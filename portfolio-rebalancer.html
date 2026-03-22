@@ -768,6 +768,151 @@ async function loadFromDrive(){try{const f=await findDriveFile();if(f){driveFile
 async function saveToDrive(){if(isOffline||!accessToken)return;setSyncStatus("saving","Salvataggio…");try{const c=JSON.stringify(getState());if(driveFileId){await fetch(`${UPLOAD_API}/files/${driveFileId}?uploadType=media`,{method:'PATCH',headers:{Authorization:`Bearer ${accessToken}`,'Content-Type':'application/json'},body:c});}else{const m={name:DRIVE_FILE,mimeType:'application/json'};const f=new FormData();f.append('metadata',new Blob([JSON.stringify(m)],{type:'application/json'}));f.append('file',new Blob([c],{type:'application/json'}));const r=await fetch(`${UPLOAD_API}/files?uploadType=multipart`,{method:'POST',headers:{Authorization:`Bearer ${accessToken}`},body:f});const res=await r.json();driveFileId=res.id;}const n=new Date();setSyncStatus("connected",`Salvato ${n.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"})}`);}catch(e){setSyncStatus("error","Errore salvataggio");}}
 function scheduleSave(){if(isOffline||!accessToken)return;clearTimeout(saveTimer);setSyncStatus("saving","In attesa…");saveTimer=setTimeout(()=>saveToDrive(),1500);}
 
+
+// ── EXPORT ───────────────────────────────────────────────────────────
+const PROMPT_SUGGESTIONS=[
+  {icon:"📊",title:"Analisi allocazione",text:"Analizza la mia allocazione attuale rispetto ai target. Evidenzia gli scostamenti più significativi e dimmi se la struttura è coerente con un profilo moderato di lungo periodo."},
+  {icon:"⚖️",title:"Piano di ribilanciamento",text:"Proponi un piano di ribilanciamento ottimale considerando acquisto di nuovi ETF e riallocazione. Stima le implicazioni fiscali in Italia (capital gain 26%)."},
+  {icon:"🔍",title:"Sovrapposizioni ETF",text:"Analizza le potenziali sovrapposizioni tra gli ETF. Ci sono strumenti che replicano gli stessi indici o hanno elevata percentuale di titoli in comune?"},
+  {icon:"💡",title:"Ottimizzazione",text:"Il portafoglio potrebbe essere semplificato? Ci sono ETF da eliminare o sostituire con strumenti più efficienti (TER, replica, liquidità)?"},
+  {icon:"📈",title:"Rendimento atteso",text:"Stima il rendimento annuo atteso e la volatilità usando dati storici. Confronta con un benchmark 60/40."},
+  {icon:"🌍",title:"Esposizione geografica",text:"Analizza l'esposizione geografica implicita considerando la composizione interna degli ETF. Sono sovraesposto a qualche area?"},
+];
+let currentExportText="";
+function getExportText(format){
+  var nl="\n", tot=total(), now=new Date().toLocaleDateString("it-IT",{day:"2-digit",month:"long",year:"numeric"});
+  if(format==="json") return JSON.stringify({exportDate:new Date().toISOString(),totalValue:tot,currency:"EUR",categoryTargets:catTargets,subcategoryTargets:subcatTargets,etfs:etfs.map(function(e){return{ticker:e.ticker||null,isin:e.isin||null,name:e.name,category:e.category,subcategory:e.subcategory||null,value:e.value,allocationPct:tot>0?parseFloat(((e.value/tot)*100).toFixed(2)):0};})},null,2);
+  if(format==="csv"){
+    var h="Ticker,ISIN,Nome,Categoria,Sottocategoria,Valore EUR,Allocazione %,Target Cat %,Target Subcat %";
+    var rows=etfs.map(function(e){
+      var p=tot>0?((e.value/tot)*100).toFixed(2):"0";
+      return [e.ticker||"",e.isin||"",'"'+e.name+'"',e.category,e.subcategory||"",e.value,p,catTargets[e.category]||0,e.subcategory?((subcatTargets[e.category]||{})[e.subcategory]||0):""].join(",");
+    });
+    return [h].concat(rows).join(nl);
+  }
+  var l=[];
+  l.push("PORTFOLIO — "+now);
+  l.push("────────────────────────────────────────────────");
+  l.push("Totale: "+fmt(tot)+" | "+etfs.length+" ETF");
+  l.push("");
+  if(format==="summary"||format==="full"){
+    l.push("TARGET CATEGORIE:");
+    CATS.forEach(function(c){
+      var ct=catTargets[c]||0, items=etfs.filter(function(e){return e.category===c;});
+      if(!ct&&!items.length) return;
+      var val=items.reduce(function(a,e){return a+e.value;},0), act=tot>0?((val/tot)*100).toFixed(1):0;
+      l.push("  "+c+"  target:"+ct+"%  att:"+act+"%  "+fmt(val));
+      if(HAS_SUBCATS.includes(c)&&subcats[c]) subcats[c].forEach(function(s){
+        var st=(subcatTargets[c]||{})[s]||0, si=items.filter(function(e){return e.subcategory===s;});
+        if(!st&&!si.length) return;
+        var sv=si.reduce(function(a,e){return a+e.value;},0), sa=tot>0?((sv/tot)*100).toFixed(1):0;
+        l.push("    └ "+s+"  target:"+st+"%  att:"+sa+"%");
+      });
+    });
+    l.push("");
+    l.push("ETF:");
+    etfs.forEach(function(e){
+      var p=tot>0?((e.value/tot)*100).toFixed(1):0;
+      var id=[e.ticker,e.isin].filter(Boolean).join("/");
+      l.push("  "+id+"  "+fmt(e.value)+" ("+p+"%)  "+e.category+(e.subcategory?" › "+e.subcategory:""));
+    });
+  }
+  if(format==="full"){
+    l.push("");
+    l.push("────────────────────────────────────────────────");
+    l.push("RIBILANCIAMENTO:");
+    var acts=calcEtfTargets(tot);
+    var buys=acts.filter(function(e){return e.diff>1;}).sort(function(a,b){return b.diff-a.diff;});
+    var sells=acts.filter(function(e){return e.diff<-1;});
+    var ok=acts.filter(function(e){return Math.abs(e.diff)<=1;});
+    if(buys.length){l.push("ACQUISTARE:");buys.forEach(function(e){l.push("  + "+(e.ticker||"")+"  "+fmt(e.diff));});}
+    if(sells.length){l.push("SOVRAPPESO:");sells.forEach(function(e){l.push("  - "+(e.ticker||"")+"  "+fmt(e.diff));});}
+    if(ok.length) l.push("BILANCIATI: "+ok.map(function(e){return e.ticker||e.isin.substring(0,6);}).join(", "));
+  }
+  return l.join(nl);
+}
+function setFormat(f){exportFormat=f;document.querySelectorAll(".format-tab").forEach(b=>b.classList.remove("active"));document.getElementById("fmt-"+f).classList.add("active");currentExportText=getExportText(f);document.getElementById("export-preview").textContent=currentExportText;renderPromptCards();}
+function renderPromptCards(){document.getElementById("prompt-cards").innerHTML=PROMPT_SUGGESTIONS.map((p,i)=>`<div class="prompt-card ripple" onclick="copyPromptWithData(${i})"><div class="prompt-card-title">${p.icon} ${p.title} <span style="color:#334155;font-size:9px;margin-left:auto">copia →</span></div><div class="prompt-card-text">${p.text}</div></div>`).join("");}
+function copyPromptWithData(i){const p=PROMPT_SUGGESTIONS[i];navigator.clipboard.writeText(`${currentExportText}
+
+${"─".repeat(48)}
+
+${p.text}`).then(()=>{const c=document.querySelectorAll(".prompt-card")[i];if(c){const orig=c.querySelector(".prompt-card-title").innerHTML;c.querySelector(".prompt-card-title").innerHTML="✓ Copiato!";setTimeout(()=>{c.querySelector(".prompt-card-title").innerHTML=orig;},1800);}});}
+function openExport(){setFormat("summary");document.getElementById("export-overlay").classList.add("open");document.getElementById("export-drawer").classList.add("open");pushState("export");}
+function closeExport(){document.getElementById("export-overlay").classList.remove("open");document.getElementById("export-drawer").classList.remove("open");}
+function copyExport(){navigator.clipboard.writeText(currentExportText).then(()=>{const b=document.getElementById("btn-copy");b.classList.add("copied");b.textContent="✓ Copiato!";setTimeout(()=>{b.classList.remove("copied");b.textContent="📋 Copia";},2000);})}
+function downloadExport(){const ext=exportFormat==="json"?"json":exportFormat==="csv"?"csv":"txt",mime=exportFormat==="json"?"application/json":exportFormat==="csv"?"text/csv":"text/plain",date=new Date().toISOString().slice(0,10);const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([currentExportText],{type:mime}));a.download=`portfolio_${date}.${ext}`;a.click();}
+
+// ── DONUT ────────────────────────────────────────────────────────────
+function buildDonut(items,tot,cL,cS,useTarget){const r=80,ir=52,cx=100,cy=100,circ=2*Math.PI*r;let off=0,p="";if(useTarget){CATS.forEach(c=>{const tv=catTargets[c]||0;if(!tv)return;const col=(COL[c]||COL["Altro"]).accent;p+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${col}" stroke-width="${r-ir}" stroke-dasharray="${(tv/100)*circ} ${circ}" stroke-dashoffset="${-off*circ}" stroke-opacity=".55" transform="rotate(-90 ${cx} ${cy})" style="transition:all .5s"/>`;off+=tv/100;});}else{items.forEach(e=>{const pct=tot>0?e.value/tot:0;const col=(COL[e.category]||COL["Altro"]).accent;p+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${col}" stroke-width="${r-ir}" stroke-dasharray="${pct*circ} ${circ}" stroke-dashoffset="${-off*circ}" transform="rotate(-90 ${cx} ${cy})" style="transition:all .5s"/>`;off+=pct;});}return `<svg width="200" height="200" viewBox="0 0 200 200"><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#1a1a2e" stroke-width="${r-ir}"/>${p}<circle cx="${cx}" cy="${cy}" r="${ir}" fill="#0d0d1a"/><text x="${cx}" y="${cy-8}" text-anchor="middle" fill="#e2e8f0" font-size="12" font-family="DM Mono,monospace" font-weight="600">${cL}</text><text x="${cx}" y="${cy+10}" text-anchor="middle" fill="#64748b" font-size="9" font-family="DM Sans,sans-serif">${cS}</text></svg>`;}
+
+// ── ETF DISPLAY ──────────────────────────────────────────────────────
+function buildEtfDisplay(items,tot,accentColor,leftPad){
+  const gT=items.reduce((a,e)=>a+e.value,0);
+  const cards=items.map(e=>{
+    const pct=tot>0?(e.value/tot)*100:0,wPct=gT>0?(e.value/gT)*100:0,bw=Math.min(100,pct*2);
+    const tH=e.ticker?`<span class="etf-card-ticker" style="color:${accentColor}">${e.ticker}</span>`:`<span class="etf-card-ticker" style="color:${accentColor}">${e.isin?.substring(0,6)+"…"||"—"}</span>`;
+    const iH=e.isin&&e.ticker?`<span class="etf-card-isin">${e.isin}</span>`:e.isin?`<span class="etf-card-isin">${e.isin}</span>`:"";
+    const vC=editingId===e.id?`<input class="inline-input-card" id="edit-${e.id}" type="number" inputmode="decimal" value="${e.value}" onblur="saveEdit(${e.id})" onkeydown="if(event.key==='Enter')saveEdit(${e.id})" autofocus>`:`<button class="etf-card-value ripple" onclick="startEdit(${e.id})" style="color:${accentColor}">${fmt(e.value)}</button>`;
+    return `<div class="etf-card"><div class="etf-card-left"><div class="etf-card-id">${tH}${iH}</div><div class="etf-card-name">${e.name}</div><div class="etf-card-bar"><div class="etf-bar-bg"><div class="etf-bar-fill" style="width:${bw}%;background:${accentColor}"></div></div><span class="etf-card-pct">${pct.toFixed(1)}%</span></div></div><div class="etf-card-right">${vC}<span class="etf-card-grp">gruppo: ${wPct.toFixed(0)}%</span></div><button class="btn-del-card ripple" onclick="removeEtf(${e.id})">✕</button></div>`;
+  }).join("");
+  const pl=leftPad?"30px":"16px";
+  const rows=items.map(e=>{const pct=tot>0?(e.value/tot)*100:0,wPct=gT>0?(e.value/gT)*100:0,bw=Math.min(100,pct*2);const tH=e.ticker?`<span class="ticker-label" style="color:${accentColor}">${e.ticker}</span>`:`<span class="ticker-label" style="color:${accentColor}">${e.isin?.substring(0,6)+"…"||"—"}</span>`;const iH=e.isin?`<span class="isin-badge">${e.isin}</span>`:"";const vC=editingId===e.id?`<input class="inline-input" id="edit-${e.id}" type="number" value="${e.value}" onblur="saveEdit(${e.id})" onkeydown="if(event.key==='Enter')saveEdit(${e.id})">`:`<span class="val-cell" onclick="startEdit(${e.id})">${fmt(e.value)}</span>`;return `<tr><td style="padding-left:${pl}"><div class="id-cell">${tH}${iH}</div></td><td class="name-cell" title="${e.name}">${e.name}</td><td>${vC}</td><td><div class="bar-wrap"><div class="bar-bg"><div class="bar-fill" style="width:${bw}%;background:${accentColor}"></div></div><span class="pct-text">${pct.toFixed(1)}%</span></div></td><td><span class="weight-cell">${wPct.toFixed(1)}%</span></td><td style="text-align:center"><button class="btn-del" onclick="removeEtf(${e.id})">✕</button></td></tr>`;}).join("");
+  return `<div class="card-wrap"><div class="etf-cards">${cards}</div></div><div class="table-wrap"><table><thead><tr><th style="padding-left:${pl}">Ticker / ISIN</th><th>Nome</th><th>Valore (€)</th><th>% Portafoglio</th><th>% Gruppo</th><th>✕</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+// ── OVERVIEW ─────────────────────────────────────────────────────────
+function renderOverview(){
+  const tot=total(),sct=sumCatTargets(),catTokColor=Math.abs(sct-100)<0.05?"#66bb6a":"#ef5350";
+  const groups={};CATS.forEach(c=>{const it=etfs.filter(e=>e.category===c);if(it.length)groups[c]=it;});
+  let d1=buildDonut(etfs,tot,fmt(tot).replace("€","")+"€","PORTAFOGLIO",false);
+  let d2=buildDonut([],0,sct.toFixed(0)+"%","TARGET",true);
+  const tc=Math.abs(sct-100)<0.05?"#66bb6a":"#ef5350";
+  d2=d2.replace('fill="#e2e8f0" font-size="12" font-family="DM Mono,monospace" font-weight="600"',`fill="${tc}" font-size="18" font-family="DM Mono,monospace" font-weight="700"`);
+  const legend=etfs.map(e=>{const col=(COL[e.category]||COL["Altro"]).accent,pct=tot>0?((e.value/tot)*100).toFixed(1):0,lbl=e.ticker||(e.isin?.substring(0,6)+"…")||"—";return `<div class="legend-item"><div class="legend-dot" style="background:${col}"></div><span class="legend-ticker">${lbl}</span><span class="legend-pct">${pct}%</span></div>`;}).join("");
+  const catSumBar=`<div class="card" style="margin-bottom:14px;padding:14px 16px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><span class="card-label" style="margin:0">Target per categoria</span><span style="font-family:'DM Mono',monospace;font-size:12px;color:${catTokColor};font-weight:600">${sct.toFixed(1)}%${Math.abs(sct-100)>0.05?` <span style="color:#64748b;font-size:10px">(${sct<100?"mancano":"superi"} ${Math.abs(100-sct).toFixed(1)}%)</span>`:" ✓"}</span></div><div style="display:flex;height:8px;border-radius:4px;overflow:hidden;gap:1px">${CATS.map(c=>{const v=catTargets[c]||0;if(!v)return"";return`<div title="${c}: ${v}%" style="flex:${v};background:${(COL[c]||COL["Altro"]).accent};transition:flex .4s"></div>`;}).join("")}${sct<100?`<div style="flex:${100-sct};background:#1e293b"></div>`:""}</div><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">${CATS.filter(c=>catTargets[c]>0).map(c=>{const col=(COL[c]||COL["Altro"]).accent;return`<div style="display:flex;align-items:center;gap:4px"><div style="width:7px;height:7px;border-radius:2px;background:${col}"></div><span style="font-size:11px;color:#94a3b8">${c}</span><span style="font-family:'DM Mono',monospace;font-size:11px;color:${col}">${catTargets[c]}%</span></div>`;}).join("")}</div></div>`;
+  let catHtml="";
+  Object.entries(groups).forEach(([cat,items])=>{
+    const col=COL[cat]||COL["Altro"],catTarget=catTargets[cat]||0,catTot=items.reduce((a,e)=>a+e.value,0),catActualPct=tot>0?(catTot/tot)*100:0,hasSub=HAS_SUBCATS.includes(cat);
+    const cpill=targetPill("TARGET",catTarget,catActualPct,`ctarget-${cat.replace(/\s/g,"_")}`,`updateCatTarget("${cat}",this.value)`,false);
+    if(hasSub){
+      const usedSubs=subcats[cat].filter(s=>items.some(e=>e.subcategory===s)),uncat=items.filter(e=>!e.subcategory||!subcats[cat].includes(e.subcategory));
+      let inner="";
+      usedSubs.forEach(sub=>{const si=items.filter(e=>e.subcategory===sub);if(!si.length)return;const sc=subcatColor(cat,sub),sv=si.reduce((a,e)=>a+e.value,0),sa=tot>0?(sv/tot)*100:0,st=(subcatTargets[cat]||{})[sub]||0;const sp=targetPill("TARGET",st,sa,`starget-${cat.replace(/\s/g,"_")}-${sub.replace(/\s/g,"_")}`,`updateSubcatTarget("${cat}","${sub}",this.value)`,true);inner+=`<div class="subcat-block"><div class="subcat-header"><div class="subcat-left"><div class="subcat-bar-el" style="background:${sc}"></div><span class="subcat-name-text" style="color:${sc}">${sub}</span><span class="subcat-count">${si.length} ETF</span></div><div class="subcat-right"><span class="subcat-val-stat">${fmt(sv)}</span>${sp}<button class="btn-sm btn-sm-danger ripple" onclick="removeSubcat('${cat}','${sub}')">✕</button></div></div>${buildEtfDisplay(si,tot,sc,true)}</div>`;});
+      if(uncat.length)inner+=`<div class="subcat-block"><div class="subcat-header"><div class="subcat-left"><div class="subcat-bar-el" style="background:#334155"></div><span class="subcat-name-text" style="color:#475569">Senza sottocategoria</span><span class="subcat-count">${uncat.length} ETF</span></div></div>${buildEtfDisplay(uncat,tot,col.accent,true)}</div>`;
+      const tags=subcats[cat].map(s=>`<div class="subcat-tag"><span class="subcat-tag-name">${s}</span><button class="subcat-tag-del ripple" onclick="removeSubcat('${cat}','${s}')">✕</button></div>`).join("");
+      const strip=`<div class="subcat-manager"><span class="subcat-manager-label">Sottocategorie:</span>${tags}<div class="subcat-add-form"><input class="subcat-add-input" type="text" id="new-sub-${cat.replace(/\s/g,"_")}" placeholder="Nuova…" onkeydown="if(event.key==='Enter')addSubcat('${cat}')"><button class="btn-sm ripple" onclick="addSubcat('${cat}')">+ Aggiungi</button></div></div>`;
+      catHtml+=`<div class="cat-block"><div class="cat-header" style="background:${col.bg}"><div class="cat-title"><div class="cat-dot" style="background:${col.accent}"></div><span class="cat-name-text" style="color:${col.accent}">${cat.toUpperCase()}</span><span class="cat-count" style="color:${col.accent}">${items.length} ETF</span></div><div class="cat-right"><span class="cat-val-stat">${fmt(catTot)}</span>${cpill}</div></div>${inner}${strip}</div>`;
+    }else{
+      catHtml+=`<div class="cat-block"><div class="cat-header" style="background:${col.bg}"><div class="cat-title"><div class="cat-dot" style="background:${col.accent}"></div><span class="cat-name-text" style="color:${col.accent}">${cat.toUpperCase()}</span><span class="cat-count" style="color:${col.accent}">${items.length} ETF</span></div><div class="cat-right"><span class="cat-val-stat">${fmt(catTot)}</span>${cpill}</div></div>${buildEtfDisplay(items,tot,col.accent,false)}</div>`;
+    }
+  });
+  document.getElementById("tab-overview").innerHTML=`<div class="summary-grid"><div class="card donut-wrap"><div class="card-label" style="text-align:center">Composizione Attuale</div>${d1}</div><div class="card donut-wrap"><div class="card-label" style="text-align:center">Allocazione Target</div>${d2}</div><div class="card"><div class="card-label">Riepilogo</div><div class="stat-row"><span class="stat-label">Totale</span><span class="stat-val" style="color:#4fc3f7">${fmt(tot)}</span></div><div class="stat-row"><span class="stat-label">N° ETF</span><span class="stat-val">${etfs.length}</span></div><div class="stat-row"><span class="stat-label">Categorie</span><span class="stat-val">${Object.keys(groups).length}</span></div><div class="stat-row"><span class="stat-label">Target totale</span><span class="stat-val" style="color:${catTokColor}">${sct.toFixed(1)}%</span></div></div></div><div class="legend">${legend}</div>${catSumBar}${catHtml}`;
+  if(editingId!==null){const el=document.getElementById("edit-"+editingId);if(el){el.focus();el.select();}}
+}
+
+// ── REBALANCE ────────────────────────────────────────────────────────
+function calcEtfTargets(newTot){return etfs.map(e=>{const cat=e.category,sub=e.subcategory;let gT=(catTargets[cat]||0)/100;if(HAS_SUBCATS.includes(cat)&&sub&&subcats[cat]?.includes(sub))gT=((subcatTargets[cat]||{})[sub]||0)/100;const gI=etfs.filter(x=>{if(x.category!==cat)return false;if(HAS_SUBCATS.includes(cat)&&sub&&subcats[cat]?.includes(sub))return x.subcategory===sub;if(HAS_SUBCATS.includes(cat)&&(!sub||!subcats[cat]?.includes(sub)))return!x.subcategory||!subcats[cat]?.includes(x.subcategory);return true;});const gV=gI.reduce((a,x)=>a+x.value,0),w=gV>0?e.value/gV:1/Math.max(gI.length,1),tv=gT*w*newTot;return{...e,targetValue:tv,diff:tv-e.value};});}
+function renderRebalance(){
+  const tot=total(),capEl=document.getElementById("new-capital"),cap=capEl?parseFloat(capEl.value)||0:0,newTot=tot+cap,sct=sumCatTargets(),tok=Math.abs(sct-100)<0.05;
+  const warn=!tok?`<div class="warn-box">⚠ I target di categoria non sommano al 100% (${sct.toFixed(1)}%). Torna all'Overview per correggerli.</div>`:"";
+  const info=`<div class="info-box">💡 Distribuzione basata su target di categoria e sottocategoria. Dentro ogni gruppo gli ETF sono pesati proporzionalmente.</div>`;
+  let rebRows="",buyItems=[],okItems=[],sellItems=[];
+  if(tok){const actions=calcEtfTargets(newTot).sort((a,b)=>b.diff-a.diff);actions.forEach(e=>{const col=(COL[e.category]||COL["Altro"]).accent,isBuy=e.diff>1,isNeu=Math.abs(e.diff)<=1;const ac=isNeu?"#64748b":isBuy?"#66bb6a":"#ef5350",bb=isNeu?"#1e293b":isBuy?"rgba(20,83,45,.25)":"rgba(127,29,29,.25)";const label=isNeu?"≈ OK":isBuy?"▲ ACQUISTA":"▼ SOVRAP.",amt=isNeu?"≈ OK":(isBuy?"+ ":"- ")+fmt(Math.abs(e.diff));const tP=newTot>0?((e.targetValue/newTot)*100).toFixed(1):0,subL=e.subcategory?` · ${e.subcategory}`:"",iR=e.isin?`<div class="reb-isin">${e.isin}</div>`:"";if(e.diff>1)buyItems.push(e);else if(Math.abs(e.diff)<=1)okItems.push(e);else sellItems.push(e);rebRows+=`<div class="reb-row"><div class="reb-dot" style="background:${col}"></div><div class="reb-id"><div class="reb-ticker" style="color:${col}">${e.ticker||e.isin?.substring(0,6)+"…"||"—"}</div>${iR}<div class="reb-cat">${e.category}<span style="color:#2d3748">${subL}</span></div></div><div class="reb-name">${e.name}</div><div class="reb-num"><div class="reb-num-label">Attuale</div><div class="reb-num-val">${fmt(e.value)}</div></div><div class="reb-num"><div class="reb-num-label">Target (${tP}%)</div><div class="reb-num-val">${fmt(e.targetValue)}</div></div><div class="reb-action"><div class="reb-amount" style="color:${ac}">${amt}</div><div class="reb-badge" style="color:${ac};background:${bb}">${label}</div></div></div>`;});
+  const sc=(title,items,color)=>{const inner=items.length===0?`<div class="empty-msg">—</div>`:items.map(e=>{const l=e.ticker||(e.isin?.substring(0,6)+"…")||"—";return`<div class="summ-item"><span class="summ-ticker">${l}</span><span class="summ-val" style="color:${color}">${fmt(Math.abs(e.diff))}</span></div>`;}).join("")+(items.length?`<div class="summ-total"><span style="font-size:10px;color:#64748b">Tot.</span><span class="summ-val" style="color:${color};font-weight:600">${fmt(items.reduce((a,e)=>a+Math.abs(e.diff),0))}</span></div>`:"");return`<div class="summ-card"><div class="summ-title" style="color:${color}">${title} (${items.length})</div>${inner}</div>`;};
+  rebRows=`<div style="color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">Piano di ribilanciamento</div><div class="reb-list">${rebRows}</div><div class="card"><div class="card-label">Riepilogo</div><div class="summ-grid3">${sc("Acquistare",buyItems,"#66bb6a")}${sc("Bilanciati",okItems,"#64748b")}${sc("Sovrappeso",sellItems,"#ef5350")}</div></div>`;}
+  document.getElementById("tab-ribilancia").innerHTML=`<div class="card" style="margin-bottom:14px"><div class="card-label">Nuovo capitale (opzionale)</div><div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><div class="capital-input-wrap"><span class="capital-euro">€</span><input class="capital-input" type="number" inputmode="decimal" id="new-capital" placeholder="0.00" oninput="renderRebalance()" value="${cap||""}"></div><div class="total-info">Totale: <span>${fmt(newTot)}</span></div></div></div>${warn}${info}${rebRows}`;
+}
+
+// ── MUTATIONS ────────────────────────────────────────────────────────
+function updateCatTarget(cat,val){catTargets[cat]=parseFloat(val)||0;renderOverview();scheduleSave();}
+function updateSubcatTarget(cat,sub,val){if(!subcatTargets[cat])subcatTargets[cat]={};subcatTargets[cat][sub]=parseFloat(val)||0;renderOverview();scheduleSave();}
+function addSubcat(cat){const inp=document.getElementById("new-sub-"+cat.replace(/\s/g,"_"));if(!inp)return;const name=inp.value.trim();if(!name||subcats[cat].includes(name)){inp.value="";return;}subcats[cat].push(name);if(!subcatTargets[cat])subcatTargets[cat]={};subcatTargets[cat][name]=0;inp.value="";renderOverview();scheduleSave();}
+function removeSubcat(cat,sub){const aff=etfs.filter(e=>e.category===cat&&e.subcategory===sub);if(aff.length&&!confirm(`"${sub}" ha ${aff.length} ETF. Continuare?`))return;if(aff.length)etfs=etfs.map(e=>e.category===cat&&e.subcategory===sub?{...e,subcategory:null}:e);subcats[cat]=subcats[cat].filter(s=>s!==sub);if(subcatTargets[cat])delete subcatTargets[cat][sub];renderOverview();scheduleSave();}
+function startEdit(id){editingId=id;renderOverview();}
+function saveEdit(id){const el=document.getElementById("edit-"+id);if(el){const v=parseFloat(el.value);if(!isNaN(v))etfs=etfs.map(e=>e.id===id?{...e,value:v}:e);}editingId=null;renderOverview();scheduleSave();}
+function removeEtf(id){if(confirm("Rimuovere questo ETF?")){etfs=etfs.filter(e=>e.id!==id);renderOverview();scheduleSave();}}
+
 // ── ISIN ────────────────────────────────────────────────────────────
 function isValidIsin(v){if(!/^[A-Z]{2}[A-Z0-9]{9}[0-9]$/.test(v))return false;let d="";for(const c of v){const x=c.charCodeAt(0);d+=x>=65?String(x-55):c;}let s=0;for(let i=0;i<d.length;i++){let x=parseInt(d[d.length-1-i]);if(i%2===1){x*=2;if(x>9)x-=9;}s+=x;}return s%10===0;}
 function validateIsin(v){const el=document.getElementById("isin-status"),dot=document.getElementById("isin-dot"),msg=document.getElementById("isin-msg");if(!v){el.style.display="none";return;}el.style.display="flex";if(v.length<12){dot.style.background="#64748b";msg.style.color="#64748b";msg.textContent=`${v.length}/12`;}else if(isValidIsin(v)){dot.style.background="#66bb6a";msg.style.color="#66bb6a";msg.textContent="✓ Valido";}else{dot.style.background="#ef5350";msg.style.color="#ef5350";msg.textContent="Non valido";}}
