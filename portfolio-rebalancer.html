@@ -454,10 +454,18 @@ tr:hover td { background: #161f30; }
       <div id="m-detected-cat" style="color:#86efac;font-size:12px;font-family:'DM Mono',monospace;"></div>
     </div>
 
-    <!-- Not found card — manual fields -->
+    <!-- Loading card — shown while searching -->
+    <div id="m-loading-card" style="display:none;background:#0e1f30;border:1px solid #1e3a5f;border-radius:12px;padding:14px 16px;margin-bottom:14px;text-align:center;">
+      <div style="display:flex;align-items:center;justify-content:center;gap:10px;color:#90caf9;font-size:13px;">
+        <span style="display:inline-block;width:16px;height:16px;border:2px solid #1e3a5f;border-top-color:#4fc3f7;border-radius:50%;animation:spin .8s linear infinite"></span>
+        Ricerca ETF in corso…
+      </div>
+    </div>
+
+    <!-- Not found card — manual fields (shown if AI also fails) -->
     <div id="m-notfound-card" style="display:none;">
-      <div style="background:#1a1510;border:1px solid #78350f;border-radius:12px;padding:12px 14px;margin-bottom:14px;color:#fcd34d;font-size:12px;">
-        ⚠ ISIN non trovato nel database — compila i campi manualmente.
+      <div style="background:#1a1510;border:1px solid #78350f;border-radius:12px;padding:12px 14px;margin-bottom:14px;color:#fcd34d;font-size:12px;" id="m-notfound-msg">
+        ⚠ ISIN non trovato — compila i campi manualmente.
       </div>
       <div class="field">
         <label>Nome ETF <span style="color:#ef5350">*</span></label>
@@ -1137,55 +1145,147 @@ function validateIsin(v){const el=document.getElementById("isin-status"),dot=doc
 // ── MODAL LOGIC (new simplified) ─────────────────────────────────────
 let modalEtfDetected = null; // the matched ETF_DB entry
 
+let isinSearchTimer = null;
+
+function showDetected(etfData) {
+  modalEtfDetected = etfData;
+  document.getElementById('m-detected-name').textContent = etfData.name;
+  document.getElementById('m-detected-cat').textContent =
+    etfData.category + (etfData.subcategory ? ' › ' + etfData.subcategory : '');
+  document.getElementById('m-detected-card').style.display = 'block';
+  document.getElementById('m-loading-card').style.display = 'none';
+  document.getElementById('m-notfound-card').style.display = 'none';
+}
+
+function showNotFound(msg) {
+  modalEtfDetected = null;
+  document.getElementById('m-loading-card').style.display = 'none';
+  document.getElementById('m-detected-card').style.display = 'none';
+  document.getElementById('m-notfound-card').style.display = 'block';
+  const msgEl = document.getElementById('m-notfound-msg');
+  if (msgEl) msgEl.textContent = msg || '⚠ ISIN non trovato — compila i campi manualmente.';
+  const nameEl = document.getElementById('m-name');
+  if (nameEl) nameEl.value = '';
+}
+
+async function searchEtfByIsin(isin) {
+  const detected = document.getElementById('m-detected-card');
+  const loading  = document.getElementById('m-loading-card');
+  const notfound = document.getElementById('m-notfound-card');
+  detected.style.display = 'none';
+  notfound.style.display = 'none';
+  loading.style.display  = 'block';
+
+  const CATS_LIST = ["Azionario","Obbligazionario","Materie Prime","Immobiliare","Liquidità","Crypto","Altro"];
+  const SUBCATS_LIST = {
+    "Azionario": ["Globale","USA","Europa","Emergenti","Pacifico"],
+    "Obbligazionario": ["Governativo","Corporate","High Yield","Emergenti"]
+  };
+
+  const prompt = `Cerca l'ETF con ISIN ${isin} e rispondi SOLO con un oggetto JSON valido, niente altro.
+Formato richiesto:
+{"ticker":"XXXX","name":"Nome completo ETF","category":"Azionario","subcategory":"Globale"}
+
+Categorie disponibili: ${CATS_LIST.join(", ")}
+Sottocategorie Azionario: Globale, USA, Europa, Emergenti, Pacifico
+Sottocategorie Obbligazionario: Governativo, Corporate, High Yield, Emergenti
+Per le altre categorie usa subcategory: null
+
+Se l'ISIN non esiste rispondi: {"error":"not found"}`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 200,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if (!resp.ok) throw new Error('API error ' + resp.status);
+    const data = await resp.json();
+
+    // Extract text from response
+    let text = '';
+    if (data.content) {
+      data.content.forEach(function(block) {
+        if (block.type === 'text') text += block.text;
+      });
+    }
+
+    // Parse JSON from response
+    const jsonMatch = text.match(/\{[^{}]+\}/);
+    if (!jsonMatch) throw new Error('No JSON in response');
+    const etfData = JSON.parse(jsonMatch[0]);
+
+    if (etfData.error) {
+      showNotFound('⚠ ISIN ' + isin + ' non trovato sul web — compila manualmente.');
+      return;
+    }
+
+    // Validate category
+    if (!CATS_LIST.includes(etfData.category)) etfData.category = 'Altro';
+    if (etfData.subcategory && !(SUBCATS_LIST[etfData.category] || []).includes(etfData.subcategory)) {
+      etfData.subcategory = null;
+    }
+    etfData.isin = isin;
+    showDetected(etfData);
+
+    // Also cache in DB so future lookups are instant
+    DB_BY_ISIN[isin] = etfData;
+    if (etfData.ticker) DB_BY_TICKER[etfData.ticker] = etfData;
+
+  } catch(e) {
+    showNotFound('⚠ Ricerca fallita (' + e.message + ') — compila manualmente.');
+  }
+}
+
 function handleIsinInput(el) {
-  // Sanitise: uppercase, only alphanumeric, max 12 chars
   el.value = el.value.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 12);
   const val = el.value;
 
-  // ISIN status indicator
+  // Status indicator
   const statusEl = document.getElementById('isin-status');
   const dot = document.getElementById('isin-dot');
   const msg = document.getElementById('isin-msg');
-  if (!val) { statusEl.style.display = 'none'; }
-  else {
-    statusEl.style.display = 'flex';
-    if (val.length < 12) {
-      dot.style.background = '#64748b'; msg.style.color = '#64748b';
-      msg.textContent = val.length + '/12 caratteri';
-    } else if (isValidIsin(val)) {
-      dot.style.background = '#66bb6a'; msg.style.color = '#66bb6a';
-      msg.textContent = '✓ Formato valido';
-    } else {
-      dot.style.background = '#ffa726'; msg.style.color = '#ffa726';
-      msg.textContent = 'Formato non standard';
-    }
+  if (!val) {
+    statusEl.style.display = 'none';
+    document.getElementById('m-detected-card').style.display = 'none';
+    document.getElementById('m-loading-card').style.display  = 'none';
+    document.getElementById('m-notfound-card').style.display = 'none';
+    modalEtfDetected = null;
+    return;
+  }
+  statusEl.style.display = 'flex';
+  if (val.length < 12) {
+    dot.style.background = '#64748b'; msg.style.color = '#64748b';
+    msg.textContent = val.length + '/12 caratteri';
+    document.getElementById('m-detected-card').style.display = 'none';
+    document.getElementById('m-loading-card').style.display  = 'none';
+    document.getElementById('m-notfound-card').style.display = 'none';
+    modalEtfDetected = null;
+    return;
   }
 
-  // Lookup
-  const match = DB_BY_ISIN[val] || null;
-  modalEtfDetected = match;
-
-  const detected = document.getElementById('m-detected-card');
-  const notfound = document.getElementById('m-notfound-card');
-
-  if (match) {
-    // Show detected card
-    document.getElementById('m-detected-name').textContent = match.name;
-    document.getElementById('m-detected-cat').textContent =
-      match.category + (match.subcategory ? ' › ' + match.subcategory : '');
-    detected.style.display = 'block';
-    notfound.style.display = 'none';
-  } else if (val.length === 12) {
-    // Full ISIN typed but not in DB
-    detected.style.display = 'none';
-    notfound.style.display = 'block';
-    // Pre-fill name field empty
-    const nameEl = document.getElementById('m-name');
-    if (nameEl) nameEl.value = '';
+  // Valid length
+  if (isValidIsin(val)) {
+    dot.style.background = '#66bb6a'; msg.style.color = '#66bb6a';
+    msg.textContent = '✓ Formato valido';
   } else {
-    detected.style.display = 'none';
-    notfound.style.display = 'none';
+    dot.style.background = '#ffa726'; msg.style.color = '#ffa726';
+    msg.textContent = 'Formato non standard';
   }
+
+  // 1. Check local DB first (instant)
+  const match = DB_BY_ISIN[val] || null;
+  if (match) { showDetected(match); return; }
+
+  // 2. Not in local DB — debounce then search via AI
+  clearTimeout(isinSearchTimer);
+  isinSearchTimer = setTimeout(function() { searchEtfByIsin(val); }, 400);
 }
 
 function manualCatChange() {
