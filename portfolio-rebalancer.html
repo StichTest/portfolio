@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<!-- iOS PWA -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Portfolio">
+<!-- Android PWA -->
+<meta name="theme-color" content="#0d0d1a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="application-name" content="Portfolio Rebalancer">
+<title>Portfolio Rebalancer</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0d0d1a;
+  --surface: #111827;
+  --surface2: #1a2234;
+  --border: #1e293b;
+  --text: #e2e8f0;
+  --muted: #64748b;
+  --accent: #4fc3f7;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+html { height: 100%; overscroll-behavior: none; }
+body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100%; -webkit-tap-highlight-color: transparent; overscroll-behavior: none; -webkit-overflow-scrolling: touch; }
+::-webkit-scrollbar { display: none; }
+input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+input::placeholder { color: #334155; }
+button { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+input, select, textarea { -webkit-appearance: none; }
+
+/* ── RIPPLE (Android Material) ─────────────────── */
+.ripple { position: relative; overflow: hidden; }
+.ripple-wave { position: absolute; border-radius: 50%; background: rgba(255,255,255,.15); transform: scale(0); animation: ripple-anim .5s linear; pointer-events: none; }
+@keyframes ripple-anim { to { transform: scale(4); opacity: 0; } }
+
+/* ── PWA INSTALL BANNER ────────────────────────── */
+.install-banner { display: none; position: fixed; bottom: calc(70px + var(--safe-bottom)); left: 12px; right: 12px; background: #1e3a5f; border: 1px solid var(--accent); border-radius: 14px; padding: 14px 16px; z-index: 150; flex-direction: row; align-items: center; gap: 12px; box-shadow: 0 8px 32px rgba(0,0,0,.5); animation: slideUp .3s ease; }
+.install-banner.show { display: flex; }
+@keyframes slideUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+.install-banner-text { flex: 1; font-size: 13px; line-height: 1.4; }
+.install-banner-title { font-weight: 700; color: var(--accent); margin-bottom: 2px; }
+.install-banner-sub { color: #94a3b8; font-size: 12px; }
+.btn-install { background: var(--accent); border: none; border-radius: 8px; padding: 8px 14px; color: #0d0d1a; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+.btn-install-dismiss { background: transparent; border: none; color: var(--muted); font-size: 18px; cursor: pointer; padding: 4px; flex-shrink: 0; }
+
+/* ── HEADER ────────────────────────────────────── */
+.header { position: sticky; top: 0; z-index: 90; background: var(--bg); border-bottom: 1px solid var(--border); padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding-top: calc(12px + var(--safe-top)); padding-left: calc(20px + var(--safe-left)); padding-right: calc(20px + var(--safe-right)); }
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo-icon { width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #1d4ed8, #4fc3f7); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+.logo-title { font-weight: 700; font-size: 15px; }
+.logo-sub { color: var(--muted); font-size: 9px; font-family: 'DM Mono', monospace; }
+.header-actions { display: flex; gap: 6px; align-items: center; }
+.tab-btn { background: transparent; border: 1px solid var(--border); border-radius: 8px; padding: 6px 14px; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .2s; }
+.tab-btn.active { background: #1e3a5f; border-color: var(--accent); color: var(--accent); }
+.btn-add-desktop { background: #1d4ed8; border: none; border-radius: 8px; padding: 6px 14px; color: #fff; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; }
+.btn-export { background: transparent; border: 1px solid #7c3aed; border-radius: 8px; padding: 6px 12px; color: #a78bfa; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+
+/* SYNC BADGE */
+.sync-badge { display: flex; align-items: center; gap: 6px; border-radius: 8px; padding: 5px 10px; font-size: 12px; font-weight: 600; border: 1px solid transparent; cursor: pointer; transition: all .3s; white-space: nowrap; }
+.sync-badge.disconnected { background: #1a1a2e; border-color: #334155; color: var(--muted); }
+.sync-badge.connected  { background: #0e2a1e; border-color: #166534; color: #86efac; }
+.sync-badge.saving     { background: #0e1f30; border-color: #1e3a5f; color: #90caf9; }
+.sync-badge.error      { background: #2a1a1a; border-color: #7f1d1d; color: #fca5a5; }
+.sync-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.sync-badge.disconnected .sync-dot { background: #334155; }
+.sync-badge.connected .sync-dot   { background: #66bb6a; animation: pulse 2s infinite; }
+.sync-badge.saving .sync-dot      { background: #4fc3f7; animation: blink .7s infinite; }
+.sync-badge.error .sync-dot       { background: #ef5350; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:.4} }
+@keyframes blink { 0%,100%{opacity:1}50%{opacity:.2} }
+
+/* ── BOTTOM NAV ────────────────────────────────── */
+.bottom-nav { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-top: 1px solid var(--border); z-index: 100; padding-bottom: var(--safe-bottom); padding-left: var(--safe-left); padding-right: var(--safe-right); }
+.bottom-nav-inner { display: flex; align-items: stretch; height: 58px; }
+.nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border: none; background: transparent; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: 600; cursor: pointer; padding: 6px 4px; transition: color .15s; position: relative; overflow: hidden; }
+.nav-item.active { color: var(--accent); }
+.nav-item.active::after { content:''; position:absolute; bottom:0; left:25%; right:25%; height:2px; background:var(--accent); border-radius:2px 2px 0 0; }
+.nav-item-icon { font-size: 20px; line-height: 1; }
+.fab { position: fixed; bottom: calc(70px + var(--safe-bottom)); right: calc(16px + var(--safe-right)); width: 54px; height: 54px; border-radius: 16px; background: #1d4ed8; border: none; color: #fff; font-size: 26px; cursor: pointer; display: none; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(29,78,216,.5); z-index: 101; transition: transform .15s, box-shadow .15s; }
+.fab:active { transform: scale(.92); box-shadow: 0 2px 10px rgba(29,78,216,.4); }
+
+/* ── CONTAINER ─────────────────────────────────── */
+.container { max-width: 1200px; margin: 0 auto; padding: 18px 16px; padding-left: calc(16px + var(--safe-left)); padding-right: calc(16px + var(--safe-right)); }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; }
+.card-label { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 12px; }
+
+.summary-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+.donut-wrap { display: flex; flex-direction: column; align-items: center; }
+.stat-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border); }
+.stat-row:last-child { border-bottom: none; }
+.stat-label { color: #94a3b8; font-size: 13px; }
+.stat-val { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 600; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+.legend-item { display: flex; align-items: center; gap: 5px; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 3px 10px; }
+.legend-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.legend-ticker { font-family: 'DM Mono', monospace; font-size: 11px; color: #94a3b8; }
+.legend-pct { font-size: 10px; color: #475569; }
+
+/* ── CAT BLOCKS ────────────────────────────────── */
+.cat-block { margin-bottom: 12px; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.cat-header { padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.cat-title { display: flex; align-items: center; gap: 8px; }
+.cat-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.cat-name-text { font-weight: 700; font-size: 12px; letter-spacing: .05em; }
+.cat-count { font-size: 10px; font-family: 'DM Mono', monospace; opacity: .65; }
+.cat-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cat-val-stat { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); }
+
+/* TARGET PILL */
+.target-pill { display: flex; align-items: center; gap: 7px; background: rgba(0,0,0,.28); border-radius: 8px; padding: 5px 10px; }
+.target-pill-label { color: var(--muted); font-size: 9px; text-transform: uppercase; letter-spacing: .07em; white-space: nowrap; }
+.target-pill-input { background: transparent; border: none; border-bottom: 1px solid #334155; color: var(--text); font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 700; width: 46px; text-align: center; outline: none; padding: 1px 2px; }
+.target-pill-input:focus { border-bottom-color: var(--accent); }
+.target-pill-pct { color: var(--muted); font-family: 'DM Mono', monospace; font-size: 12px; }
+.target-pill-sep { width: 1px; height: 14px; background: var(--border); }
+.target-pill-alloc { font-family: 'DM Mono', monospace; font-size: 11px; }
+.target-pill-sm { display: flex; align-items: center; gap: 6px; background: rgba(0,0,0,.3); border-radius: 7px; padding: 4px 9px; }
+.target-pill-sm .target-pill-label { font-size: 8px; }
+.target-pill-sm .target-pill-input { font-size: 12px; width: 38px; }
+.target-pill-sm .target-pill-pct { font-size: 11px; }
+.target-pill-sm .target-pill-alloc { font-size: 10px; }
+
+/* SUBCAT */
+.subcat-block { border-top: 1px solid var(--border); }
+.subcat-header { padding: 8px 14px 8px 18px; display: flex; align-items: center; justify-content: space-between; background: #0c1526; flex-wrap: wrap; gap: 6px; }
+.subcat-left { display: flex; align-items: center; gap: 7px; }
+.subcat-bar-el { width: 3px; height: 16px; border-radius: 2px; flex-shrink: 0; }
+.subcat-name-text { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.subcat-count { font-size: 9px; color: #475569; font-family: 'DM Mono', monospace; }
+.subcat-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.subcat-val-stat { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); }
+
+/* ETF CARDS */
+.etf-cards { display: flex; flex-direction: column; }
+.etf-card { padding: 12px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; transition: background .15s; position: relative; overflow: hidden; }
+.etf-card:last-child { border-bottom: none; }
+.etf-card:active { background: var(--surface2); }
+.etf-card-left { flex: 1; min-width: 0; }
+.etf-card-id { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; flex-wrap: wrap; }
+.etf-card-ticker { font-family: 'DM Mono', monospace; font-weight: 700; font-size: 15px; }
+.etf-card-isin { font-family: 'DM Mono', monospace; font-size: 9px; color: #475569; background: var(--border); border-radius: 3px; padding: 1px 5px; }
+.etf-card-name { font-size: 11px; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 6px; }
+.etf-card-bar { display: flex; align-items: center; gap: 6px; }
+.etf-bar-bg { flex: 1; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.etf-bar-fill { height: 100%; border-radius: 2px; transition: width .4s; }
+.etf-card-pct { font-family: 'DM Mono', monospace; font-size: 10px; color: #94a3b8; white-space: nowrap; }
+.etf-card-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+.etf-card-value { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 600; cursor: pointer; padding: 4px 8px; border-radius: 8px; background: var(--border); border: none; color: inherit; }
+.etf-card-grp { font-family: 'DM Mono', monospace; font-size: 10px; color: #475569; }
+.btn-del-card { background: transparent; border: none; color: #334155; cursor: pointer; font-size: 16px; padding: 6px; border-radius: 6px; line-height: 1; min-width: 32px; min-height: 32px; display: flex; align-items: center; justify-content: center; }
+.btn-del-card:active { color: #ef5350; background: #2a1a1a; }
+.inline-input-card { background: var(--bg); border: 2px solid var(--accent); border-radius: 8px; padding: 4px 8px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 14px; width: 100px; outline: none; text-align: right; }
+
+/* DESKTOP TABLE */
+table { width: 100%; border-collapse: collapse; background: var(--surface); }
+th { padding: 8px 16px; text-align: left; color: #475569; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; border-bottom: 1px solid var(--border); white-space: nowrap; }
+td { padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #161f30; }
+.id-cell { display: flex; flex-direction: column; gap: 2px; }
+.ticker-label { font-family: 'DM Mono', monospace; font-weight: 600; font-size: 14px; }
+.isin-badge { display: inline-block; background: var(--border); border-radius: 3px; padding: 1px 5px; color: var(--muted); font-size: 9px; font-family: 'DM Mono', monospace; }
+.name-cell { color: #94a3b8; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.val-cell { font-family: 'DM Mono', monospace; cursor: pointer; padding: 3px 7px; border-radius: 5px; border: 1px solid transparent; transition: border-color .2s; display: inline-block; }
+.val-cell:hover { border-color: #1e3a5f; }
+.bar-wrap { display: flex; align-items: center; gap: 7px; }
+.bar-bg { width: 64px; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 2px; transition: width .4s; }
+.pct-text { font-family: 'DM Mono', monospace; font-size: 11px; color: #94a3b8; min-width: 36px; }
+.weight-cell { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); }
+.inline-input { background: var(--bg); border: 1px solid #1e3a5f; border-radius: 5px; padding: 3px 6px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 12px; width: 90px; outline: none; text-align: right; }
+.btn-del { background: transparent; border: none; color: #475569; cursor: pointer; font-size: 15px; padding: 2px 5px; border-radius: 4px; transition: color .2s; }
+.btn-del:hover { color: #ef5350; }
+
+.btn-sm { background: transparent; border: 1px solid #1e3a5f; border-radius: 6px; padding: 4px 9px; color: var(--accent); font-size: 11px; font-family: 'DM Sans', sans-serif; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.btn-sm-danger { border-color: #7f1d1d; color: #ef5350; }
+
+.subcat-manager { border-top: 1px solid var(--border); padding: 9px 14px; background: #080e1c; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.subcat-manager-label { color: #334155; font-size: 9px; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; white-space: nowrap; }
+.subcat-tag { display: inline-flex; align-items: center; gap: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 3px 8px 3px 10px; }
+.subcat-tag-name { font-size: 11px; color: #94a3b8; }
+.subcat-tag-del { background: none; border: none; color: #334155; cursor: pointer; font-size: 11px; line-height: 1; padding: 0 1px; }
+.subcat-add-form { display: flex; align-items: center; gap: 5px; }
+.subcat-add-input { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 4px 9px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 12px; outline: none; width: 140px; }
+
+/* ── REBALANCE ─────────────────────────────────── */
+.capital-input-wrap { position: relative; width: 100%; max-width: 280px; }
+.capital-euro { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--accent); font-family: 'DM Mono', monospace; font-size: 15px; pointer-events: none; }
+.capital-input { background: var(--bg); border: 1px solid #1e3a5f; border-radius: 10px; padding: 12px 12px 12px 30px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 16px; outline: none; width: 100%; }
+.warn-box { background: #2a1a1a; border: 1px solid #7f1d1d; border-radius: 10px; padding: 12px 16px; margin-bottom: 14px; color: #fca5a5; font-size: 13px; }
+.info-box { background: #0e1f30; border: 1px solid #1e3a5f; border-radius: 10px; padding: 12px 16px; margin-bottom: 14px; color: #90caf9; font-size: 12px; line-height: 1.6; }
+.reb-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.reb-row { background: var(--surface); border: 1px solid var(--border); border-radius: 11px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.reb-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.reb-id { flex: 0 0 90px; }
+.reb-ticker { font-family: 'DM Mono', monospace; font-weight: 600; font-size: 14px; }
+.reb-isin { font-family: 'DM Mono', monospace; font-size: 9px; color: #334155; margin-top: 1px; }
+.reb-cat { color: #475569; font-size: 10px; margin-top: 2px; }
+.reb-name { color: #94a3b8; font-size: 11px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 80px; }
+.reb-num { text-align: right; flex: 0 0 100px; }
+.reb-num-label { color: var(--muted); font-size: 10px; margin-bottom: 2px; }
+.reb-num-val { font-family: 'DM Mono', monospace; font-size: 12px; color: #94a3b8; }
+.reb-action { flex: 0 0 128px; text-align: right; }
+.reb-amount { font-family: 'DM Mono', monospace; font-size: 15px; font-weight: 700; }
+.reb-badge { font-size: 10px; border-radius: 4px; padding: 2px 7px; display: inline-block; margin-top: 3px; }
+.summ-grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.summ-card { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+.summ-title { font-size: 11px; font-weight: 600; margin-bottom: 8px; }
+.summ-item { display: flex; justify-content: space-between; margin-bottom: 4px; gap: 6px; }
+.summ-ticker { font-family: 'DM Mono', monospace; font-size: 11px; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.summ-val { font-family: 'DM Mono', monospace; font-size: 11px; flex-shrink: 0; }
+.summ-total { border-top: 1px solid var(--border); margin-top: 6px; padding-top: 6px; display: flex; justify-content: space-between; }
+.empty-msg { color: #334155; font-size: 11px; }
+.total-info { color: var(--muted); font-size: 12px; margin-top: 10px; }
+.total-info span { color: var(--accent); font-family: 'DM Mono', monospace; font-weight: 600; }
+
+/* ── LOGIN ─────────────────────────────────────── */
+.login-screen { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 500; padding: 20px; }
+.login-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 36px 28px; width: 100%; max-width: 400px; text-align: center; }
+.login-logo { width: 52px; height: 52px; border-radius: 14px; background: linear-gradient(135deg,#1d4ed8,#4fc3f7); display: flex; align-items: center; justify-content: center; font-size: 26px; margin: 0 auto 20px; }
+.login-title { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+.login-sub { color: var(--muted); font-size: 13px; line-height: 1.6; margin-bottom: 28px; }
+.login-features { display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; text-align: left; }
+.login-feature { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #94a3b8; }
+.login-feature-icon { width: 28px; height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+.btn-google { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; background: #fff; border: none; border-radius: 10px; padding: 13px 20px; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; color: #1e293b; cursor: pointer; min-height: 48px; }
+.btn-google img { width: 20px; height: 20px; }
+.login-note { margin-top: 14px; font-size: 11px; color: #334155; line-height: 1.6; }
+.btn-offline { margin-top: 10px; background: transparent; border: none; color: #475569; font-family: 'DM Sans', sans-serif; font-size: 12px; cursor: pointer; text-decoration: underline; padding: 8px; min-height: 44px; }
+
+/* ── EXPORT DRAWER ─────────────────────────────── */
+.export-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 200; backdrop-filter: blur(3px); display: none; }
+.export-overlay.open { display: block; }
+.export-drawer { position: fixed; right: 0; top: 0; bottom: 0; width: 520px; max-width: 100vw; background: var(--surface); border-left: 1px solid var(--border); z-index: 201; display: flex; flex-direction: column; transform: translateX(100%); transition: transform .3s cubic-bezier(.4,0,.2,1); }
+.export-drawer.open { transform: translateX(0); }
+.export-drawer-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; padding-top: calc(16px + var(--safe-top)); }
+.export-drawer-title { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.btn-close-drawer { background: transparent; border: none; color: var(--muted); font-size: 20px; cursor: pointer; padding: 8px 12px; border-radius: 8px; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; }
+.export-drawer-body { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding-bottom: calc(16px + var(--safe-bottom)); }
+.format-tabs { display: flex; gap: 5px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 4px; }
+.format-tab { flex: 1; border: none; border-radius: 7px; padding: 8px 4px; font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600; cursor: pointer; background: transparent; color: #475569; text-align: center; min-height: 44px; }
+.format-tab.active { background: var(--border); color: var(--text); }
+.format-tab .ftab-icon { font-size: 15px; display: block; margin-bottom: 2px; }
+.export-preview { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px; font-family: 'DM Mono', monospace; font-size: 11px; line-height: 1.65; color: #94a3b8; white-space: pre-wrap; word-break: break-all; max-height: 260px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.export-actions { display: flex; gap: 8px; }
+.btn-copy { flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px; background: var(--border); border: 1px solid #334155; border-radius: 10px; padding: 12px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; min-height: 48px; }
+.btn-copy.copied { background: #0e2a1e; border-color: #166534; color: #86efac; }
+.btn-download { flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px; background: #7c3aed; border: none; border-radius: 10px; padding: 12px; color: #fff; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; min-height: 48px; }
+.prompt-section-title { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; }
+.prompt-cards { display: flex; flex-direction: column; gap: 7px; }
+.prompt-card { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px 13px; cursor: pointer; min-height: 44px; position: relative; overflow: hidden; }
+.prompt-card:active { border-color: #7c3aed; background: #12082a; }
+.prompt-card-title { font-size: 12px; font-weight: 600; color: #a78bfa; margin-bottom: 3px; display: flex; align-items: center; }
+.prompt-card-text { font-size: 11px; color: var(--muted); line-height: 1.5; }
+.export-info { background: #12082a; border: 1px solid #4c1d95; border-radius: 10px; padding: 12px 14px; font-size: 11px; color: #c4b5fd; line-height: 1.6; }
+
+/* ── MODAL ─────────────────────────────────────── */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.72); display: flex; align-items: flex-end; justify-content: center; z-index: 300; backdrop-filter: blur(4px); }
+.modal { background: var(--surface); border: 1px solid #1e3a5f; border-radius: 20px 20px 0 0; padding: 20px; width: 100%; max-width: 520px; max-height: 93vh; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding-bottom: calc(20px + var(--safe-bottom)); }
+.modal-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 14px; }
+.modal h3 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.modal-subtitle { color: #475569; font-size: 12px; margin-bottom: 16px; }
+.detect-banner { border-radius: 10px; padding: 10px 13px; margin-bottom: 14px; display: none; align-items: flex-start; gap: 9px; font-size: 12px; line-height: 1.5; }
+.detect-banner.found { background: #0e2a1e; border: 1px solid #166534; color: #86efac; display: flex; }
+.detect-banner.notfound { background: #1a1510; border: 1px solid #78350f; color: #fcd34d; display: flex; }
+.detect-icon { font-size: 15px; flex-shrink: 0; }
+.detect-override { color: var(--muted); font-size: 10px; margin-top: 2px; }
+.id-toggle { display: flex; gap: 0; margin-bottom: 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 3px; }
+.id-toggle-btn { flex: 1; border: none; border-radius: 8px; padding: 10px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; background: transparent; color: #475569; min-height: 44px; }
+.id-toggle-btn.active { background: #1e3a5f; color: var(--accent); }
+.field { margin-bottom: 13px; }
+.field label { display: block; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+.field input, .field select { width: 100%; background: var(--bg); border: 1px solid #1e3a5f; border-radius: 10px; padding: 13px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 16px; outline: none; min-height: 48px; }
+.field input:focus { border-color: var(--accent); }
+.field input.optional { border-color: var(--border); }
+.field select { font-family: 'DM Sans', sans-serif; font-size: 15px; }
+.field-note { font-size: 10px; color: #334155; margin-top: 4px; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.isin-status { display: flex; align-items: center; gap: 6px; margin-top: 5px; font-size: 11px; }
+.isin-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.modal-divider { border: none; border-top: 1px solid var(--border); margin: 14px 0 12px; }
+.modal-btns { display: flex; gap: 10px; margin-top: 18px; }
+.btn-cancel { flex: 1; background: transparent; border: 1px solid #334155; border-radius: 12px; padding: 14px; color: #94a3b8; font-family: 'DM Sans', sans-serif; font-size: 15px; cursor: pointer; min-height: 52px; }
+.btn-confirm { flex: 2; background: #1d4ed8; border: none; border-radius: 12px; padding: 14px; color: #fff; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 700; cursor: pointer; min-height: 52px; }
+
+/* ── RESPONSIVE ────────────────────────────────── */
+@media (max-width: 640px) {
+  .bottom-nav { display: block; }
+  .fab { display: flex; }
+  .header .tab-btn, .header .btn-add-desktop, .header .btn-export { display: none; }
+  .container { padding: 12px; padding-bottom: calc(80px + var(--safe-bottom)); }
+  .summary-grid { grid-template-columns: 1fr; gap: 10px; }
+  .table-wrap { display: none; }
+  .card-wrap { display: block; }
+  .summ-grid3 { grid-template-columns: 1fr; }
+  .reb-num { display: none; }
+  .export-drawer { width: 100vw; border-left: none; border-top: 1px solid var(--border); border-radius: 20px 20px 0 0; top: auto; height: 90vh; }
+  .target-pill-alloc { display: none; }
+  .target-pill-sep { display: none; }
+}
+@media (min-width: 641px) {
+  .table-wrap { display: block; }
+  .card-wrap { display: none; }
+  .modal-overlay { align-items: center; }
+  .modal { border-radius: 16px; max-height: 88vh; }
+  .modal-handle { display: none; }
+}
+@media (min-width: 641px) and (max-width: 900px) {
+  .summary-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-screen" id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">⚖</div>
+    <div class="login-title">Portfolio Rebalancer</div>
+    <div class="login-sub">Dati salvati nel tuo Google Drive, sincronizzati su tutti i dispositivi.</div>
+    <div class="login-features">
+      <div class="login-feature"><div class="login-feature-icon" style="background:#0e2a1e">🔒</div><span>File privato — solo tu</span></div>
+      <div class="login-feature"><div class="login-feature-icon" style="background:#0e1f30">🔄</div><span>Sync automatico multi-device</span></div>
+      <div class="login-feature"><div class="login-feature-icon" style="background:#12082a">🤖</div><span>Esporta per analisi AI</span></div>
+    </div>
+    <button class="btn-google ripple" onclick="signIn()">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G">Accedi con Google
+    </button>
+    <p class="login-note">Accesso limitato al solo file che l'app crea.</p>
+    <button class="btn-offline" onclick="useOffline()">Continua senza sincronizzazione →</button>
+  </div>
+</div>
+
+<!-- INSTALL BANNER (Android) -->
+<div class="install-banner" id="install-banner">
+  <div class="install-banner-text">
+    <div class="install-banner-title">📲 Installa l'app</div>
+    <div class="install-banner-sub">Aggiungila alla schermata home per accesso rapido</div>
+  </div>
+  <button class="btn-install" onclick="installApp()">Installa</button>
+  <button class="btn-install-dismiss" onclick="dismissInstall()">✕</button>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none">
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon">⚖</div>
+      <div><div class="logo-title">Portfolio Rebalancer</div><div class="logo-sub">ETF ALLOCATION MANAGER</div></div>
+    </div>
+    <div class="header-actions">
+      <button class="tab-btn active ripple" onclick="switchTab('overview')">Overview</button>
+      <button class="tab-btn ripple" onclick="switchTab('ribilancia')">Ribilancia</button>
+      <button class="btn-add-desktop ripple" onclick="openModal()">+ Aggiungi ETF</button>
+      <button class="btn-export ripple" onclick="openExport()">🤖 Esporta AI</button>
+      <div class="sync-badge disconnected" id="sync-badge" onclick="syncBadgeClick()">
+        <div class="sync-dot"></div><span id="sync-label">Non connesso</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div id="tab-overview"></div>
+    <div id="tab-ribilancia" style="display:none"></div>
+  </div>
+
+  <!-- Bottom Nav -->
+  <div class="bottom-nav">
+    <div class="bottom-nav-inner">
+      <button class="nav-item active ripple" id="nav-overview" onclick="switchTab('overview')">
+        <span class="nav-item-icon">📊</span>Overview
+      </button>
+      <button class="nav-item ripple" id="nav-ribilancia" onclick="switchTab('ribilancia')">
+        <span class="nav-item-icon">⚖️</span>Ribilancia
+      </button>
+      <button class="nav-item ripple" onclick="openExport()">
+        <span class="nav-item-icon">🤖</span>Esporta AI
+      </button>
+      <button class="nav-item ripple" onclick="syncBadgeClick()" style="max-width:60px">
+        <span class="nav-item-icon" id="nav-sync-icon">☁️</span>
+        <span id="nav-sync-label" style="font-size:9px">Sync</span>
+      </button>
+    </div>
+  </div>
+
+  <button class="fab ripple" onclick="openModal()" aria-label="Aggiungi ETF">＋</button>
+</div>
+
+<!-- EXPORT DRAWER -->
+<div class="export-overlay" id="export-overlay" onclick="closeExport()"></div>
+<div class="export-drawer" id="export-drawer">
+  <div class="export-drawer-header">
+    <div class="export-drawer-title">🤖 Esporta per AI</div>
+    <button class="btn-close-drawer ripple" onclick="closeExport()">✕</button>
+  </div>
+  <div class="export-drawer-body">
+    <div><div class="prompt-section-title">Formato</div>
+      <div class="format-tabs">
+        <button class="format-tab active ripple" onclick="setFormat('summary')" id="fmt-summary"><span class="ftab-icon">📋</span>Riepilogo</button>
+        <button class="format-tab ripple" onclick="setFormat('json')" id="fmt-json"><span class="ftab-icon">{ }</span>JSON</button>
+        <button class="format-tab ripple" onclick="setFormat('csv')" id="fmt-csv"><span class="ftab-icon">📊</span>CSV</button>
+        <button class="format-tab ripple" onclick="setFormat('full')" id="fmt-full"><span class="ftab-icon">📄</span>Completo</button>
+      </div>
+    </div>
+    <div><div class="prompt-section-title">Anteprima</div><div class="export-preview" id="export-preview"></div></div>
+    <div class="export-actions">
+      <button class="btn-copy ripple" id="btn-copy" onclick="copyExport()">📋 Copia</button>
+      <button class="btn-download ripple" onclick="downloadExport()">⬇ Scarica</button>
+    </div>
+    <div><div class="prompt-section-title">Prompt pronti per Claude / ChatGPT</div><div class="prompt-cards" id="prompt-cards"></div></div>
+    <div class="export-info">💡 Clicca un prompt per copiarlo con i tuoi dati, poi incollalo in una nuova chat.</div>
+  </div>
+</div>
+
+<!-- MODAL ETF -->
+<div class="modal-overlay" id="modal" style="display:none" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>Aggiungi ETF</h3>
+    <p class="modal-subtitle">Inserisci l'ISIN — tutti i campi vengono rilevati automaticamente.</p>
+
+    <!-- ISIN field -->
+    <div class="field">
+      <label>ISIN <span style="color:#ef5350">*</span></label>
+      <input type="text" id="m-isin"
+        placeholder="es. IE00B3RBWM25"
+        maxlength="12"
+        autocomplete="off" autocapitalize="characters" spellcheck="false"
+        style="font-size:18px;letter-spacing:.08em;font-family:'DM Mono',monospace"
+        oninput="handleIsinInput(this)"
+        onpaste="setTimeout(()=>handleIsinInput(this),150)">
+      <div class="isin-status" id="isin-status" style="display:none">
+        <div class="isin-dot" id="isin-dot"></div><span id="isin-msg"></span>
+      </div>
+      <div class="field-note">12 caratteri: 2 lettere paese + 9 alfanumerici + 1 cifra di controllo</div>
+    </div>
+
+    <!-- Auto-detected info card -->
+    <div id="m-detected-card" style="display:none;background:#0e2a1e;border:1px solid #166534;border-radius:12px;padding:14px 16px;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <span style="font-size:16px">✓</span>
+        <span style="color:#66bb6a;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em">ETF rilevato</span>
+      </div>
+      <div id="m-detected-name" style="color:#e2e8f0;font-weight:600;font-size:15px;margin-bottom:6px;"></div>
+      <div id="m-detected-cat" style="color:#86efac;font-size:12px;font-family:'DM Mono',monospace;"></div>
+    </div>
+
+    <!-- Not found card — manual fields -->
+    <div id="m-notfound-card" style="display:none;">
+      <div style="background:#1a1510;border:1px solid #78350f;border-radius:12px;padding:12px 14px;margin-bottom:14px;color:#fcd34d;font-size:12px;">
+        ⚠ ISIN non trovato nel database — compila i campi manualmente.
+      </div>
+      <div class="field">
+        <label>Nome ETF <span style="color:#ef5350">*</span></label>
+        <input type="text" id="m-name" placeholder="es. Vanguard FTSE All-World" autocomplete="off">
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Categoria</label>
+          <select id="m-cat" onchange="manualCatChange()">
+            <option>Azionario</option><option>Obbligazionario</option><option>Materie Prime</option>
+            <option>Immobiliare</option><option>Liquidità</option><option>Crypto</option><option>Altro</option>
+          </select>
+        </div>
+        <div class="field" id="m-subcat-field" style="display:none">
+          <label>Sottocategoria</label>
+          <select id="m-subcat"></select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Value field — always visible -->
+    <div class="field">
+      <label>Valore attuale (€)</label>
+      <input type="number" id="m-value" placeholder="es. 5000" class="optional" inputmode="decimal">
+    </div>
+
+    <div class="modal-btns">
+      <button class="btn-cancel ripple" onclick="closeModal()">Annulla</button>
+      <button class="btn-confirm ripple" onclick="confirmModal()">Aggiungi</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── PWA: MANIFEST (inline) ──────────────────────────────────────────
+const manifest = {
+  name: "Portfolio Rebalancer",
+  short_name: "Portfolio",
+  description: "ETF portfolio manager con sincronizzazione Google Drive",
+  start_url: "./",
+  display: "standalone",
+  background_color: "#0d0d1a",
+  theme_color: "#0d0d1a",
+  orientation: "any",
+  icons: [
+    { src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231d4ed8'/><text y='.9em' font-size='80' x='10'>⚖</text></svg>", sizes: "192x192", type: "image/svg+xml" },
+    { src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231d4ed8'/><text y='.9em' font-size='80' x='10'>⚖</text></svg>", sizes: "512x512", type: "image/svg+xml", purpose: "any maskable" }
+  ]
+};
+const manifestBlob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
+const manifestURL = URL.createObjectURL(manifestBlob);
+const manifestLink = document.createElement('link');
+manifestLink.rel = 'manifest';
+manifestLink.href = manifestURL;
+document.head.appendChild(manifestLink);
+
+// ── PWA: SERVICE WORKER (inline) ────────────────────────────────────
+const SW_CODE = `
+const CACHE = 'portfolio-v1';
+const ASSETS = [self.location.href.replace('/sw.js','')];
+self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS))));
+self.addEventListener('activate', e => e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))));
+self.addEventListener('fetch', e => {
+  if(!e.request.url.startsWith('http')) return;
+  if(e.request.url.includes('googleapis.com') || e.request.url.includes('accounts.google.com') || e.request.url.includes('fonts.googleapis')) return;
+  e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).catch(() => caches.match('/'))));
+});
+`;
+if ('serviceWorker' in navigator) {
+  const swBlob = new Blob([SW_CODE], {type: 'application/javascript'});
+  const swURL = URL.createObjectURL(swBlob);
+  navigator.serviceWorker.register(swURL, {scope: './'}).catch(()=>{});
+}
+
+// ── PWA: INSTALL PROMPT (Android) ──────────────────────────────────
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  setTimeout(() => {
+    const b = document.getElementById('install-banner');
+    if(b && !localStorage.getItem('installDismissed')) b.classList.add('show');
+  }, 3000);
+});
+window.addEventListener('appinstalled', () => {
+  document.getElementById('install-banner')?.classList.remove('show');
+  deferredInstallPrompt = null;
+});
+function installApp() {
+  if(!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  deferredInstallPrompt.userChoice.then(() => { deferredInstallPrompt = null; });
+  document.getElementById('install-banner')?.classList.remove('show');
+}
+function dismissInstall() {
+  document.getElementById('install-banner')?.classList.remove('show');
+  localStorage.setItem('installDismissed', '1');
+}
+
+// ── RIPPLE EFFECT (Android Material) ───────────────────────────────
+document.addEventListener('pointerdown', e => {
+  const el = e.target.closest('.ripple');
+  if (!el) return;
+  const rect = el.getBoundingClientRect();
+  const size = Math.max(rect.width, rect.height) * 2;
+  const wave = document.createElement('span');
+  wave.className = 'ripple-wave';
+  wave.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX-rect.left-size/2}px;top:${e.clientY-rect.top-size/2}px`;
+  el.appendChild(wave);
+  wave.addEventListener('animationend', () => wave.remove());
+});
+
+// ── ANDROID BACK BUTTON ─────────────────────────────────────────────
+function pushState(id) { history.pushState({panel: id}, ''); }
+window.addEventListener('popstate', e => {
+  const modal = document.getElementById('modal');
+  const drawer = document.getElementById('export-drawer');
+  if(modal && modal.style.display !== 'none') { closeModal(); return; }
+  if(drawer && drawer.classList.contains('open')) { closeExport(); return; }
+});
+
+// ── CONFIG ──────────────────────────────────────────────────────────
+const CLIENT_ID  = '959051714852-ip1k8c3nrg3u0cgm5pr7c69a1830eu4h.apps.googleusercontent.com';
+const SCOPES     = 'https://www.googleapis.com/auth/drive.file';
+const DRIVE_FILE = 'portfolio_rebalancer_data.json';
+const DRIVE_API  = 'https://www.googleapis.com/drive/v3';
+const UPLOAD_API = 'https://www.googleapis.com/upload/drive/v3';
+
+const CATS = ["Azionario","Obbligazionario","Materie Prime","Immobiliare","Liquidità","Crypto","Altro"];
+const HAS_SUBCATS = ["Azionario","Obbligazionario"];
+const COL = {
+  "Azionario":{"bg":"#122a45","accent":"#4fc3f7"},"Obbligazionario":{"bg":"#0e2a1e","accent":"#66bb6a"},
+  "Materie Prime":{"bg":"#2e1e08","accent":"#ffa726"},"Immobiliare":{"bg":"#1e1030","accent":"#ce93d8"},
+  "Liquidità":{"bg":"#0e1f30","accent":"#90caf9"},"Crypto":{"bg":"#2a0e0e","accent":"#ef5350"},
+  "Altro":{"bg":"#1a1a1a","accent":"#b0bec5"}
+};
+const SUBCAT_TINTS = {
+  "Azionario":["#4fc3f7","#38bdf8","#0ea5e9","#60a5fa","#a5b4fc","#93c5fd","#7dd3fc","#bae6fd"],
+  "Obbligazionario":["#66bb6a","#4ade80","#34d399","#6ee7b7","#86efac","#a7f3d0","#bbf7d0","#d1fae5"]
+};
+
+const ETF_DB = [
+  {ticker:"VWCE",isin:"IE00B3RBWM25",name:"Vanguard FTSE All-World UCITS ETF",category:"Azionario",subcategory:"Globale"},
+  {ticker:"SWDA",isin:"IE00B4L5Y983",name:"iShares Core MSCI World UCITS ETF",category:"Azionario",subcategory:"Globale"},
+  {ticker:"IWDA",isin:"IE00B4L5Y983",name:"iShares Core MSCI World (Acc)",category:"Azionario",subcategory:"Globale"},
+  {ticker:"FWRA",isin:"IE00BFNM3P36",name:"Invesco FTSE All-World UCITS ETF",category:"Azionario",subcategory:"Globale"},
+  {ticker:"SSAC",isin:"IE00B3YCGJ38",name:"iShares MSCI ACWI UCITS ETF",category:"Azionario",subcategory:"Globale"},
+  {ticker:"CSPX",isin:"IE00B5BMR087",name:"iShares Core S&P 500 UCITS ETF",category:"Azionario",subcategory:"USA"},
+  {ticker:"VUAA",isin:"IE00BFMXXD54",name:"Vanguard S&P 500 UCITS ETF (Acc)",category:"Azionario",subcategory:"USA"},
+  {ticker:"VUSA",isin:"IE00B3XXRP09",name:"Vanguard S&P 500 UCITS ETF (Dist)",category:"Azionario",subcategory:"USA"},
+  {ticker:"CNDX",isin:"IE00B53SZB19",name:"iShares Nasdaq 100 UCITS ETF",category:"Azionario",subcategory:"USA"},
+  {ticker:"EQQQ",isin:"IE0032077012",name:"Invesco EQQQ Nasdaq-100 UCITS ETF",category:"Azionario",subcategory:"USA"},
+  {ticker:"IVV", isin:"US4642872265",name:"iShares Core S&P 500 ETF",category:"Azionario",subcategory:"USA"},
+  {ticker:"VOO", isin:"US9229083632",name:"Vanguard S&P 500 ETF",category:"Azionario",subcategory:"USA"},
+  {ticker:"QQQ", isin:"US46090E1038",name:"Invesco QQQ Trust",category:"Azionario",subcategory:"USA"},
+  {ticker:"VTI", isin:"US9229087690",name:"Vanguard Total Stock Market ETF",category:"Azionario",subcategory:"USA"},
+  {ticker:"IMEU",isin:"IE00B4K48X80",name:"iShares Core MSCI Europe UCITS ETF",category:"Azionario",subcategory:"Europa"},
+  {ticker:"VEUR",isin:"IE00B945VV12",name:"Vanguard FTSE Developed Europe UCITS ETF",category:"Azionario",subcategory:"Europa"},
+  {ticker:"EXIS",isin:"DE0005933931",name:"iShares Core DAX UCITS ETF",category:"Azionario",subcategory:"Europa"},
+  {ticker:"EIMI",isin:"IE00BKM4GZ66",name:"iShares Core MSCI EM IMI UCITS ETF",category:"Azionario",subcategory:"Emergenti"},
+  {ticker:"IEMA",isin:"IE00B4L5YC18",name:"iShares MSCI Emerging Markets UCITS ETF",category:"Azionario",subcategory:"Emergenti"},
+  {ticker:"VFEM",isin:"IE00B3VVMM84",name:"Vanguard FTSE Emerging Markets UCITS ETF",category:"Azionario",subcategory:"Emergenti"},
+  {ticker:"VWO", isin:"US9220428588",name:"Vanguard Emerging Markets ETF",category:"Azionario",subcategory:"Emergenti"},
+  {ticker:"IJPA",isin:"IE00B4N1BC98",name:"iShares Core MSCI Japan IMI UCITS ETF",category:"Azionario",subcategory:"Pacifico"},
+  {ticker:"VJPA",isin:"IE00B95PGT31",name:"Vanguard FTSE Japan UCITS ETF",category:"Azionario",subcategory:"Pacifico"},
+  {ticker:"AGGH",isin:"IE00BDBRDM35",name:"iShares Core Global Aggregate Bond UCITS ETF",category:"Obbligazionario",subcategory:"Governativo"},
+  {ticker:"VAGF",isin:"IE00BG47KB92",name:"Vanguard Global Aggregate Bond UCITS ETF",category:"Obbligazionario",subcategory:"Governativo"},
+  {ticker:"IBTS",isin:"IE00B14X4S71",name:"iShares USD Treasury Bond 1-3yr UCITS ETF",category:"Obbligazionario",subcategory:"Governativo"},
+  {ticker:"IBTM",isin:"IE00B1FZS798",name:"iShares USD Treasury Bond 7-10yr UCITS ETF",category:"Obbligazionario",subcategory:"Governativo"},
+  {ticker:"IBTL",isin:"IE00B3B8Q275",name:"iShares USD Treasury Bond 20+yr UCITS ETF",category:"Obbligazionario",subcategory:"Governativo"},
+  {ticker:"TLT", isin:"US4642874329",name:"iShares 20+ Year Treasury Bond ETF",category:"Obbligazionario",subcategory:"Governativo"},
+  {ticker:"IEAC",isin:"IE00B3F81409",name:"iShares Core EUR Corp Bond UCITS ETF",category:"Obbligazionario",subcategory:"Corporate"},
+  {ticker:"LQDE",isin:"IE0032523478",name:"iShares USD Corp Bond UCITS ETF",category:"Obbligazionario",subcategory:"Corporate"},
+  {ticker:"LQD", isin:"US4642876555",name:"iShares iBoxx $ IG Corp Bond ETF",category:"Obbligazionario",subcategory:"Corporate"},
+  {ticker:"IHYG",isin:"IE00B66F4759",name:"iShares EUR High Yield Corp Bond UCITS ETF",category:"Obbligazionario",subcategory:"High Yield"},
+  {ticker:"DHYG",isin:"IE00BF3N7102",name:"iShares USD High Yield Corp Bond UCITS ETF",category:"Obbligazionario",subcategory:"High Yield"},
+  {ticker:"HYG", isin:"US4642885135",name:"iShares iBoxx $ High Yield Corp Bond ETF",category:"Obbligazionario",subcategory:"High Yield"},
+  {ticker:"EMBE",isin:"IE00B4613386",name:"iShares JPMorgan USD EM Bond UCITS ETF",category:"Obbligazionario",subcategory:"Emergenti"},
+  {ticker:"EMB", isin:"US4642882819",name:"iShares JPMorgan USD EM Bond ETF",category:"Obbligazionario",subcategory:"Emergenti"},
+  {ticker:"SGLD",isin:"IE00B579F325",name:"Invesco Physical Gold ETC",category:"Materie Prime",subcategory:null},
+  {ticker:"IGLN",isin:"IE00B4ND3602",name:"iShares Physical Gold ETC",category:"Materie Prime",subcategory:null},
+  {ticker:"PHAU",isin:"JE00B1VS3770",name:"WisdomTree Physical Gold",category:"Materie Prime",subcategory:null},
+  {ticker:"GLD", isin:"US78463V1070",name:"SPDR Gold Shares",category:"Materie Prime",subcategory:null},
+  {ticker:"CMOD",isin:"IE00BD6FM271",name:"iShares Diversified Commodity Swap UCITS ETF",category:"Materie Prime",subcategory:null},
+  {ticker:"IQQP",isin:"IE00B1FZS350",name:"iShares Developed Markets Property UCITS ETF",category:"Immobiliare",subcategory:null},
+  {ticker:"WPRE",isin:"IE00B8GF1M35",name:"iShares World Real Estate UCITS ETF",category:"Immobiliare",subcategory:null},
+  {ticker:"VNQ", isin:"US9229085538",name:"Vanguard Real Estate ETF",category:"Immobiliare",subcategory:null},
+  {ticker:"XEON",isin:"LU0290358497",name:"Xtrackers EUR Overnight Rate Swap UCITS ETF",category:"Liquidità",subcategory:null},
+  {ticker:"CSH2",isin:"IE0002XZSHO1",name:"iShares EUR Ultrashort Bond UCITS ETF",category:"Liquidità",subcategory:null},
+  {ticker:"ESTR",isin:"LU2215097533",name:"Amundi Euro Overnight Return UCITS ETF",category:"Liquidità",subcategory:null},
+  {ticker:"SGOV",isin:"US46436E7189",name:"iShares 0-3 Month Treasury Bond ETF",category:"Liquidità",subcategory:null},
+  {ticker:"BTCE",isin:"DE000A27Z304",name:"ETC Group Physical Bitcoin ETC",category:"Crypto",subcategory:null},
+  {ticker:"ETHE",isin:"DE000A3GMKD7",name:"ETC Group Physical Ethereum ETC",category:"Crypto",subcategory:null},
+];
+const DB_BY_TICKER={},DB_BY_ISIN={};
+ETF_DB.forEach(e=>{if(e.ticker)DB_BY_TICKER[e.ticker]=e;if(e.isin)DB_BY_ISIN[e.isin]=e;});
+
+// ── STATE ───────────────────────────────────────────────────────────
+let nextId=30,idMode="ticker",modalDetected=null;
+let accessToken=null,driveFileId=null,saveTimer=null,isOffline=false;
+let catTargets={"Azionario":60,"Obbligazionario":18,"Materie Prime":8,"Immobiliare":6,"Liquidità":8,"Crypto":0,"Altro":0};
+let subcatTargets={"Azionario":{"Globale":33,"USA":20,"Europa":0,"Emergenti":7,"Pacifico":0},"Obbligazionario":{"Governativo":12,"Corporate":0,"High Yield":6,"Emergenti":0}};
+let subcats={"Azionario":["Globale","USA","Europa","Emergenti","Pacifico"],"Obbligazionario":["Governativo","Corporate","High Yield","Emergenti"]};
+let etfs=[
+  {id:1,ticker:"VWCE",isin:"IE00B3RBWM25",name:"Vanguard FTSE All-World",      category:"Azionario",      subcategory:"Globale",    value:8000},
+  {id:2,ticker:"CSPX",isin:"IE00B5BMR087",name:"iShares Core S&P 500",          category:"Azionario",      subcategory:"USA",        value:5000},
+  {id:3,ticker:"IEMA",isin:"IE00B4L5YC18",name:"iShares MSCI Emerging Markets", category:"Azionario",      subcategory:"Emergenti",  value:2000},
+  {id:4,ticker:"AGGH",isin:"IE00BDBRDM35",name:"iShares Core Global Agg Bond",  category:"Obbligazionario",subcategory:"Governativo",value:3000},
+  {id:5,ticker:"IHYG",isin:"IE00B66F4759",name:"iShares EUR High Yield Corp",   category:"Obbligazionario",subcategory:"High Yield", value:1500},
+  {id:6,ticker:"SGLD",isin:"IE00B579F325",name:"Invesco Physical Gold ETC",     category:"Materie Prime",  subcategory:null,         value:2000},
+  {id:7,ticker:"IQQP",isin:"IE00B1FZS350",name:"iShares Developed Mkt Property",category:"Immobiliare",    subcategory:null,         value:1500},
+  {id:8,ticker:"XEON",isin:"LU0290358497",name:"Xtrackers EUR Overnight Rate",  category:"Liquidità",      subcategory:null,         value:2000},
+];
+let activeTab="overview",editingId=null,exportFormat="summary";
+
+// ── HELPERS ─────────────────────────────────────────────────────────
+const fmt=n=>new Intl.NumberFormat("it-IT",{style:"currency",currency:"EUR",minimumFractionDigits:2}).format(n);
+const total=()=>etfs.reduce((a,e)=>a+e.value,0);
+const sumCatTargets=()=>Object.values(catTargets).reduce((a,v)=>a+v,0);
+function subcatColor(cat,sub){const l=subcats[cat]||[],i=l.indexOf(sub);return(SUBCAT_TINTS[cat]||[])[i%(SUBCAT_TINTS[cat]?.length||1)]||(COL[cat]||COL["Altro"]).accent;}
+function allocColor(a,t){if(!t)return a>0?"#ffa726":"#64748b";const d=Math.abs(a-t);return d<0.5?"#66bb6a":d<2?"#ffa726":"#ef5350";}
+function targetPill(label,tgt,act,inputId,onchangeCb,small){
+  const cls=small?"target-pill target-pill-sm":"target-pill";
+  const ac=allocColor(act,tgt),sign=act-tgt,ss=sign>=0?`+${sign.toFixed(1)}`:sign.toFixed(1);
+  const allocHtml=(tgt===0&&act===0)?"—":`${act.toFixed(1)}% <span style="color:${ac}">(${ss}%)</span>`;
+  return `<div class="${cls}"><span class="target-pill-label">${label}</span><div style="display:flex;align-items:baseline;gap:2px"><input class="target-pill-input" type="number" inputmode="decimal" value="${tgt}" id="${inputId}" onchange="${onchangeCb}" min="0" max="100" step="0.5"><span class="target-pill-pct">%</span></div><div class="target-pill-sep"></div><span class="target-pill-alloc">${allocHtml}</span></div>`;
+}
+
+// ── SYNC ────────────────────────────────────────────────────────────
+function setSyncStatus(s,l){
+  const b=document.getElementById("sync-badge"),lb=document.getElementById("sync-label");
+  if(b){b.className="sync-badge "+s;lb.textContent=l;}
+  const ni=document.getElementById("nav-sync-icon"),nl=document.getElementById("nav-sync-label");
+  if(ni)ni.textContent=s==="connected"?"✅":s==="saving"?"🔄":s==="error"?"❌":"☁️";
+  if(nl)nl.textContent=s==="connected"?"Sync ✓":s==="saving"?"Sync…":s==="error"?"Errore":"Sync";
+}
+function signIn(){
+  const btn = document.querySelector(".btn-google");
+  try {
+    if(typeof google === "undefined"){
+      alert("Libreria Google non caricata.\nVerifica la connessione internet e ricarica la pagina.");
+      return;
+    }
+    if(!google.accounts || !google.accounts.oauth2){
+      alert("google.accounts.oauth2 non disponibile.\nRicarica la pagina e riprova.");
+      return;
+    }
+    if(btn){ btn.innerHTML = "⏳ Connessione in corso…"; btn.disabled = true; }
+    const c = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID,
+      scope: SCOPES,
+      error_callback: (e) => {
+        if(btn){ btn.disabled=false; btn.innerHTML='<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" height="20"> Accedi con Google'; }
+        if(e.type === "popup_closed") return; // user closed popup, no alert needed
+        alert("Errore Google: " + (e.message || e.type || JSON.stringify(e)));
+      },
+      callback: async(r) => {
+        if(btn){ btn.disabled=false; btn.innerHTML='<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" height="20"> Accedi con Google'; }
+        if(r.error){
+          alert("Errore login: " + (r.error_description || r.error));
+          return;
+        }
+        accessToken = r.access_token;
+        setSyncStatus("saving","Caricamento…");
+        document.getElementById("login-screen").style.display = "none";
+        document.getElementById("app").style.display = "block";
+        await loadFromDrive();
+        renderOverview();
+      }
+    });
+    c.requestAccessToken({prompt: "consent"});
+  } catch(e) {
+    if(btn){ btn.disabled=false; btn.innerHTML='<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" height="20"> Accedi con Google'; }
+    alert("Errore JavaScript: " + e.message + "\n\nApri la console del browser (F12) per dettagli.");
+  }
+}
+function useOffline(){isOffline=true;document.getElementById("login-screen").style.display="none";document.getElementById("app").style.display="block";setSyncStatus("disconnected","Locale");renderOverview();}
+function syncBadgeClick(){if(!accessToken)signIn();}
+function getState(){return{etfs,catTargets,subcatTargets,subcats,nextId};}
+function setState(s){if(!s)return;if(s.etfs)etfs=s.etfs;if(s.catTargets)catTargets=s.catTargets;if(s.subcatTargets)subcatTargets=s.subcatTargets;if(s.subcats)subcats=s.subcats;if(s.nextId)nextId=s.nextId;}
+async function driveRequest(method,url,body,params){const q=params?'?'+new URLSearchParams(params):'';const opts={method,headers:{Authorization:`Bearer ${accessToken}`}};if(body){opts.headers['Content-Type']='application/json';opts.body=JSON.stringify(body);}const r=await fetch(url+q,opts);if(!r.ok)throw new Error(`${r.status}`);return r.json();}
+async function findDriveFile(){const r=await driveRequest('GET',`${DRIVE_API}/files`,null,{q:`name='${DRIVE_FILE}' and trashed=false`,spaces:'drive',fields:'files(id,name,modifiedTime)'});return r.files?.[0]||null;}
+async function loadFromDrive(){try{const f=await findDriveFile();if(f){driveFileId=f.id;const r=await fetch(`${DRIVE_API}/files/${driveFileId}?alt=media`,{headers:{Authorization:`Bearer ${accessToken}`}});if(r.ok){const d=await r.json();setState(d);const dt=new Date(f.modifiedTime);setSyncStatus("connected",`Sync ${dt.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"})}`);}}}catch(e){setSyncStatus("error","Errore");}if(!driveFileId)await saveToDrive();}
+async function saveToDrive(){if(isOffline||!accessToken)return;setSyncStatus("saving","Salvataggio…");try{const c=JSON.stringify(getState());if(driveFileId){await fetch(`${UPLOAD_API}/files/${driveFileId}?uploadType=media`,{method:'PATCH',headers:{Authorization:`Bearer ${accessToken}`,'Content-Type':'application/json'},body:c});}else{const m={name:DRIVE_FILE,mimeType:'application/json'};const f=new FormData();f.append('metadata',new Blob([JSON.stringify(m)],{type:'application/json'}));f.append('file',new Blob([c],{type:'application/json'}));const r=await fetch(`${UPLOAD_API}/files?uploadType=multipart`,{method:'POST',headers:{Authorization:`Bearer ${accessToken}`},body:f});const res=await r.json();driveFileId=res.id;}const n=new Date();setSyncStatus("connected",`Salvato ${n.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"})}`);}catch(e){setSyncStatus("error","Errore salvataggio");}}
+function scheduleSave(){if(isOffline||!accessToken)return;clearTimeout(saveTimer);setSyncStatus("saving","In attesa…");saveTimer=setTimeout(()=>saveToDrive(),1500);}
+
+// ── ISIN ────────────────────────────────────────────────────────────
+function isValidIsin(v){if(!/^[A-Z]{2}[A-Z0-9]{9}[0-9]$/.test(v))return false;let d="";for(const c of v){const x=c.charCodeAt(0);d+=x>=65?String(x-55):c;}let s=0;for(let i=0;i<d.length;i++){let x=parseInt(d[d.length-1-i]);if(i%2===1){x*=2;if(x>9)x-=9;}s+=x;}return s%10===0;}
+function validateIsin(v){const el=document.getElementById("isin-status"),dot=document.getElementById("isin-dot"),msg=document.getElementById("isin-msg");if(!v){el.style.display="none";return;}el.style.display="flex";if(v.length<12){dot.style.background="#64748b";msg.style.color="#64748b";msg.textContent=`${v.length}/12`;}else if(isValidIsin(v)){dot.style.background="#66bb6a";msg.style.color="#66bb6a";msg.textContent="✓ Valido";}else{dot.style.background="#ef5350";msg.style.color="#ef5350";msg.textContent="Non valido";}}
+
+// ── AUTO-DETECT ──────────────────────────────────────────────────────
+// ── MODAL LOGIC (new simplified) ─────────────────────────────────────
+let modalEtfDetected = null; // the matched ETF_DB entry
+
+function handleIsinInput(el) {
+  // Sanitise: uppercase, only alphanumeric, max 12 chars
+  el.value = el.value.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 12);
+  const val = el.value;
+
+  // ISIN status indicator
+  const statusEl = document.getElementById('isin-status');
+  const dot = document.getElementById('isin-dot');
+  const msg = document.getElementById('isin-msg');
+  if (!val) { statusEl.style.display = 'none'; }
+  else {
+    statusEl.style.display = 'flex';
+    if (val.length < 12) {
+      dot.style.background = '#64748b'; msg.style.color = '#64748b';
+      msg.textContent = val.length + '/12 caratteri';
+    } else if (isValidIsin(val)) {
+      dot.style.background = '#66bb6a'; msg.style.color = '#66bb6a';
+      msg.textContent = '✓ Formato valido';
+    } else {
+      dot.style.background = '#ffa726'; msg.style.color = '#ffa726';
+      msg.textContent = 'Formato non standard';
+    }
+  }
+
+  // Lookup
+  const match = DB_BY_ISIN[val] || null;
+  modalEtfDetected = match;
+
+  const detected = document.getElementById('m-detected-card');
+  const notfound = document.getElementById('m-notfound-card');
+
+  if (match) {
+    // Show detected card
+    document.getElementById('m-detected-name').textContent = match.name;
+    document.getElementById('m-detected-cat').textContent =
+      match.category + (match.subcategory ? ' › ' + match.subcategory : '');
+    detected.style.display = 'block';
+    notfound.style.display = 'none';
+  } else if (val.length === 12) {
+    // Full ISIN typed but not in DB
+    detected.style.display = 'none';
+    notfound.style.display = 'block';
+    // Pre-fill name field empty
+    const nameEl = document.getElementById('m-name');
+    if (nameEl) nameEl.value = '';
+  } else {
+    detected.style.display = 'none';
+    notfound.style.display = 'none';
+  }
+}
+
+function manualCatChange() {
+  const cat = document.getElementById('m-cat').value;
+  const subField = document.getElementById('m-subcat-field');
+  const subSel = document.getElementById('m-subcat');
+  if (HAS_SUBCATS.includes(cat) && subcats[cat]) {
+    subField.style.display = 'block';
+    subSel.innerHTML = subcats[cat].map(x => '<option value="' + x + '">' + x + '</option>').join('') +
+      '<option value="">— Nessuna —</option>';
+  } else {
+    subField.style.display = 'none';
+  }
+}
+
+function openModal() {
+  // Reset
+  document.getElementById('m-isin').value = '';
+  document.getElementById('m-value').value = '';
+  document.getElementById('isin-status').style.display = 'none';
+  document.getElementById('m-detected-card').style.display = 'none';
+  document.getElementById('m-notfound-card').style.display = 'none';
+  const nameEl = document.getElementById('m-name');
+  if (nameEl) nameEl.value = '';
+  modalEtfDetected = null;
+  document.getElementById('modal').style.display = 'flex';
+  pushState('modal');
+  // Focus ISIN field
+  setTimeout(() => document.getElementById('m-isin').focus(), 100);
+}
+
+function closeModal() {
+  document.getElementById('modal').style.display = 'none';
+}
+
+function confirmModal() {
+  const isin = document.getElementById('m-isin').value.trim().toUpperCase();
+  if (!isin) return alert('Inserisci l\u0027ISIN.');
+
+  const value = parseFloat(document.getElementById('m-value').value) || 0;
+
+  let name, category, subcategory;
+
+  if (modalEtfDetected) {
+    name        = modalEtfDetected.name;
+    category    = modalEtfDetected.category;
+    subcategory = modalEtfDetected.subcategory || null;
+  } else {
+    // Manual fallback
+    const nameEl = document.getElementById('m-name');
+    name = nameEl ? nameEl.value.trim() : '';
+    if (!name) return alert('ETF non trovato nel database. Inserisci il nome manualmente.');
+    category = document.getElementById('m-cat').value;
+    const subSel = document.getElementById('m-subcat');
+    subcategory = HAS_SUBCATS.includes(category) && subSel ? subSel.value || null : null;
+  }
+
+  etfs.push({ id: nextId++, ticker: null, isin: isin, name: name, category: category, subcategory: subcategory, value: value });
+  closeModal();
+  renderOverview();
+  scheduleSave();
+}
+
+// Keep these for compatibility with setIdMode calls in nav
+function setIdMode(mode) {}
+function onModalCatChange() {}
+function onIdentifierInput() {}
+
+// ── TABS ─────────────────────────────────────────────────────────────
+function switchTab(t){activeTab=t;document.querySelectorAll(".tab-btn").forEach((b,i)=>b.classList.toggle("active",i===(t==="overview"?0:1)));document.getElementById("tab-overview").style.display=t==="overview"?"":"none";document.getElementById("tab-ribilancia").style.display=t==="ribilancia"?"":"none";document.querySelectorAll(".nav-item").forEach(b=>b.classList.remove("active"));const m={"overview":"nav-overview","ribilancia":"nav-ribilancia"};if(m[t])document.getElementById(m[t]).classList.add("active");if(t==="ribilancia")renderRebalance();}
+</script>
+</body>
+</html>
