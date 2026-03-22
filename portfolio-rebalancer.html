@@ -694,21 +694,29 @@ function setSyncStatus(s,l){
   if(nl)nl.textContent=s==="connected"?"Sync ✓":s==="saving"?"Sync…":s==="error"?"Errore":"Sync";
 }
 function signIn(){
+  const btn = document.querySelector(".btn-google");
   try {
-    if(typeof google === "undefined" || !google.accounts || !google.accounts.oauth2){
-      alert("La libreria Google non è ancora caricata. Attendi qualche secondo e riprova.");
+    if(typeof google === "undefined"){
+      alert("Libreria Google non caricata.\nVerifica la connessione internet e ricarica la pagina.");
       return;
     }
-    const btn = document.querySelector(".btn-google");
-    if(btn){ btn.textContent = "Connessione in corso…"; btn.disabled = true; }
+    if(!google.accounts || !google.accounts.oauth2){
+      alert("google.accounts.oauth2 non disponibile.\nRicarica la pagina e riprova.");
+      return;
+    }
+    if(btn){ btn.innerHTML = "⏳ Connessione in corso…"; btn.disabled = true; }
     const c = google.accounts.oauth2.initTokenClient({
       client_id: CLIENT_ID,
       scope: SCOPES,
+      error_callback: (e) => {
+        if(btn){ btn.disabled=false; btn.innerHTML='<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" height="20"> Accedi con Google'; }
+        if(e.type === "popup_closed") return; // user closed popup, no alert needed
+        alert("Errore Google: " + (e.message || e.type || JSON.stringify(e)));
+      },
       callback: async(r) => {
-        if(btn){ btn.disabled = false; btn.innerHTML = '<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" height="20"> Accedi con Google'; }
+        if(btn){ btn.disabled=false; btn.innerHTML='<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" height="20"> Accedi con Google'; }
         if(r.error){
-          setSyncStatus("error","Errore login");
-          alert("Errore login: " + (r.error_description || r.error) + "\n\nAssicurati di essere nella lista utenti di test in Google Cloud Console.");
+          alert("Errore login: " + (r.error_description || r.error));
           return;
         }
         accessToken = r.access_token;
@@ -719,11 +727,10 @@ function signIn(){
         renderOverview();
       }
     });
-    c.requestAccessToken();
+    c.requestAccessToken({prompt: "consent"});
   } catch(e) {
-    alert("Errore: " + e.message);
-    const btn = document.querySelector(".btn-google");
-    if(btn){ btn.disabled = false; }
+    if(btn){ btn.disabled=false; btn.innerHTML='<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" height="20"> Accedi con Google'; }
+    alert("Errore JavaScript: " + e.message + "\n\nApri la console del browser (F12) per dettagli.");
   }
 }
 function useOffline(){isOffline=true;document.getElementById("login-screen").style.display="none";document.getElementById("app").style.display="block";setSyncStatus("disconnected","Locale");renderOverview();}
