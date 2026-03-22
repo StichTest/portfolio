@@ -1168,73 +1168,89 @@ function showNotFound(msg) {
   if (nameEl) nameEl.value = '';
 }
 
+// ── ETF lookup via OpenFIGI (free, no key, CORS-enabled) ─────────────
+// Category inference rules based on name/securityType keywords
+function inferCategory(name, secType) {
+  var n = (name || '').toLowerCase();
+  var s = (secType || '').toLowerCase();
+  // Crypto
+  if (/bitcoin|ethereum|crypto|btc|eth/.test(n)) return {category:'Crypto', subcategory:null};
+  // Materie prime
+  if (/gold|silver|commodity|commodit|oro|argento|palladium|platinum|metal|energy|oil/.test(n)) return {category:'Materie Prime', subcategory:null};
+  // Immobiliare
+  if (/real estate|reit|property|immobil|epra|nareit/.test(n)) return {category:'Immobiliare', subcategory:null};
+  // Liquidità / monetario
+  if (/overnight|cash|liquidity|money market|monetar|ultrashort|t-bill|treasury bill/.test(n)) return {category:'Liquidità', subcategory:null};
+  // Obbligazionario
+  if (/bond|obbl|aggregate|treasury|govt|government|corporate|high yield|credit|duration|fixed|gilts|btp|bund/.test(n)) {
+    var subcat = null;
+    if (/high.yield|junk/.test(n)) subcat = 'High Yield';
+    else if (/corporate|corp(?!orate)|credit/.test(n)) subcat = 'Corporate';
+    else if (/emergi|em bond|developing/.test(n)) subcat = 'Emergenti';
+    else subcat = 'Governativo';
+    return {category:'Obbligazionario', subcategory:subcat};
+  }
+  // Azionario — try to detect subcategory
+  if (/equity|stock|share|azionar|msci|s&p|nasdaq|stoxx|dax|ftse|nikkei|topix/.test(n) || s==='equity') {
+    var subcat = null;
+    if (/emergi|emerging|em (?!bond)|frontier/.test(n)) subcat = 'Emergenti';
+    else if (/japan|nikkei|topix|pacific|asia(?! bond)|apac/.test(n)) subcat = 'Pacifico';
+    else if (/europe|europa|eurozone|stoxx|dax|ftse europa|euro equity/.test(n)) subcat = 'Europa';
+    else if (/s&p 500|nasdaq|usa|us equity|north america|russell|dow jones/.test(n)) subcat = 'USA';
+    else subcat = 'Globale';
+    return {category:'Azionario', subcategory:subcat};
+  }
+  return {category:'Azionario', subcategory:'Globale'};
+}
+
 async function searchEtfByIsin(isin) {
-  const detected = document.getElementById('m-detected-card');
-  const loading  = document.getElementById('m-loading-card');
-  const notfound = document.getElementById('m-notfound-card');
-  detected.style.display = 'none';
-  notfound.style.display = 'none';
-  loading.style.display  = 'block';
-
-  const CATS_LIST = ["Azionario","Obbligazionario","Materie Prime","Immobiliare","Liquidità","Crypto","Altro"];
-  const SUBCATS_LIST = {
-    "Azionario": ["Globale","USA","Europa","Emergenti","Pacifico"],
-    "Obbligazionario": ["Governativo","Corporate","High Yield","Emergenti"]
-  };
-
-  const prompt = `Cerca l'ETF con ISIN ${isin} e rispondi SOLO con un oggetto JSON valido, niente altro.
-Formato richiesto:
-{"ticker":"XXXX","name":"Nome completo ETF","category":"Azionario","subcategory":"Globale"}
-
-Categorie disponibili: ${CATS_LIST.join(", ")}
-Sottocategorie Azionario: Globale, USA, Europa, Emergenti, Pacifico
-Sottocategorie Obbligazionario: Governativo, Corporate, High Yield, Emergenti
-Per le altre categorie usa subcategory: null
-
-Se l'ISIN non esiste rispondi: {"error":"not found"}`;
+  document.getElementById('m-detected-card').style.display = 'none';
+  document.getElementById('m-notfound-card').style.display = 'none';
+  document.getElementById('m-loading-card').style.display  = 'block';
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    // ── Step 1: OpenFIGI — maps ISIN to name + ticker + securityType ──
+    const figiResp = await fetch('https://api.openfigi.com/v3/mapping', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 200,
-        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-        messages: [{ role: 'user', content: prompt }]
-      })
+      body: JSON.stringify([{ idType: 'ID_ISIN', idValue: isin }])
     });
 
-    if (!resp.ok) throw new Error('API error ' + resp.status);
-    const data = await resp.json();
+    if (!figiResp.ok) throw new Error('OpenFIGI error ' + figiResp.status);
+    const figiData = await figiResp.json();
 
-    // Extract text from response
-    let text = '';
-    if (data.content) {
-      data.content.forEach(function(block) {
-        if (block.type === 'text') text += block.text;
-      });
-    }
+    // figiData is an array; first element has a "data" array of matches
+    const results = (figiData[0] && figiData[0].data) ? figiData[0].data : [];
 
-    // Parse JSON from response
-    const jsonMatch = text.match(/\{[^{}]+\}/);
-    if (!jsonMatch) throw new Error('No JSON in response');
-    const etfData = JSON.parse(jsonMatch[0]);
-
-    if (etfData.error) {
-      showNotFound('⚠ ISIN ' + isin + ' non trovato sul web — compila manualmente.');
+    if (!results.length) {
+      showNotFound('⚠ ISIN ' + isin + ' non trovato — compila manualmente.');
       return;
     }
 
-    // Validate category
-    if (!CATS_LIST.includes(etfData.category)) etfData.category = 'Altro';
-    if (etfData.subcategory && !(SUBCATS_LIST[etfData.category] || []).includes(etfData.subcategory)) {
-      etfData.subcategory = null;
-    }
-    etfData.isin = isin;
+    // Pick best result: prefer exchanges like XAMS, XMIL, XETR, XLON, XNAS
+    var preferred = results.filter(function(r) {
+      return /XAMS|XMIL|XETR|XLON|XNAS|XPAR|XFRA/.test(r.exchCode || '');
+    });
+    var best = preferred.length ? preferred[0] : results[0];
+
+    var rawName   = best.name || best.securityDescription || '';
+    var rawTicker = best.ticker || '';
+    var secType   = best.securityType || best.securityType2 || '';
+
+    // ── Step 2: infer category from name ──────────────────────────────
+    var catInfo = inferCategory(rawName, secType);
+
+    var etfData = {
+      isin:        isin,
+      ticker:      rawTicker || null,
+      name:        rawName,
+      category:    catInfo.category,
+      subcategory: catInfo.subcategory
+    };
+
     showDetected(etfData);
 
-    // Also cache in DB so future lookups are instant
+    // Cache so next lookup is instant
     DB_BY_ISIN[isin] = etfData;
     if (etfData.ticker) DB_BY_TICKER[etfData.ticker] = etfData;
 
