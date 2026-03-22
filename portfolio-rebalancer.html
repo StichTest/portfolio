@@ -490,6 +490,54 @@ tr:hover td { background: #161f30; }
   </div>
 </div>
 
+<!-- MODAL EDIT ETF -->
+<div class="modal-overlay" id="edit-modal" style="display:none" onclick="if(event.target===this)closeEditModal()">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>Modifica ETF</h3>
+    <p class="modal-subtitle">Modifica i dati dell'ETF selezionato.</p>
+
+    <div class="field">
+      <label>ISIN</label>
+      <input type="text" id="em-isin" maxlength="12" autocapitalize="characters" spellcheck="false"
+        style="font-size:16px;letter-spacing:.06em;font-family:'DM Mono',monospace"
+        oninput="this.value=this.value.toUpperCase()" class="optional">
+    </div>
+    <div class="field">
+      <label>Ticker</label>
+      <input type="text" id="em-ticker" autocapitalize="characters" spellcheck="false"
+        style="font-family:'DM Mono',monospace"
+        oninput="this.value=this.value.toUpperCase()" class="optional">
+    </div>
+    <div class="field">
+      <label>Nome ETF <span style="color:#ef5350">*</span></label>
+      <input type="text" id="em-name" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>Valore attuale (€)</label>
+      <input type="number" id="em-value" inputmode="decimal" class="optional">
+    </div>
+    <hr class="modal-divider">
+    <div class="field-row">
+      <div class="field"><label>Categoria</label>
+        <select id="em-cat" onchange="editCatChange()">
+          <option>Azionario</option><option>Obbligazionario</option><option>Materie Prime</option>
+          <option>Immobiliare</option><option>Liquidità</option><option>Crypto</option><option>Altro</option>
+        </select>
+      </div>
+      <div class="field" id="em-subcat-field" style="display:none">
+        <label>Sottocategoria</label>
+        <select id="em-subcat"></select>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel ripple" onclick="closeEditModal()" style="color:#ef5350;border-color:#7f1d1d" id="em-delete-btn">🗑 Elimina</button>
+      <button class="btn-confirm ripple" onclick="saveEditModal()">Salva</button>
+    </div>
+  </div>
+</div>
+
+
 <script>
 // ── PWA: MANIFEST (inline) ──────────────────────────────────────────
 const manifest = {
@@ -573,7 +621,9 @@ document.addEventListener('pointerdown', e => {
 function pushState(id) { history.pushState({panel: id}, ''); }
 window.addEventListener('popstate', e => {
   const modal = document.getElementById('modal');
+  const editModal = document.getElementById('edit-modal');
   const drawer = document.getElementById('export-drawer');
+  if(editModal && editModal.style.display !== 'none') { closeEditModal(); return; }
   if(modal && modal.style.display !== 'none') { closeModal(); return; }
   if(drawer && drawer.classList.contains('open')) { closeExport(); return; }
 });
@@ -650,6 +700,92 @@ const ETF_DB = [
   {ticker:"SGOV",isin:"US46436E7189",name:"iShares 0-3 Month Treasury Bond ETF",category:"Liquidità",subcategory:null},
   {ticker:"BTCE",isin:"DE000A27Z304",name:"ETC Group Physical Bitcoin ETC",category:"Crypto",subcategory:null},
   {ticker:"ETHE",isin:"DE000A3GMKD7",name:"ETC Group Physical Ethereum ETC",category:"Crypto",subcategory:null},
+  // ── AZIONARIO GLOBALE aggiuntivi
+  {ticker:"VWRL",isin:"IE00B3RBWM25",name:"Vanguard FTSE All-World UCITS ETF (Dist)",category:"Azionario",subcategory:"Globale"},
+  {ticker:"ACWI",isin:"US46432F8302",name:"iShares MSCI ACWI ETF",category:"Azionario",subcategory:"Globale"},
+  {ticker:"WEBG",isin:"IE0007J9QWS9",name:"Amundi MSCI World UCITS ETF",category:"Azionario",subcategory:"Globale"},
+  {ticker:"HMWO",isin:"IE00B4X9L533",name:"HSBC MSCI World UCITS ETF",category:"Azionario",subcategory:"Globale"},
+  {ticker:"XDWT",isin:"IE00BJ0KDQ92",name:"Xtrackers MSCI World UCITS ETF",category:"Azionario",subcategory:"Globale"},
+  {ticker:"WSML",isin:"IE00BK5BQT80",name:"iShares MSCI World Small Cap UCITS ETF",category:"Azionario",subcategory:"Globale"},
+  {ticker:"MVOL",isin:"IE00B8FHGS14",name:"iShares Edge MSCI World Min Vol UCITS ETF",category:"Azionario",subcategory:"Globale"},
+  {ticker:"IWMO",isin:"IE00BP3QZD73",name:"iShares Edge MSCI World Momentum UCITS ETF",category:"Azionario",subcategory:"Globale"},
+  {ticker:"IWQU",isin:"IE00BP3QZB52",name:"iShares Edge MSCI World Quality UCITS ETF",category:"Azionario",subcategory:"Globale"},
+  {ticker:"IWVL",isin:"IE00BP3QZC69",name:"iShares Edge MSCI World Value UCITS ETF",category:"Azionario",subcategory:"Globale"},
+  {ticker:"LCUW",isin:"IE00BYX2JD69",name:"iShares MSCI World SRI UCITS ETF",category:"Azionario",subcategory:"Globale"},
+  {ticker:"UIMB",isin:"IE00BYVJRP78",name:"UBS MSCI ACWI Socially Responsible UCITS ETF",category:"Azionario",subcategory:"Globale"},
+  {ticker:"SPYY",isin:"IE00B6YX5C33",name:"SPDR MSCI ACWI UCITS ETF",category:"Azionario",subcategory:"Globale"},
+  // ── AZIONARIO USA aggiuntivi
+  {ticker:"SXR8",isin:"IE00B5BMR087",name:"iShares Core S&P 500 UCITS ETF (Acc)",category:"Azionario",subcategory:"USA"},
+  {ticker:"SPY5",isin:"IE00B6YX5C33",name:"SPDR S&P 500 UCITS ETF",category:"Azionario",subcategory:"USA"},
+  {ticker:"IUSA",isin:"IE0031442068",name:"iShares S&P 500 UCITS ETF (Dist)",category:"Azionario",subcategory:"USA"},
+  {ticker:"VGWE",isin:"IE00BG15KY74",name:"Vanguard S&P 500 UCITS ETF (EUR Hedged)",category:"Azionario",subcategory:"USA"},
+  {ticker:"QDVE",isin:"IE00B3YX9Y18",name:"iShares S&P 500 IT Sector UCITS ETF",category:"Azionario",subcategory:"USA"},
+  {ticker:"HEAL",isin:"IE00B4JNQZ49",name:"iShares S&P 500 Healthcare Sector UCITS ETF",category:"Azionario",subcategory:"USA"},
+  {ticker:"INRG",isin:"IE00B1XNHC34",name:"iShares Global Clean Energy UCITS ETF",category:"Azionario",subcategory:"Globale"},
+  {ticker:"IQQH",isin:"IE0031442068",name:"iShares Global Clean Energy UCITS ETF",category:"Azionario",subcategory:"Globale"},
+  // ── AZIONARIO EUROPA aggiuntivi
+  {ticker:"CSSX5E",isin:"IE00B53L3W79",name:"iShares Core Euro Stoxx 50 UCITS ETF",category:"Azionario",subcategory:"Europa"},
+  {ticker:"MEUD",isin:"FR0010261198",name:"Lyxor MSCI EMU UCITS ETF",category:"Azionario",subcategory:"Europa"},
+  {ticker:"EUE",isin:"FR0007054358",name:"Lyxor Euro Stoxx 50 UCITS ETF",category:"Azionario",subcategory:"Europa"},
+  {ticker:"IQQE",isin:"IE00B4K48X80",name:"iShares MSCI Europe UCITS ETF",category:"Azionario",subcategory:"Europa"},
+  {ticker:"VERX",isin:"IE00B945VV12",name:"Vanguard FTSE Developed Europe ex-UK UCITS ETF",category:"Azionario",subcategory:"Europa"},
+  {ticker:"PAUE",isin:"IE00B4L5YX21",name:"iShares MSCI Europe ex-UK UCITS ETF",category:"Azionario",subcategory:"Europa"},
+  {ticker:"EXIS",isin:"DE0005933931",name:"iShares Core DAX UCITS ETF",category:"Azionario",subcategory:"Europa"},
+  // ── AZIONARIO EMERGENTI aggiuntivi
+  {ticker:"AEEM",isin:"LU1681045370",name:"Amundi MSCI Emerging Markets UCITS ETF",category:"Azionario",subcategory:"Emergenti"},
+  {ticker:"EEM",isin:"US4642872349",name:"iShares MSCI Emerging Markets ETF",category:"Azionario",subcategory:"Emergenti"},
+  {ticker:"EMIM",isin:"IE00BKM4GZ66",name:"iShares Core MSCI Emerging Markets IMI UCITS ETF",category:"Azionario",subcategory:"Emergenti"},
+  {ticker:"CEEM",isin:"IE00B4L5YC18",name:"iShares MSCI EM UCITS ETF USD (Acc)",category:"Azionario",subcategory:"Emergenti"},
+  // ── AZIONARIO PACIFICO / ASIA
+  {ticker:"CPXJ",isin:"IE00B52MJY50",name:"iShares Core MSCI Pacific ex-Japan UCITS ETF",category:"Azionario",subcategory:"Pacifico"},
+  {ticker:"EWJ",isin:"US4642866077",name:"iShares MSCI Japan ETF",category:"Azionario",subcategory:"Pacifico"},
+  {ticker:"XMUJ",isin:"IE00BKPSFD73",name:"Xtrackers MSCI Japan UCITS ETF",category:"Azionario",subcategory:"Pacifico"},
+  // ── OBBLIGAZIONARIO aggiuntivi
+  {ticker:"DBXG",isin:"LU0290357929",name:"Xtrackers II Eurozone Govt Bond UCITS ETF",category:"Obbligazionario",subcategory:"Governativo"},
+  {ticker:"IS0E",isin:"IE00B4WXJJ64",name:"iShares Euro Govt Bond UCITS ETF",category:"Obbligazionario",subcategory:"Governativo"},
+  {ticker:"IBTK",isin:"IE00BYXPSP02",name:"iShares USD Treasury Bond 10-20yr UCITS ETF",category:"Obbligazionario",subcategory:"Governativo"},
+  {ticker:"IEF",isin:"US4642874329",name:"iShares 7-10 Year Treasury Bond ETF",category:"Obbligazionario",subcategory:"Governativo"},
+  {ticker:"SHY",isin:"US4642872240",name:"iShares 1-3 Year Treasury Bond ETF",category:"Obbligazionario",subcategory:"Governativo"},
+  {ticker:"BTP",isin:"IE00B3X3YJ08",name:"iShares BTP UCITS ETF",category:"Obbligazionario",subcategory:"Governativo"},
+  {ticker:"ECRP",isin:"IE00B4L60045",name:"iShares EUR Corp Bond 1-5yr UCITS ETF",category:"Obbligazionario",subcategory:"Corporate"},
+  {ticker:"VDCP",isin:"IE00BZ163L38",name:"Vanguard USD Corp Bond UCITS ETF",category:"Obbligazionario",subcategory:"Corporate"},
+  {ticker:"VCIT",isin:"US9229083202",name:"Vanguard Intermediate-Term Corp Bond ETF",category:"Obbligazionario",subcategory:"Corporate"},
+  {ticker:"SHYG",isin:"IE00B4PY7Y77",name:"iShares EUR High Yield Corp Bond Short Dur UCITS ETF",category:"Obbligazionario",subcategory:"High Yield"},
+  {ticker:"JNK",isin:"US78468R1275",name:"SPDR Bloomberg High Yield Bond ETF",category:"Obbligazionario",subcategory:"High Yield"},
+  {ticker:"IAED",isin:"IE00BD9M1G54",name:"iShares USD EM Bond UCITS ETF",category:"Obbligazionario",subcategory:"Emergenti"},
+  {ticker:"EMB",isin:"US4642882819",name:"iShares JPMorgan USD EM Bond ETF",category:"Obbligazionario",subcategory:"Emergenti"},
+  // ── MATERIE PRIME aggiuntivi
+  {ticker:"XGLD",isin:"DE000A0S9GB0",name:"Xtrackers Physical Gold ETC",category:"Materie Prime",subcategory:null},
+  {ticker:"IGLN",isin:"IE00B4ND3602",name:"iShares Physical Gold ETC",category:"Materie Prime",subcategory:null},
+  {ticker:"IAU",isin:"US4642858056",name:"iShares Gold Trust",category:"Materie Prime",subcategory:null},
+  {ticker:"SSLV",isin:"IE00B4LFSF14",name:"iShares Physical Silver ETC",category:"Materie Prime",subcategory:null},
+  {ticker:"PHSI",isin:"JE00B1VS3333",name:"WisdomTree Physical Silver",category:"Materie Prime",subcategory:null},
+  {ticker:"AIGA",isin:"IE0003GK0Q15",name:"Amundi Bloomberg Commodity ex-Agri UCITS ETF",category:"Materie Prime",subcategory:null},
+  {ticker:"BCOG",isin:"IE00B3CNHD78",name:"iShares Bloomberg Roll Select Commodity UCITS ETF",category:"Materie Prime",subcategory:null},
+  {ticker:"GSG",isin:"US46428R1077",name:"iShares S&P GSCI Commodity Trust",category:"Materie Prime",subcategory:null},
+  {ticker:"PDBC",isin:"US69374H1086",name:"Invesco Optimum Yield Diversified Commodity ETF",category:"Materie Prime",subcategory:null},
+  // ── IMMOBILIARE aggiuntivi
+  {ticker:"XREA",isin:"IE00BFXR5W90",name:"Xtrackers FTSE EPRA/NAREIT Europe UCITS ETF",category:"Immobiliare",subcategory:null},
+  {ticker:"EPRE",isin:"IE00B5L01S07",name:"SPDR FTSE EPRA Europe ex-UK Real Estate UCITS ETF",category:"Immobiliare",subcategory:null},
+  {ticker:"REM",isin:"US46432F8302",name:"iShares Mortgage Real Estate ETF",category:"Immobiliare",subcategory:null},
+  // ── LIQUIDITÀ aggiuntivi
+  {ticker:"SMART",isin:"LU1190417599",name:"Lyxor Smart Overnight Return UCITS ETF",category:"Liquidità",subcategory:null},
+  {ticker:"ERNX",isin:"IE00BDQXLN72",name:"iShares EUR Cash UCITS ETF",category:"Liquidità",subcategory:null},
+  {ticker:"BIL",isin:"US78468R6160",name:"SPDR Bloomberg 1-3 Month T-Bill ETF",category:"Liquidità",subcategory:null},
+  {ticker:"SGOV",isin:"US46436E7189",name:"iShares 0-3 Month Treasury Bond ETF",category:"Liquidità",subcategory:null},
+  // ── CRYPTO aggiuntivi
+  {ticker:"VBTC",isin:"SE0018014839",name:"VanEck Bitcoin ETN",category:"Crypto",subcategory:null},
+  {ticker:"BTIC",isin:"XS2376221562",name:"WisdomTree Physical Bitcoin ETC",category:"Crypto",subcategory:null},
+  {ticker:"WETH",isin:"XS2376222370",name:"WisdomTree Physical Ethereum ETC",category:"Crypto",subcategory:null},
+  {ticker:"LBTC",isin:"XS2252172821",name:"CoinShares Physical Bitcoin ETP",category:"Crypto",subcategory:null},
+  // ── TEMATICI / SETTORIALI
+  {ticker:"WTAI",isin:"IE00BDVPNG13",name:"WisdomTree Artificial Intelligence UCITS ETF",category:"Azionario",subcategory:"Globale"},
+  {ticker:"L8I7",isin:"IE00BMW3QX54",name:"iShares Digitalisation UCITS ETF",category:"Azionario",subcategory:"Globale"},
+  {ticker:"XDWT",isin:"IE00BMYDM794",name:"Xtrackers MSCI World IT UCITS ETF",category:"Azionario",subcategory:"USA"},
+  {ticker:"IQQD",isin:"IE00B42NKQ00",name:"iShares DivDAX UCITS ETF",category:"Azionario",subcategory:"Europa"},
+  {ticker:"VHYL",isin:"IE00B8GKDB10",name:"Vanguard FTSE All-World High Dividend Yield UCITS ETF",category:"Azionario",subcategory:"Globale"},
+  {ticker:"IDVY",isin:"IE00B0M63177",name:"iShares Euro Dividend UCITS ETF",category:"Azionario",subcategory:"Europa"},
+  {ticker:"TDIV",isin:"IE00B8GKDB10",name:"VanEck Morningstar Developed Markets Dividend Leaders UCITS ETF",category:"Azionario",subcategory:"Globale"},
   // ESG / Extra
   {ticker:"WSML",isin:"IE00BK5BQT80",name:"iShares MSCI World Small Cap UCITS ETF",category:"Azionario",subcategory:"Globale"},
   {ticker:"ESGW",isin:"IE00BK5BQT80",name:"iShares MSCI World ESG Screened UCITS ETF",category:"Azionario",subcategory:"Globale"},
@@ -761,13 +897,93 @@ function signIn(){
 function useOffline(){isOffline=true;document.getElementById("login-screen").style.display="none";document.getElementById("app").style.display="block";setSyncStatus("disconnected","Locale");renderOverview();}
 function syncBadgeClick(){if(!accessToken)signIn();}
 function getState(){return{etfs,catTargets,subcatTargets,subcats,nextId};}
-function setState(s){if(!s)return;if(s.etfs)etfs=s.etfs;if(s.catTargets)catTargets=s.catTargets;if(s.subcatTargets)subcatTargets=s.subcatTargets;if(s.subcats)subcats=s.subcats;if(s.nextId)nextId=s.nextId;}
+function setState(s){
+  if(!s)return;
+  if(s.etfs) etfs=s.etfs;
+  if(s.catTargets){
+    // Migrate: remove legacy per-etf target fields if present
+    catTargets=s.catTargets;
+  }
+  if(s.subcatTargets) subcatTargets=s.subcatTargets;
+  if(s.subcats) subcats=s.subcats;
+  if(s.nextId) nextId=s.nextId;
+  // Remove legacy target field from each ETF if present
+  etfs=etfs.map(function(e){var n={};Object.keys(e).forEach(function(k){if(k!=="target")n[k]=e[k];});return n;});
+}
 async function driveRequest(method,url,body,params){const q=params?'?'+new URLSearchParams(params):'';const opts={method,headers:{Authorization:`Bearer ${accessToken}`}};if(body){opts.headers['Content-Type']='application/json';opts.body=JSON.stringify(body);}const r=await fetch(url+q,opts);if(!r.ok)throw new Error(`${r.status}`);return r.json();}
 async function findDriveFile(){const r=await driveRequest('GET',`${DRIVE_API}/files`,null,{q:`name='${DRIVE_FILE}' and trashed=false`,spaces:'drive',fields:'files(id,name,modifiedTime)'});return r.files?.[0]||null;}
 async function loadFromDrive(){try{const f=await findDriveFile();if(f){driveFileId=f.id;const r=await fetch(`${DRIVE_API}/files/${driveFileId}?alt=media`,{headers:{Authorization:`Bearer ${accessToken}`}});if(r.ok){const d=await r.json();setState(d);const dt=new Date(f.modifiedTime);setSyncStatus("connected",`Sync ${dt.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"})}`);}}}catch(e){setSyncStatus("error","Errore");}if(!driveFileId)await saveToDrive();}
 async function saveToDrive(){if(isOffline||!accessToken)return;setSyncStatus("saving","Salvataggio…");try{const c=JSON.stringify(getState());if(driveFileId){await fetch(`${UPLOAD_API}/files/${driveFileId}?uploadType=media`,{method:'PATCH',headers:{Authorization:`Bearer ${accessToken}`,'Content-Type':'application/json'},body:c});}else{const m={name:DRIVE_FILE,mimeType:'application/json'};const f=new FormData();f.append('metadata',new Blob([JSON.stringify(m)],{type:'application/json'}));f.append('file',new Blob([c],{type:'application/json'}));const r=await fetch(`${UPLOAD_API}/files?uploadType=multipart`,{method:'POST',headers:{Authorization:`Bearer ${accessToken}`},body:f});const res=await r.json();driveFileId=res.id;}const n=new Date();setSyncStatus("connected",`Salvato ${n.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"})}`);}catch(e){setSyncStatus("error","Errore salvataggio");}}
 function scheduleSave(){if(isOffline||!accessToken)return;clearTimeout(saveTimer);setSyncStatus("saving","In attesa…");saveTimer=setTimeout(()=>saveToDrive(),1500);}
 
+
+
+// ── EDIT MODAL ────────────────────────────────────────────────────────
+let editingEtfId = null;
+
+function openEditModal(id) {
+  const e = etfs.find(x => x.id === id);
+  if (!e) return;
+  editingEtfId = id;
+  document.getElementById('em-isin').value = e.isin || '';
+  document.getElementById('em-ticker').value = e.ticker || '';
+  document.getElementById('em-name').value = e.name || '';
+  document.getElementById('em-value').value = e.value || '';
+  document.getElementById('em-cat').value = e.category || 'Altro';
+  editCatChange();
+  if (e.subcategory) {
+    const s = document.getElementById('em-subcat');
+    if (s) s.value = e.subcategory;
+  }
+  // Delete button
+  document.getElementById('em-delete-btn').onclick = function() {
+    if (confirm('Eliminare ' + e.name + '?')) {
+      etfs = etfs.filter(x => x.id !== id);
+      closeEditModal();
+      renderOverview();
+      scheduleSave();
+    }
+  };
+  document.getElementById('edit-modal').style.display = 'flex';
+  pushState('edit-modal');
+}
+
+function closeEditModal() {
+  document.getElementById('edit-modal').style.display = 'none';
+  editingEtfId = null;
+}
+
+function editCatChange() {
+  const cat = document.getElementById('em-cat').value;
+  const field = document.getElementById('em-subcat-field');
+  const sel = document.getElementById('em-subcat');
+  if (HAS_SUBCATS.includes(cat) && subcats[cat]) {
+    field.style.display = 'block';
+    sel.innerHTML = subcats[cat].map(function(x){ return '<option value="'+x+'">'+x+'</option>'; }).join('') +
+      '<option value="">— Nessuna —</option>';
+  } else {
+    field.style.display = 'none';
+  }
+}
+
+function saveEditModal() {
+  if (editingEtfId === null) return;
+  const name = document.getElementById('em-name').value.trim();
+  if (!name) { alert("Il nome è obbligatorio."); return; }
+  const isin = document.getElementById('em-isin').value.trim().toUpperCase();
+  const ticker = document.getElementById('em-ticker').value.trim().toUpperCase();
+  const value = parseFloat(document.getElementById('em-value').value) || 0;
+  const category = document.getElementById('em-cat').value;
+  const subSel = document.getElementById('em-subcat');
+  const subcategory = HAS_SUBCATS.includes(category) && subSel && subSel.value ? subSel.value : null;
+  etfs = etfs.map(function(e) {
+    if (e.id !== editingEtfId) return e;
+    return { id: e.id, ticker: ticker||null, isin: isin||null, name: name, category: category, subcategory: subcategory, value: value };
+  });
+  closeEditModal();
+  renderOverview();
+  scheduleSave();
+}
 
 // ── EXPORT ───────────────────────────────────────────────────────────
 const PROMPT_SUGGESTIONS=[
@@ -854,10 +1070,10 @@ function buildEtfDisplay(items,tot,accentColor,leftPad){
     const tH=e.ticker?`<span class="etf-card-ticker" style="color:${accentColor}">${e.ticker}</span>`:`<span class="etf-card-ticker" style="color:${accentColor}">${e.isin?.substring(0,6)+"…"||"—"}</span>`;
     const iH=e.isin&&e.ticker?`<span class="etf-card-isin">${e.isin}</span>`:e.isin?`<span class="etf-card-isin">${e.isin}</span>`:"";
     const vC=editingId===e.id?`<input class="inline-input-card" id="edit-${e.id}" type="number" inputmode="decimal" value="${e.value}" onblur="saveEdit(${e.id})" onkeydown="if(event.key==='Enter')saveEdit(${e.id})" autofocus>`:`<button class="etf-card-value ripple" onclick="startEdit(${e.id})" style="color:${accentColor}">${fmt(e.value)}</button>`;
-    return `<div class="etf-card"><div class="etf-card-left"><div class="etf-card-id">${tH}${iH}</div><div class="etf-card-name">${e.name}</div><div class="etf-card-bar"><div class="etf-bar-bg"><div class="etf-bar-fill" style="width:${bw}%;background:${accentColor}"></div></div><span class="etf-card-pct">${pct.toFixed(1)}%</span></div></div><div class="etf-card-right">${vC}<span class="etf-card-grp">gruppo: ${wPct.toFixed(0)}%</span></div><button class="btn-del-card ripple" onclick="removeEtf(${e.id})">✕</button></div>`;
+    return `<div class="etf-card"><div class="etf-card-left" onclick="openEditModal(${e.id})" style="cursor:pointer"><div class="etf-card-id">${tH}${iH}<span style="margin-left:auto;font-size:10px;color:#334155">✏</span></div><div class="etf-card-name">${e.name}</div><div class="etf-card-bar"><div class="etf-bar-bg"><div class="etf-bar-fill" style="width:${bw}%;background:${accentColor}"></div></div><span class="etf-card-pct">${pct.toFixed(1)}%</span></div></div><div class="etf-card-right">${vC}<span class="etf-card-grp">gruppo: ${wPct.toFixed(0)}%</span></div><button class="btn-del-card ripple" onclick="removeEtf(${e.id})">✕</button></div>`;
   }).join("");
   const pl=leftPad?"30px":"16px";
-  const rows=items.map(e=>{const pct=tot>0?(e.value/tot)*100:0,wPct=gT>0?(e.value/gT)*100:0,bw=Math.min(100,pct*2);const tH=e.ticker?`<span class="ticker-label" style="color:${accentColor}">${e.ticker}</span>`:`<span class="ticker-label" style="color:${accentColor}">${e.isin?.substring(0,6)+"…"||"—"}</span>`;const iH=e.isin?`<span class="isin-badge">${e.isin}</span>`:"";const vC=editingId===e.id?`<input class="inline-input" id="edit-${e.id}" type="number" value="${e.value}" onblur="saveEdit(${e.id})" onkeydown="if(event.key==='Enter')saveEdit(${e.id})">`:`<span class="val-cell" onclick="startEdit(${e.id})">${fmt(e.value)}</span>`;return `<tr><td style="padding-left:${pl}"><div class="id-cell">${tH}${iH}</div></td><td class="name-cell" title="${e.name}">${e.name}</td><td>${vC}</td><td><div class="bar-wrap"><div class="bar-bg"><div class="bar-fill" style="width:${bw}%;background:${accentColor}"></div></div><span class="pct-text">${pct.toFixed(1)}%</span></div></td><td><span class="weight-cell">${wPct.toFixed(1)}%</span></td><td style="text-align:center"><button class="btn-del" onclick="removeEtf(${e.id})">✕</button></td></tr>`;}).join("");
+  const rows=items.map(e=>{const pct=tot>0?(e.value/tot)*100:0,wPct=gT>0?(e.value/gT)*100:0,bw=Math.min(100,pct*2);const tH=e.ticker?`<span class="ticker-label" style="color:${accentColor}">${e.ticker}</span>`:`<span class="ticker-label" style="color:${accentColor}">${e.isin?.substring(0,6)+"…"||"—"}</span>`;const iH=e.isin?`<span class="isin-badge">${e.isin}</span>`:"";const vC=editingId===e.id?`<input class="inline-input" id="edit-${e.id}" type="number" value="${e.value}" onblur="saveEdit(${e.id})" onkeydown="if(event.key==='Enter')saveEdit(${e.id})">`:`<span class="val-cell" onclick="startEdit(${e.id})">${fmt(e.value)}</span>`;return `<tr><td style="padding-left:${pl}"><div class="id-cell" onclick="openEditModal(${e.id})" style="cursor:pointer">${tH}${iH}<span style="font-size:9px;color:#334155;margin-top:2px">✏ modifica</span></div></td><td class="name-cell" title="${e.name}">${e.name}</td><td>${vC}</td><td><div class="bar-wrap"><div class="bar-bg"><div class="bar-fill" style="width:${bw}%;background:${accentColor}"></div></div><span class="pct-text">${pct.toFixed(1)}%</span></div></td><td><span class="weight-cell">${wPct.toFixed(1)}%</span></td><td style="text-align:center"><button class="btn-del" onclick="removeEtf(${e.id})">✕</button></td></tr>`;}).join("");
   return `<div class="card-wrap"><div class="etf-cards">${cards}</div></div><div class="table-wrap"><table><thead><tr><th style="padding-left:${pl}">Ticker / ISIN</th><th>Nome</th><th>Valore (€)</th><th>% Portafoglio</th><th>% Gruppo</th><th>✕</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
@@ -1029,7 +1245,8 @@ function confirmModal() {
         ? subSel.value || null : null;
     }
 
-    etfs.push({ id: nextId++, ticker: null, isin: isin || null, name: name, category: category, subcategory: subcategory, value: value });
+    var ticker = (modalEtfDetected && modalEtfDetected.ticker) ? modalEtfDetected.ticker : null;
+    etfs.push({ id: nextId++, ticker: ticker, isin: isin || null, name: name, category: category, subcategory: subcategory, value: value });
     closeModal();
     renderOverview();
     scheduleSave();
