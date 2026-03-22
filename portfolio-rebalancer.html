@@ -650,6 +650,31 @@ const ETF_DB = [
   {ticker:"SGOV",isin:"US46436E7189",name:"iShares 0-3 Month Treasury Bond ETF",category:"Liquidità",subcategory:null},
   {ticker:"BTCE",isin:"DE000A27Z304",name:"ETC Group Physical Bitcoin ETC",category:"Crypto",subcategory:null},
   {ticker:"ETHE",isin:"DE000A3GMKD7",name:"ETC Group Physical Ethereum ETC",category:"Crypto",subcategory:null},
+  // ESG / Extra
+  {ticker:"WSML",isin:"IE00BK5BQT80",name:"iShares MSCI World Small Cap UCITS ETF",category:"Azionario",subcategory:"Globale"},
+  {ticker:"ESGW",isin:"IE00BK5BQT80",name:"iShares MSCI World ESG Screened UCITS ETF",category:"Azionario",subcategory:"Globale"},
+  {ticker:"MVOL",isin:"IE00B8FHGS14",name:"iShares Edge MSCI World Min Vol UCITS ETF",category:"Azionario",subcategory:"Globale"},
+  {ticker:"IWMO",isin:"IE00BP3QZD73",name:"iShares Edge MSCI World Momentum UCITS ETF",category:"Azionario",subcategory:"Globale"},
+  {ticker:"IWQU",isin:"IE00BP3QZB52",name:"iShares Edge MSCI World Quality UCITS ETF",category:"Azionario",subcategory:"Globale"},
+  {ticker:"IWVL",isin:"IE00BP3QZC69",name:"iShares Edge MSCI World Value UCITS ETF",category:"Azionario",subcategory:"Globale"},
+  {ticker:"LCUW",isin:"IE00BYX2JD69",name:"iShares MSCI World ESG Screened UCITS ETF",category:"Azionario",subcategory:"Globale"},
+  {ticker:"PAUE",isin:"IE00B4L5YX21",name:"iShares MSCI Europe ex-UK UCITS ETF",category:"Azionario",subcategory:"Europa"},
+  {ticker:"IQQE",isin:"IE00B4K48X80",name:"iShares MSCI Europe UCITS ETF",category:"Azionario",subcategory:"Europa"},
+  {ticker:"EUNN",isin:"IE00B945VV12",name:"Vanguard FTSE Developed Europe UCITS ETF",category:"Azionario",subcategory:"Europa"},
+  {ticker:"XMWO",isin:"IE00BJ0KDQ92",name:"Xtrackers MSCI World Swap UCITS ETF",category:"Azionario",subcategory:"Globale"},
+  {ticker:"XDWD",isin:"IE00BJ0KDQ92",name:"Xtrackers MSCI World UCITS ETF",category:"Azionario",subcategory:"Globale"},
+  {ticker:"HMWD",isin:"IE00BP15BH22",name:"HSBC MSCI World UCITS ETF",category:"Azionario",subcategory:"Globale"},
+  {ticker:"SPYW",isin:"IE00B5BMR087",name:"SPDR S&P 500 ESG UCITS ETF",category:"Azionario",subcategory:"USA"},
+  {ticker:"UIMB",isin:"IE00BYVJRP78",name:"UBS MSCI ACWI Socially Responsible UCITS ETF",category:"Azionario",subcategory:"Globale"},
+  {ticker:"SPPW",isin:"IE00B3YCGJ38",name:"SPDR MSCI ACWI UCITS ETF",category:"Azionario",subcategory:"Globale"},
+  {ticker:"IBTK",isin:"IE00BYXPSP02",name:"iShares USD Treasury Bond 10-20yr UCITS ETF",category:"Obbligazionario",subcategory:"Governativo"},
+  {ticker:"CSBGU0",isin:"IE00BFNM3D14",name:"iShares Core Global Corp Bond UCITS ETF",category:"Obbligazionario",subcategory:"Corporate"},
+  {ticker:"QDVE",isin:"IE00B3YX9Y18",name:"iShares S&P 500 Information Technology Sector UCITS ETF",category:"Azionario",subcategory:"USA"},
+  {ticker:"HEAL",isin:"IE00B4JNQZ49",name:"iShares S&P 500 Health Care Sector UCITS ETF",category:"Azionario",subcategory:"USA"},
+  {ticker:"IQQH",isin:"IE00B4JNQZ49",name:"iShares Global Clean Energy UCITS ETF",category:"Azionario",subcategory:"Globale"},
+  {ticker:"INRG",isin:"IE00B1XNHC34",name:"iShares Global Clean Energy UCITS ETF",category:"Azionario",subcategory:"Globale"},
+  {ticker:"WTAI",isin:"IE00BDVPNG13",name:"WisdomTree Artificial Intelligence UCITS ETF",category:"Azionario",subcategory:"Globale"},
+  {ticker:"L8I7",isin:"IE00BMW3QX54",name:"iShares Digitalisation UCITS ETF",category:"Azionario",subcategory:"Globale"},
 ];
 const DB_BY_TICKER={},DB_BY_ISIN={};
 ETF_DB.forEach(e=>{if(e.ticker)DB_BY_TICKER[e.ticker]=e;if(e.isin)DB_BY_ISIN[e.isin]=e;});
@@ -836,31 +861,36 @@ function closeModal() {
 }
 
 function confirmModal() {
-  const isin = document.getElementById('m-isin').value.trim().toUpperCase();
-  if (!isin) return alert('Inserisci l\u0027ISIN.');
+  try {
+    const isin = document.getElementById('m-isin').value.trim().toUpperCase();
+    if (!isin) { alert("Inserisci l'ISIN."); return; }
 
-  const value = parseFloat(document.getElementById('m-value').value) || 0;
+    const value = parseFloat(document.getElementById('m-value').value) || 0;
+    let name, category, subcategory;
 
-  let name, category, subcategory;
+    if (modalEtfDetected) {
+      name        = modalEtfDetected.name;
+      category    = modalEtfDetected.category;
+      subcategory = modalEtfDetected.subcategory || null;
+    } else {
+      // Manual entry — notfound card is visible
+      const nameEl = document.getElementById('m-name');
+      name = nameEl ? nameEl.value.trim() : '';
+      if (!name) { alert("Inserisci il nome dell'ETF."); return; }
+      const catEl = document.getElementById('m-cat');
+      category = catEl ? catEl.value : 'Altro';
+      const subSel = document.getElementById('m-subcat');
+      subcategory = (subSel && subSel.style.display !== 'none' && HAS_SUBCATS.includes(category))
+        ? subSel.value || null : null;
+    }
 
-  if (modalEtfDetected) {
-    name        = modalEtfDetected.name;
-    category    = modalEtfDetected.category;
-    subcategory = modalEtfDetected.subcategory || null;
-  } else {
-    // Manual fallback
-    const nameEl = document.getElementById('m-name');
-    name = nameEl ? nameEl.value.trim() : '';
-    if (!name) return alert('ETF non trovato nel database. Inserisci il nome manualmente.');
-    category = document.getElementById('m-cat').value;
-    const subSel = document.getElementById('m-subcat');
-    subcategory = HAS_SUBCATS.includes(category) && subSel ? subSel.value || null : null;
+    etfs.push({ id: nextId++, ticker: null, isin: isin || null, name: name, category: category, subcategory: subcategory, value: value });
+    closeModal();
+    renderOverview();
+    scheduleSave();
+  } catch(e) {
+    alert("Errore: " + e.message);
   }
-
-  etfs.push({ id: nextId++, ticker: null, isin: isin, name: name, category: category, subcategory: subcategory, value: value });
-  closeModal();
-  renderOverview();
-  scheduleSave();
 }
 
 // Keep these for compatibility with setIdMode calls in nav
