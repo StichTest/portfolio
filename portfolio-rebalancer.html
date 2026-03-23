@@ -1210,26 +1210,61 @@ async function searchEtfByIsin(isin) {
 
   try {
     // ── Step 1: OpenFIGI — maps ISIN to name + ticker + securityType ──
-    const figiResp = await fetch('https://api.openfigi.com/v3/mapping', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify([{ idType: 'ID_ISIN', idValue: isin }])
-    });
+    // Try OpenFIGI directly first, then via CORS proxy as fallback
+    var figiData = null;
+    var figiError = null;
 
-    if (!figiResp.ok) throw new Error('OpenFIGI error ' + figiResp.status);
-    const figiData = await figiResp.json();
+    var figiBody = JSON.stringify([{ idType: 'ID_ISIN', idValue: isin }]);
+    var figiHeaders = { 'Content-Type': 'application/json' };
 
-    // figiData is an array; first element has a "data" array of matches
-    const results = (figiData[0] && figiData[0].data) ? figiData[0].data : [];
+    // Attempt 1: direct
+    try {
+      var r1 = await fetch('https://api.openfigi.com/v3/mapping', {
+        method: 'POST', headers: figiHeaders, body: figiBody
+      });
+      if (r1.ok) figiData = await r1.json();
+    } catch(e1) { figiError = e1.message; }
+
+    // Attempt 2: via corsproxy.io
+    if (!figiData) {
+      try {
+        var r2 = await fetch('https://corsproxy.io/?https://api.openfigi.com/v3/mapping', {
+          method: 'POST', headers: figiHeaders, body: figiBody
+        });
+        if (r2.ok) figiData = await r2.json();
+      } catch(e2) { figiError = e2.message; }
+    }
+
+    // Attempt 3: via allorigins (GET only — encode body as param)
+    if (!figiData) {
+      try {
+        var encoded = encodeURIComponent('https://api.openfigi.com/v3/mapping');
+        var r3 = await fetch('https://api.allorigins.win/get?url=' + encoded, {
+          method: 'GET'
+        });
+        // allorigins wraps response in {contents:...}
+        if (r3.ok) {
+          var wrapped = await r3.json();
+          if (wrapped && wrapped.contents) {
+            var inner = JSON.parse(wrapped.contents);
+            if (Array.isArray(inner)) figiData = inner;
+          }
+        }
+      } catch(e3) { figiError = e3.message; }
+    }
+
+    if (!figiData) throw new Error(figiError || 'Tutti i tentativi falliti');
+
+    var results = (figiData[0] && figiData[0].data) ? figiData[0].data : [];
 
     if (!results.length) {
       showNotFound('⚠ ISIN ' + isin + ' non trovato — compila manualmente.');
       return;
     }
 
-    // Pick best result: prefer exchanges like XAMS, XMIL, XETR, XLON, XNAS
+    // Pick best result: prefer European exchanges
     var preferred = results.filter(function(r) {
-      return /XAMS|XMIL|XETR|XLON|XNAS|XPAR|XFRA/.test(r.exchCode || '');
+      return /XAMS|XMIL|XETR|XLON|XNAS|XPAR|XFRA|XSWX/.test(r.exchCode || '');
     });
     var best = preferred.length ? preferred[0] : results[0];
 
