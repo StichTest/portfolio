@@ -1170,37 +1170,50 @@ function showNotFound(msg) {
 
 // ── ETF lookup via OpenFIGI (free, no key, CORS-enabled) ─────────────
 // Category inference rules based on name/securityType keywords
-function inferCategory(name, secType) {
+function inferCategory(name, secType, isin) {
   var n = (name || '').toLowerCase();
   var s = (secType || '').toLowerCase();
-  // Crypto
-  if (/bitcoin|ethereum|crypto|btc|eth/.test(n)) return {category:'Crypto', subcategory:null};
-  // Materie prime
-  if (/gold|silver|commodity|commodit|oro|argento|palladium|platinum|metal|energy|oil/.test(n)) return {category:'Materie Prime', subcategory:null};
-  // Immobiliare
-  if (/real estate|reit|property|immobil|epra|nareit/.test(n)) return {category:'Immobiliare', subcategory:null};
-  // Liquidità / monetario
-  if (/overnight|cash|liquidity|money market|monetar|ultrashort|t-bill|treasury bill/.test(n)) return {category:'Liquidità', subcategory:null};
-  // Obbligazionario
-  if (/bond|obbl|aggregate|treasury|govt|government|corporate|high yield|credit|duration|fixed|gilts|btp|bund/.test(n)) {
-    var subcat = null;
-    if (/high.yield|junk/.test(n)) subcat = 'High Yield';
-    else if (/corporate|corp(?!orate)|credit/.test(n)) subcat = 'Corporate';
-    else if (/emergi|em bond|developing/.test(n)) subcat = 'Emergenti';
-    else subcat = 'Governativo';
+  var i = (isin || '').toUpperCase();
+
+  // ── SecurityType from OpenFIGI ─────────────────────────────────────
+  // OpenFIGI returns securityType like "Corporate Bond", "Government Bond",
+  // "MBS", "ETP", "Equity", "Preferred" etc. — use as primary signal
+  if (/bond|fixed.income|note|obbl|gilts|bund|btp|tips|strip/i.test(s)) {
+    var subcat = 'Governativo';
+    if (/high.yield|junk|speculative/i.test(s+' '+n)) subcat = 'High Yield';
+    else if (/corp|credit|invest.grade/i.test(s+' '+n)) subcat = 'Corporate';
+    else if (/emergi|em |developing/i.test(n)) subcat = 'Emergenti';
     return {category:'Obbligazionario', subcategory:subcat};
   }
-  // Azionario — try to detect subcategory
-  if (/equity|stock|share|azionar|msci|s&p|nasdaq|stoxx|dax|ftse|nikkei|topix/.test(n) || s==='equity') {
-    var subcat = null;
-    if (/emergi|emerging|em (?!bond)|frontier/.test(n)) subcat = 'Emergenti';
-    else if (/japan|nikkei|topix|pacific|asia(?! bond)|apac/.test(n)) subcat = 'Pacifico';
-    else if (/europe|europa|eurozone|stoxx|dax|ftse europa|euro equity/.test(n)) subcat = 'Europa';
-    else if (/s&p 500|nasdaq|usa|us equity|north america|russell|dow jones/.test(n)) subcat = 'USA';
-    else subcat = 'Globale';
-    return {category:'Azionario', subcategory:subcat};
+
+  // ── Crypto ──────────────────────────────────────────────────────────
+  if (/bitcoin|ethereum|crypto|btc|eth|xbt|blockchain/i.test(n)) return {category:'Crypto', subcategory:null};
+
+  // ── Materie prime ───────────────────────────────────────────────────
+  if (/gold|silver|commodity|commodit|palladium|platinum|metal|energy|oil|wheat|corn|soya|agriculture|natural gas|base metal/i.test(n)) return {category:'Materie Prime', subcategory:null};
+
+  // ── Immobiliare ─────────────────────────────────────────────────────
+  if (/real estate|reit|property|immobil|epra|nareit|infrastructure/i.test(n)) return {category:'Immobiliare', subcategory:null};
+
+  // ── Liquidità / monetario ───────────────────────────────────────────
+  if (/overnight|cash|liquidity|money.market|monetar|ultrashort|t-bill|treasury.bill|estr|ester|sonia|sofr|eonia/i.test(n)) return {category:'Liquidità', subcategory:null};
+
+  // ── Obbligazionario — keyword check on name ─────────────────────────
+  if (/agg(regate)?|bond|obbl|treasury|govt|government|corporate|high.yield|credit|duration|fixed.income|gilts|btp|bund|sovereign|maturity|inflation|linker|tips|income|debt/i.test(n)) {
+    var subcat = 'Governativo';
+    if (/high.yield|junk|sub.invest/i.test(n)) subcat = 'High Yield';
+    else if (/corp|credit|invest.grade|ig/i.test(n)) subcat = 'Corporate';
+    else if (/emergi|em bond|develop|frontier/i.test(n)) subcat = 'Emergenti';
+    return {category:'Obbligazionario', subcategory:subcat};
   }
-  return {category:'Azionario', subcategory:'Globale'};
+
+  // ── Azionario — detect subcategory ──────────────────────────────────
+  var subcat = 'Globale';
+  if (/emergi|emerging|em (?!bond)|frontier/i.test(n)) subcat = 'Emergenti';
+  else if (/japan|nikkei|topix|pacific|asia|apac|australia|korea|taiwan|china(?! bond)/i.test(n)) subcat = 'Pacifico';
+  else if (/europe|europa|eurozone|stoxx|dax|ftse dev|euro equity|cac|ibex|mib|atx|bel|ams/i.test(n)) subcat = 'Europa';
+  else if (/s.?p 500|nasdaq|usa|us equity|north america|russell|dow jones|nyse|american/i.test(n)) subcat = 'USA';
+  return {category:'Azionario', subcategory:subcat};
 }
 
 async function searchEtfByIsin(isin) {
