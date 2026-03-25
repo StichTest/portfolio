@@ -144,6 +144,14 @@ input, select, textarea { -webkit-appearance: none; }
 .etf-card { padding: 12px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; transition: background .15s; position: relative; overflow: hidden; }
 .etf-card:last-child { border-bottom: none; }
 .etf-card:active { background: var(--surface2); }
+.etf-card.dragging { opacity: .4; background: var(--surface2); }
+.etf-card.drag-over { border-top: 2px solid var(--accent); }
+.drag-handle { color: #334155; cursor: grab; font-size: 16px; padding: 4px 2px; flex-shrink: 0; touch-action: none; user-select: none; }
+.drag-handle:active { cursor: grabbing; color: var(--accent); }
+tr.dragging td { opacity: .4; background: var(--surface2) !important; }
+tr.drag-over td { border-top: 2px solid var(--accent); }
+.tr-drag-handle { color: #334155; cursor: grab; font-size: 14px; }
+.tr-drag-handle:hover { color: var(--accent); }
 .etf-card-left { flex: 1; min-width: 0; }
 .etf-card-id { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; flex-wrap: wrap; }
 .etf-card-ticker { font-family: 'DM Mono', monospace; font-weight: 700; font-size: 15px; }
@@ -796,7 +804,7 @@ const ETF_DB = [
   {ticker:"TDIV",isin:"IE00B8GKDB10",name:"VanEck Morningstar Developed Markets Dividend Leaders UCITS ETF",category:"Azionario",subcategory:"Globale"},
   // ESG / Extra
   {ticker:"WSML",isin:"IE00BK5BQT80",name:"iShares MSCI World Small Cap UCITS ETF",category:"Azionario",subcategory:"Globale"},
-  {ticker:"ESGW",isin:"IE00BK5BQT80",name:"iShares MSCI World ESG Screened UCITS ETF",category:"Azionario",subcategory:"Globale"},
+  {ticker:"ESGW",isin:"IE00BYVJRP78",name:"iShares MSCI World ESG Screened UCITS ETF",category:"Azionario",subcategory:"Globale"},
   {ticker:"MVOL",isin:"IE00B8FHGS14",name:"iShares Edge MSCI World Min Vol UCITS ETF",category:"Azionario",subcategory:"Globale"},
   {ticker:"IWMO",isin:"IE00BP3QZD73",name:"iShares Edge MSCI World Momentum UCITS ETF",category:"Azionario",subcategory:"Globale"},
   {ticker:"IWQU",isin:"IE00BP3QZB52",name:"iShares Edge MSCI World Quality UCITS ETF",category:"Azionario",subcategory:"Globale"},
@@ -993,6 +1001,108 @@ function saveEditModal() {
   scheduleSave();
 }
 
+
+// ── DRAG AND DROP ────────────────────────────────────────────────────
+var dragSrcId = null;
+
+function onDragStart(ev, id) {
+  dragSrcId = id;
+  ev.dataTransfer.effectAllowed = 'move';
+  ev.dataTransfer.setData('text/plain', String(id));
+  var el = ev.currentTarget;
+  setTimeout(function() { el.classList.add('dragging'); }, 0);
+}
+
+function onDragOver(ev) {
+  ev.preventDefault();
+  ev.dataTransfer.dropEffect = 'move';
+  var el = ev.currentTarget;
+  document.querySelectorAll('.drag-over').forEach(function(e){ e.classList.remove('drag-over'); });
+  el.classList.add('drag-over');
+}
+
+function onDrop(ev, targetId) {
+  ev.preventDefault();
+  ev.stopPropagation();
+  document.querySelectorAll('.drag-over').forEach(function(e){ e.classList.remove('drag-over'); });
+  if (dragSrcId === null || dragSrcId === targetId) return;
+  var srcIdx = etfs.findIndex(function(e){ return e.id === dragSrcId; });
+  var tgtIdx = etfs.findIndex(function(e){ return e.id === targetId; });
+  if (srcIdx === -1 || tgtIdx === -1) return;
+  var moved = etfs.splice(srcIdx, 1)[0];
+  etfs.splice(tgtIdx, 0, moved);
+  renderOverview();
+  scheduleSave();
+}
+
+function onDragEnd(ev) {
+  dragSrcId = null;
+  document.querySelectorAll('.dragging, .drag-over').forEach(function(e){
+    e.classList.remove('dragging');
+    e.classList.remove('drag-over');
+  });
+}
+
+// Touch drag for mobile
+var touchDragId = null;
+var touchClone = null;
+
+function addTouchDrag() {
+  document.addEventListener('touchstart', function(ev) {
+    var handle = ev.target.closest('.drag-handle');
+    if (!handle) return;
+    var card = handle.closest('.etf-card');
+    if (!card) return;
+    touchDragId = parseInt(card.dataset.id);
+    // Clone for visual feedback
+    touchClone = card.cloneNode(true);
+    touchClone.style.cssText = 'position:fixed;opacity:.7;pointer-events:none;z-index:9999;width:'+card.offsetWidth+'px;left:'+card.getBoundingClientRect().left+'px;top:'+card.getBoundingClientRect().top+'px;border-radius:12px;background:var(--surface2)';
+    document.body.appendChild(touchClone);
+    card.classList.add('dragging');
+  }, {passive:true});
+
+  document.addEventListener('touchmove', function(ev) {
+    if (!touchDragId || !touchClone) return;
+    var t = ev.touches[0];
+    touchClone.style.left = (t.clientX - touchClone.offsetWidth/2) + 'px';
+    touchClone.style.top  = (t.clientY - 30) + 'px';
+    // Find card under touch
+    touchClone.style.display = 'none';
+    var el = document.elementFromPoint(t.clientX, t.clientY);
+    touchClone.style.display = '';
+    document.querySelectorAll('.drag-over').forEach(function(e){ e.classList.remove('drag-over'); });
+    var targetCard = el ? el.closest('.etf-card') : null;
+    if (targetCard && parseInt(targetCard.dataset.id) !== touchDragId) {
+      targetCard.classList.add('drag-over');
+    }
+  }, {passive:true});
+
+  document.addEventListener('touchend', function(ev) {
+    if (!touchDragId) return;
+    var t = ev.changedTouches[0];
+    if (touchClone) { touchClone.remove(); touchClone = null; }
+    document.querySelectorAll('.dragging').forEach(function(e){ e.classList.remove('dragging'); });
+    var el = document.elementFromPoint(t.clientX, t.clientY);
+    var targetCard = el ? el.closest('.etf-card') : null;
+    document.querySelectorAll('.drag-over').forEach(function(e){ e.classList.remove('drag-over'); });
+    if (targetCard) {
+      var targetId = parseInt(targetCard.dataset.id);
+      if (targetId && targetId !== touchDragId) {
+        var srcIdx = etfs.findIndex(function(e){ return e.id === touchDragId; });
+        var tgtIdx = etfs.findIndex(function(e){ return e.id === targetId; });
+        if (srcIdx !== -1 && tgtIdx !== -1) {
+          var moved = etfs.splice(srcIdx, 1)[0];
+          etfs.splice(tgtIdx, 0, moved);
+          renderOverview();
+          scheduleSave();
+        }
+      }
+    }
+    touchDragId = null;
+  }, {passive:true});
+}
+addTouchDrag();
+
 // ── EXPORT ───────────────────────────────────────────────────────────
 const PROMPT_SUGGESTIONS=[
   {icon:"📊",title:"Analisi allocazione",text:"Analizza la mia allocazione attuale rispetto ai target. Evidenzia gli scostamenti più significativi e dimmi se la struttura è coerente con un profilo moderato di lungo periodo."},
@@ -1078,10 +1188,10 @@ function buildEtfDisplay(items,tot,accentColor,leftPad){
     const tH=e.ticker?`<span class="etf-card-ticker" style="color:${accentColor}">${e.ticker}</span>`:`<span class="etf-card-ticker" style="color:${accentColor}">${e.isin?.substring(0,6)+"…"||"—"}</span>`;
     const iH=e.isin&&e.ticker?`<span class="etf-card-isin">${e.isin}</span>`:e.isin?`<span class="etf-card-isin">${e.isin}</span>`:"";
     const vC=editingId===e.id?`<input class="inline-input-card" id="edit-${e.id}" type="number" inputmode="decimal" value="${e.value}" onblur="saveEdit(${e.id})" onkeydown="if(event.key==='Enter')saveEdit(${e.id})" autofocus>`:`<button class="etf-card-value ripple" onclick="startEdit(${e.id})" style="color:${accentColor}">${fmt(e.value)}</button>`;
-    return `<div class="etf-card"><div class="etf-card-left" onclick="openEditModal(${e.id})" style="cursor:pointer"><div class="etf-card-id">${tH}${iH}<span style="margin-left:auto;font-size:10px;color:#334155">✏</span></div><div class="etf-card-name">${e.name}</div><div class="etf-card-bar"><div class="etf-bar-bg"><div class="etf-bar-fill" style="width:${bw}%;background:${accentColor}"></div></div><span class="etf-card-pct">${pct.toFixed(1)}%</span></div></div><div class="etf-card-right">${vC}<span class="etf-card-grp">gruppo: ${wPct.toFixed(0)}%</span></div><button class="btn-del-card ripple" onclick="removeEtf(${e.id})">✕</button></div>`;
+    return `<div class="etf-card" draggable="true" data-id="${e.id}" ondragstart="onDragStart(event,${e.id})" ondragover="onDragOver(event)" ondrop="onDrop(event,${e.id})" ondragend="onDragEnd(event)"><span class="drag-handle" title="Trascina per riordinare">⠿</span><div class="etf-card-left" onclick="openEditModal(${e.id})" style="cursor:pointer"><div class="etf-card-id">${tH}${iH}<span style="margin-left:auto;font-size:10px;color:#334155">✏</span></div><div class="etf-card-name">${e.name}</div><div class="etf-card-bar"><div class="etf-bar-bg"><div class="etf-bar-fill" style="width:${bw}%;background:${accentColor}"></div></div><span class="etf-card-pct">${pct.toFixed(1)}%</span></div></div><div class="etf-card-right">${vC}<span class="etf-card-grp">gruppo: ${wPct.toFixed(0)}%</span></div><button class="btn-del-card ripple" onclick="removeEtf(${e.id})">✕</button></div>`;
   }).join("");
   const pl=leftPad?"30px":"16px";
-  const rows=items.map(e=>{const pct=tot>0?(e.value/tot)*100:0,wPct=gT>0?(e.value/gT)*100:0,bw=Math.min(100,pct*2);const tH=e.ticker?`<span class="ticker-label" style="color:${accentColor}">${e.ticker}</span>`:`<span class="ticker-label" style="color:${accentColor}">${e.isin?.substring(0,6)+"…"||"—"}</span>`;const iH=e.isin?`<span class="isin-badge">${e.isin}</span>`:"";const vC=editingId===e.id?`<input class="inline-input" id="edit-${e.id}" type="number" value="${e.value}" onblur="saveEdit(${e.id})" onkeydown="if(event.key==='Enter')saveEdit(${e.id})">`:`<span class="val-cell" onclick="startEdit(${e.id})">${fmt(e.value)}</span>`;return `<tr><td style="padding-left:${pl}"><div class="id-cell" onclick="openEditModal(${e.id})" style="cursor:pointer">${tH}${iH}<span style="font-size:9px;color:#334155;margin-top:2px">✏ modifica</span></div></td><td class="name-cell" title="${e.name}">${e.name}</td><td>${vC}</td><td><div class="bar-wrap"><div class="bar-bg"><div class="bar-fill" style="width:${bw}%;background:${accentColor}"></div></div><span class="pct-text">${pct.toFixed(1)}%</span></div></td><td><span class="weight-cell">${wPct.toFixed(1)}%</span></td><td style="text-align:center"><button class="btn-del" onclick="removeEtf(${e.id})">✕</button></td></tr>`;}).join("");
+  const rows=items.map(e=>{const pct=tot>0?(e.value/tot)*100:0,wPct=gT>0?(e.value/gT)*100:0,bw=Math.min(100,pct*2);const tH=e.ticker?`<span class="ticker-label" style="color:${accentColor}">${e.ticker}</span>`:`<span class="ticker-label" style="color:${accentColor}">${e.isin?.substring(0,6)+"…"||"—"}</span>`;const iH=e.isin?`<span class="isin-badge">${e.isin}</span>`:"";const vC=editingId===e.id?`<input class="inline-input" id="edit-${e.id}" type="number" value="${e.value}" onblur="saveEdit(${e.id})" onkeydown="if(event.key==='Enter')saveEdit(${e.id})">`:`<span class="val-cell" onclick="startEdit(${e.id})">${fmt(e.value)}</span>`;return `<tr draggable="true" data-id="${e.id}" ondragstart="onDragStart(event,${e.id})" ondragover="onDragOver(event)" ondrop="onDrop(event,${e.id})" ondragend="onDragEnd(event)"><td style="padding-left:${pl};width:24px"><span class="tr-drag-handle" title="Trascina">⠿</span></td><td><div class="id-cell" onclick="openEditModal(${e.id})" style="cursor:pointer">${tH}${iH}<span style="font-size:9px;color:#334155;margin-top:2px">✏</span></div></td><td class="name-cell" title="${e.name}">${e.name}</td><td>${vC}</td><td><div class="bar-wrap"><div class="bar-bg"><div class="bar-fill" style="width:${bw}%;background:${accentColor}"></div></div><span class="pct-text">${pct.toFixed(1)}%</span></div></td><td><span class="weight-cell">${wPct.toFixed(1)}%</span></td><td style="text-align:center"><button class="btn-del" onclick="removeEtf(${e.id})">✕</button></td></tr>`;}).join("");
   return `<div class="card-wrap"><div class="etf-cards">${cards}</div></div><div class="table-wrap"><table><thead><tr><th style="padding-left:${pl}">Ticker / ISIN</th><th>Nome</th><th>Valore (€)</th><th>% Portafoglio</th><th>% Gruppo</th><th>✕</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
