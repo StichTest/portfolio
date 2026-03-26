@@ -915,17 +915,49 @@ function useOffline(){isOffline=true;document.getElementById("login-screen").sty
 function syncBadgeClick(){if(!accessToken)signIn();}
 function getState(){return{etfs,catTargets,subcatTargets,subcats,nextId};}
 function setState(s){
-  if(!s)return;
-  if(s.etfs) etfs=s.etfs;
-  if(s.catTargets){
-    // Migrate: remove legacy per-etf target fields if present
-    catTargets=s.catTargets;
+  if(!s) return;
+  if(s.etfs) etfs = s.etfs;
+
+  if(s.catTargets) {
+    // Sanitize: only keep the 7 known categories, clamp each 0-100
+    var cleaned = {};
+    var knownCats = ["Azionario","Obbligazionario","Materie Prime","Immobiliare","Liquidità","Crypto","Altro"];
+    knownCats.forEach(function(c){
+      var v = parseFloat(s.catTargets[c]) || 0;
+      cleaned[c] = Math.max(0, Math.min(100, v));
+    });
+    // If total > 100 it means old per-ETF targets leaked in — reset to defaults
+    var total = Object.values(cleaned).reduce(function(a,v){return a+v;}, 0);
+    if (total > 100.1) {
+      catTargets = {"Azionario":60,"Obbligazionario":18,"Materie Prime":8,"Immobiliare":6,"Liquidità":8,"Crypto":0,"Altro":0};
+    } else {
+      catTargets = cleaned;
+    }
   }
-  if(s.subcatTargets) subcatTargets=s.subcatTargets;
-  if(s.subcats) subcats=s.subcats;
-  if(s.nextId) nextId=s.nextId;
-  // Remove legacy target field from each ETF if present
-  etfs=etfs.map(function(e){var n={};Object.keys(e).forEach(function(k){if(k!=="target")n[k]=e[k];});return n;});
+
+  if(s.subcatTargets) {
+    // Only keep subcategories that still exist
+    var cleanedSub = {};
+    Object.keys(s.subcatTargets).forEach(function(cat){
+      if(!subcats[cat]) return;
+      cleanedSub[cat] = {};
+      subcats[cat].forEach(function(sub){
+        var v = parseFloat((s.subcatTargets[cat]||{})[sub]) || 0;
+        cleanedSub[cat][sub] = Math.max(0, Math.min(100, v));
+      });
+    });
+    subcatTargets = cleanedSub;
+  }
+
+  if(s.subcats) subcats = s.subcats;
+  if(s.nextId) nextId = s.nextId;
+
+  // Strip legacy per-ETF target field
+  etfs = etfs.map(function(e){
+    var n = {};
+    Object.keys(e).forEach(function(k){ if(k !== "target") n[k] = e[k]; });
+    return n;
+  });
 }
 async function driveRequest(method,url,body,params){const q=params?'?'+new URLSearchParams(params):'';const opts={method,headers:{Authorization:`Bearer ${accessToken}`}};if(body){opts.headers['Content-Type']='application/json';opts.body=JSON.stringify(body);}const r=await fetch(url+q,opts);if(!r.ok)throw new Error(`${r.status}`);return r.json();}
 async function findDriveFile(){const r=await driveRequest('GET',`${DRIVE_API}/files`,null,{q:`name='${DRIVE_FILE}' and trashed=false`,spaces:'drive',fields:'files(id,name,modifiedTime)'});return r.files?.[0]||null;}
@@ -1205,7 +1237,7 @@ function renderOverview(){
   const tc=Math.abs(sct-100)<0.05?"#66bb6a":"#ef5350";
   d2=d2.replace('fill="#e2e8f0" font-size="12" font-family="DM Mono,monospace" font-weight="600"',`fill="${tc}" font-size="18" font-family="DM Mono,monospace" font-weight="700"`);
   const legend=etfs.map(e=>{const col=(COL[e.category]||COL["Altro"]).accent,pct=tot>0?((e.value/tot)*100).toFixed(1):0,lbl=e.ticker||(e.isin?.substring(0,6)+"…")||"—";return `<div class="legend-item"><div class="legend-dot" style="background:${col}"></div><span class="legend-ticker">${lbl}</span><span class="legend-pct">${pct}%</span></div>`;}).join("");
-  const catSumBar=`<div class="card" style="margin-bottom:14px;padding:14px 16px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><span class="card-label" style="margin:0">Target per categoria</span><span style="font-family:'DM Mono',monospace;font-size:12px;color:${catTokColor};font-weight:600">${sct.toFixed(1)}%${Math.abs(sct-100)>0.05?` <span style="color:#64748b;font-size:10px">(${sct<100?"mancano":"superi"} ${Math.abs(100-sct).toFixed(1)}%)</span>`:" ✓"}</span></div><div style="display:flex;height:8px;border-radius:4px;overflow:hidden;gap:1px">${CATS.map(c=>{const v=catTargets[c]||0;if(!v)return"";return`<div title="${c}: ${v}%" style="flex:${v};background:${(COL[c]||COL["Altro"]).accent};transition:flex .4s"></div>`;}).join("")}${sct<100?`<div style="flex:${100-sct};background:#1e293b"></div>`:""}</div><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">${CATS.filter(c=>catTargets[c]>0).map(c=>{const col=(COL[c]||COL["Altro"]).accent;return`<div style="display:flex;align-items:center;gap:4px"><div style="width:7px;height:7px;border-radius:2px;background:${col}"></div><span style="font-size:11px;color:#94a3b8">${c}</span><span style="font-family:'DM Mono',monospace;font-size:11px;color:${col}">${catTargets[c]}%</span></div>`;}).join("")}</div></div>`;
+  const catSumBar=`<div class="card" style="margin-bottom:14px;padding:14px 16px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><span class="card-label" style="margin:0">Target per categoria</span><span style="font-family:'DM Mono',monospace;font-size:12px;color:${catTokColor};font-weight:600">${sct.toFixed(1)}%${Math.abs(sct-100)>0.05?` <span style="color:#64748b;font-size:10px">(${sct<100?"mancano":"superi"} ${Math.abs(100-sct).toFixed(1)}%)</span>`:" ✓"}</span></div><div style="display:flex;height:8px;border-radius:4px;overflow:hidden;gap:1px">${CATS.filter(c=>catTargets[c]>0&&etfs.some(e=>e.category===c)).map(c=>{const v=catTargets[c];return`<div title="${c}: ${v}%" style="flex:${v};background:${(COL[c]||COL["Altro"]).accent};transition:flex .4s"></div>`;}).join("")}${sct<100?`<div style="flex:${100-sct};background:#1e293b"></div>`:""}</div><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">${CATS.filter(c=>catTargets[c]>0&&etfs.some(e=>e.category===c)).map(c=>{const col=(COL[c]||COL["Altro"]).accent;return`<div style="display:flex;align-items:center;gap:4px"><div style="width:7px;height:7px;border-radius:2px;background:${col}"></div><span style="font-size:11px;color:#94a3b8">${c}</span><span style="font-family:'DM Mono',monospace;font-size:11px;color:${col}">${catTargets[c]}%</span></div>`;}).join("")}</div></div>`;
   let catHtml="";
   Object.entries(groups).forEach(([cat,items])=>{
     const col=COL[cat]||COL["Altro"],catTarget=catTargets[cat]||0,catTot=items.reduce((a,e)=>a+e.value,0),catActualPct=tot>0?(catTot/tot)*100:0,hasSub=HAS_SUBCATS.includes(cat);
