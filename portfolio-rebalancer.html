@@ -860,7 +860,7 @@ function targetPill(label,tgt,act,inputId,onchangeCb,small){
   const cls=small?"target-pill target-pill-sm":"target-pill";
   const ac=allocColor(act,tgt),sign=act-tgt,ss=sign>=0?`+${sign.toFixed(1)}`:sign.toFixed(1);
   const allocHtml=(tgt===0&&act===0)?"—":`${act.toFixed(1)}% <span style="color:${ac}">(${ss}%)</span>`;
-  return `<div class="${cls}"><span class="target-pill-label">${label}</span><div style="display:flex;align-items:baseline;gap:2px"><input class="target-pill-input" type="number" inputmode="decimal" value="${tgt}" id="${inputId}" onchange="${onchangeCb}" min="0" max="100" step="0.5"><span class="target-pill-pct">%</span></div><div class="target-pill-sep"></div><span class="target-pill-alloc">${allocHtml}</span></div>`;
+  return `<div class="${cls}"><span class="target-pill-label">${label}</span><div style="display:flex;align-items:baseline;gap:2px"><input class="target-pill-input" type="number" inputmode="decimal" value="${tgt}" id="${inputId}" oninput="${onchangeCb}" onchange="${onchangeCb}" min="0" max="100" step="0.5"><span class="target-pill-pct">%</span></div><div class="target-pill-sep"></div><span class="target-pill-alloc">${allocHtml}</span></div>`;
 }
 
 // ── SYNC ────────────────────────────────────────────────────────────
@@ -919,34 +919,23 @@ function setState(s){
   if(s.etfs) etfs = s.etfs;
 
   if(s.catTargets) {
-    // Sanitize: only keep the 7 known categories, clamp each 0-100
-    var cleaned = {};
+    // Load saved targets — only strip unknown keys and clamp to 0-100
     var knownCats = ["Azionario","Obbligazionario","Materie Prime","Immobiliare","Liquidità","Crypto","Altro"];
     knownCats.forEach(function(c){
-      var v = parseFloat(s.catTargets[c]) || 0;
-      cleaned[c] = Math.max(0, Math.min(100, v));
+      var v = parseFloat(s.catTargets[c]);
+      catTargets[c] = isNaN(v) ? 0 : Math.max(0, Math.min(100, v));
     });
-    // If total > 100 it means old per-ETF targets leaked in — reset to defaults
-    var total = Object.values(cleaned).reduce(function(a,v){return a+v;}, 0);
-    if (total > 100.1) {
-      catTargets = {"Azionario":60,"Obbligazionario":18,"Materie Prime":8,"Immobiliare":6,"Liquidità":8,"Crypto":0,"Altro":0};
-    } else {
-      catTargets = cleaned;
-    }
   }
 
   if(s.subcatTargets) {
-    // Only keep subcategories that still exist
-    var cleanedSub = {};
     Object.keys(s.subcatTargets).forEach(function(cat){
-      if(!subcats[cat]) return;
-      cleanedSub[cat] = {};
-      subcats[cat].forEach(function(sub){
-        var v = parseFloat((s.subcatTargets[cat]||{})[sub]) || 0;
-        cleanedSub[cat][sub] = Math.max(0, Math.min(100, v));
+      if(!subcatTargets[cat]) subcatTargets[cat] = {};
+      var saved = s.subcatTargets[cat] || {};
+      Object.keys(saved).forEach(function(sub){
+        var v = parseFloat(saved[sub]);
+        subcatTargets[cat][sub] = isNaN(v) ? 0 : Math.max(0, Math.min(100, v));
       });
     });
-    subcatTargets = cleanedSub;
   }
 
   if(s.subcats) subcats = s.subcats;
@@ -1136,6 +1125,100 @@ function addTouchDrag() {
 }
 addTouchDrag();
 
+
+// ── UPDATE TARGET UI (lightweight, no full re-render) ────────────────
+function updateTargetUI() {
+  var sct = sumCatTargets();
+  var catTokColor = Math.abs(sct - 100) < 0.05 ? "#66bb6a" : (sct > 100 ? "#ef5350" : "#ffa726");
+  var tot = total();
+
+  // Update summary bar total label
+  document.querySelectorAll('[id^="target-total-label"]').forEach(function(el) {
+    el.textContent = sct.toFixed(1) + "%";
+    el.style.color = catTokColor;
+  });
+
+  // Update each category target pill alloc span
+  CATS.forEach(function(cat) {
+    var tgt = catTargets[cat] || 0;
+    var catTot = etfs.filter(function(e){ return e.category === cat; }).reduce(function(a,e){ return a+e.value; }, 0);
+    var act = tot > 0 ? (catTot / tot) * 100 : 0;
+    var ac = allocColor(act, tgt);
+    var sign = act - tgt;
+    var ss = sign >= 0 ? "+" + sign.toFixed(1) : sign.toFixed(1);
+    var allocHtml = (tgt === 0 && act === 0) ? "—" : act.toFixed(1) + "% <span style='color:" + ac + "'>(" + ss + "%)</span>";
+    var pill = document.getElementById("ctarget-" + cat.replace(/\s/g, "_"));
+    if (pill) {
+      var allocSpan = pill.closest(".target-pill")?.querySelector(".target-pill-alloc");
+      if (allocSpan) allocSpan.innerHTML = allocHtml;
+    }
+    // Update subcategory pills
+    var catSubcats = subcats[cat] || [];
+    catSubcats.forEach(function(sub) {
+      var stgt = (subcatTargets[cat] || {})[sub] || 0;
+      var subTot = etfs.filter(function(e){ return e.category === cat && e.subcategory === sub; }).reduce(function(a,e){ return a+e.value; }, 0);
+      var sact = tot > 0 ? (subTot / tot) * 100 : 0;
+      var sac = allocColor(sact, stgt);
+      var ssign = sact - stgt;
+      var sss = ssign >= 0 ? "+" + ssign.toFixed(1) : ssign.toFixed(1);
+      var sAllocHtml = (stgt === 0 && sact === 0) ? "—" : sact.toFixed(1) + "% <span style='color:" + sac + "'>(" + sss + "%)</span>";
+      var spill = document.getElementById("starget-" + cat.replace(/\s/g,"_") + "-" + sub.replace(/\s/g,"_"));
+      if (spill) {
+        var allocSpan = spill.closest(".target-pill")?.querySelector(".target-pill-alloc");
+        if (allocSpan) allocSpan.innerHTML = sAllocHtml;
+      }
+    });
+  });
+
+  // Update riepilogo card stat
+  var statEl = document.querySelector('.stat-val[data-target-total]');
+  if (statEl) { statEl.textContent = sct.toFixed(1) + "%"; statEl.style.color = catTokColor; }
+
+  // Update summary bar segments and chips
+  // Update warn banner
+  var warnEl = document.getElementById("cat-sum-bar-warn");
+  if (warnEl) {
+    if (sct > 100.05) {
+      warnEl.style.display = "block";
+      warnEl.textContent = "⚠ La somma supera 100% di " + (sct-100).toFixed(1) + "% — riduci qualche categoria.";
+    } else {
+      warnEl.style.display = "none";
+    }
+  }
+  var barEl = document.getElementById("cat-sum-bar-fill");
+  var chipsEl = document.getElementById("cat-sum-bar-chips");
+  var totalLabelEl = document.getElementById("cat-sum-bar-total");
+  if (totalLabelEl) {
+    totalLabelEl.innerHTML = sct.toFixed(1) + "% / 100%" + (Math.abs(sct-100) > 0.05
+      ? ' <span style="color:#64748b;font-size:10px">(' + (sct < 100 ? "mancano" : "superi") + " " + Math.abs(100-sct).toFixed(1) + "%)</span>"
+      : " ✓");
+    totalLabelEl.style.color = catTokColor;
+  }
+  if (barEl) {
+    barEl.innerHTML = CATS.filter(function(c){ return catTargets[c] > 0 && etfs.some(function(e){ return e.category === c; }); })
+      .map(function(c){ var v=catTargets[c]; return '<div title="'+c+': '+v+'%" style="flex:'+v+';background:'+(COL[c]||COL["Altro"]).accent+';transition:flex .4s"></div>'; }).join("")
+      + (sct < 100 ? '<div style="flex:'+(100-sct)+';background:#1e293b"></div>' : "");
+  }
+  if (chipsEl) {
+    chipsEl.innerHTML = CATS.filter(function(c){ return catTargets[c] > 0 && etfs.some(function(e){ return e.category === c; }); })
+      .map(function(c){
+        var col = (COL[c]||COL["Altro"]).accent;
+        return '<div style="display:flex;align-items:center;gap:4px"><div style="width:7px;height:7px;border-radius:2px;background:'+col+'"></div><span style="font-size:11px;color:#94a3b8">'+c+'</span><span style="font-family:monospace;font-size:11px;color:'+col+'">'+catTargets[c]+'%</span></div>';
+      }).join("");
+  }
+
+  // Validation: warn if cat total > 100
+  var warnEl = document.getElementById("cat-sum-warn");
+  if (warnEl) {
+    if (sct > 100.05) {
+      warnEl.style.display = "block";
+      warnEl.textContent = "⚠ La somma supera 100% di " + (sct-100).toFixed(1) + "% — riduci qualche categoria.";
+    } else {
+      warnEl.style.display = "none";
+    }
+  }
+}
+
 // ── EXPORT ───────────────────────────────────────────────────────────
 const PROMPT_SUGGESTIONS=[
   {icon:"📊",title:"Analisi allocazione",text:"Analizza la mia allocazione attuale rispetto ai target. Evidenzia gli scostamenti più significativi e dimmi se la struttura è coerente con un profilo moderato di lungo periodo."},
@@ -1237,7 +1320,7 @@ function renderOverview(){
   const tc=Math.abs(sct-100)<0.05?"#66bb6a":"#ef5350";
   d2=d2.replace('fill="#e2e8f0" font-size="12" font-family="DM Mono,monospace" font-weight="600"',`fill="${tc}" font-size="18" font-family="DM Mono,monospace" font-weight="700"`);
   const legend=etfs.map(e=>{const col=(COL[e.category]||COL["Altro"]).accent,pct=tot>0?((e.value/tot)*100).toFixed(1):0,lbl=e.ticker||(e.isin?.substring(0,6)+"…")||"—";return `<div class="legend-item"><div class="legend-dot" style="background:${col}"></div><span class="legend-ticker">${lbl}</span><span class="legend-pct">${pct}%</span></div>`;}).join("");
-  const catSumBar=`<div class="card" style="margin-bottom:14px;padding:14px 16px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><span class="card-label" style="margin:0">Target per categoria</span><span style="font-family:'DM Mono',monospace;font-size:12px;color:${catTokColor};font-weight:600">${sct.toFixed(1)}%${Math.abs(sct-100)>0.05?` <span style="color:#64748b;font-size:10px">(${sct<100?"mancano":"superi"} ${Math.abs(100-sct).toFixed(1)}%)</span>`:" ✓"}</span></div><div style="display:flex;height:8px;border-radius:4px;overflow:hidden;gap:1px">${CATS.filter(c=>catTargets[c]>0&&etfs.some(e=>e.category===c)).map(c=>{const v=catTargets[c];return`<div title="${c}: ${v}%" style="flex:${v};background:${(COL[c]||COL["Altro"]).accent};transition:flex .4s"></div>`;}).join("")}${sct<100?`<div style="flex:${100-sct};background:#1e293b"></div>`:""}</div><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">${CATS.filter(c=>catTargets[c]>0&&etfs.some(e=>e.category===c)).map(c=>{const col=(COL[c]||COL["Altro"]).accent;return`<div style="display:flex;align-items:center;gap:4px"><div style="width:7px;height:7px;border-radius:2px;background:${col}"></div><span style="font-size:11px;color:#94a3b8">${c}</span><span style="font-family:'DM Mono',monospace;font-size:11px;color:${col}">${catTargets[c]}%</span></div>`;}).join("")}</div></div>`;
+  const catSumBar=`<div class="card" style="margin-bottom:14px;padding:14px 16px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><span class="card-label" style="margin:0">Target per categoria</span><span id="cat-sum-bar-total" style="font-family:'DM Mono',monospace;font-size:12px;color:${catTokColor};font-weight:600">${sct.toFixed(1)}% / 100%${Math.abs(sct-100)>0.05?` <span style="color:#64748b;font-size:10px">(${sct<100?"mancano":"superi"} ${Math.abs(100-sct).toFixed(1)}%)</span>`:" ✓"}</span></div><div id="cat-sum-bar-warn" style="display:${sct>100.05?"flex":"none"};align-items:center;justify-content:space-between;gap:10px;color:#ef5350;font-size:11px;margin-bottom:8px;background:#2a1a1a;border-radius:6px;padding:6px 12px"><span>⚠ La somma supera 100% di ${(sct-100).toFixed(1)}% — riduci qualche categoria.</span><button onclick="resetCatTargets()" style="background:#7f1d1d;border:none;border-radius:6px;padding:4px 10px;color:#fca5a5;font-size:11px;font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;white-space:nowrap">↺ Reset target</button></div><div id="cat-sum-bar-fill" style="display:flex;height:8px;border-radius:4px;overflow:hidden;gap:1px">${CATS.filter(c=>catTargets[c]>0&&etfs.some(e=>e.category===c)).map(c=>{const v=catTargets[c];return`<div title="${c}: ${v}%" style="flex:${v};background:${(COL[c]||COL["Altro"]).accent};transition:flex .4s"></div>`;}).join("")}${sct<100?`<div style="flex:${100-sct};background:#1e293b"></div>`:""}</div><div id="cat-sum-bar-chips" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">${CATS.filter(c=>catTargets[c]>0&&etfs.some(e=>e.category===c)).map(c=>{const col=(COL[c]||COL["Altro"]).accent;return`<div style="display:flex;align-items:center;gap:4px"><div style="width:7px;height:7px;border-radius:2px;background:${col}"></div><span style="font-size:11px;color:#94a3b8">${c}</span><span style="font-family:'DM Mono',monospace;font-size:11px;color:${col}">${catTargets[c]}%</span></div>`;}).join("")}</div></div>`;
   let catHtml="";
   Object.entries(groups).forEach(([cat,items])=>{
     const col=COL[cat]||COL["Altro"],catTarget=catTargets[cat]||0,catTot=items.reduce((a,e)=>a+e.value,0),catActualPct=tot>0?(catTot/tot)*100:0,hasSub=HAS_SUBCATS.includes(cat);
@@ -1272,8 +1355,33 @@ function renderRebalance(){
 }
 
 // ── MUTATIONS ────────────────────────────────────────────────────────
-function updateCatTarget(cat,val){catTargets[cat]=parseFloat(val)||0;renderOverview();scheduleSave();}
-function updateSubcatTarget(cat,sub,val){if(!subcatTargets[cat])subcatTargets[cat]={};subcatTargets[cat][sub]=parseFloat(val)||0;renderOverview();scheduleSave();}
+function resetCatTargets() {
+  if (!confirm("Resetta tutti i target di categoria ai valori di default (Azionario 60%, Obbligazionario 18%, Materie Prime 8%, Immobiliare 6%, Liquidità 8%)?")) return;
+  catTargets = {"Azionario":60,"Obbligazionario":18,"Materie Prime":8,"Immobiliare":6,"Liquidità":8,"Crypto":0,"Altro":0};
+  // Reset subcategory targets too
+  subcatTargets = {
+    "Azionario": {"Globale":0,"USA":0,"Europa":0,"Emergenti":0,"Pacifico":0},
+    "Obbligazionario": {"Governativo":0,"Corporate":0,"High Yield":0,"Emergenti":0}
+  };
+  renderOverview();
+  scheduleSave();
+}
+
+function updateCatTarget(cat, val) {
+  var v = parseFloat(val);
+  if (isNaN(v) || val === '') return;
+  catTargets[cat] = Math.max(0, v); // allow > 100 while editing, UI shows warning
+  updateTargetUI();
+  scheduleSave();
+}
+function updateSubcatTarget(cat, sub, val) {
+  var v = parseFloat(val);
+  if (isNaN(v) || val === '') return;
+  if (!subcatTargets[cat]) subcatTargets[cat] = {};
+  subcatTargets[cat][sub] = Math.max(0, v);
+  updateTargetUI();
+  scheduleSave();
+}
 function addSubcat(cat){const inp=document.getElementById("new-sub-"+cat.replace(/\s/g,"_"));if(!inp)return;const name=inp.value.trim();if(!name||subcats[cat].includes(name)){inp.value="";return;}subcats[cat].push(name);if(!subcatTargets[cat])subcatTargets[cat]={};subcatTargets[cat][name]=0;inp.value="";renderOverview();scheduleSave();}
 function removeSubcat(cat,sub){const aff=etfs.filter(e=>e.category===cat&&e.subcategory===sub);if(aff.length&&!confirm(`"${sub}" ha ${aff.length} ETF. Continuare?`))return;if(aff.length)etfs=etfs.map(e=>e.category===cat&&e.subcategory===sub?{...e,subcategory:null}:e);subcats[cat]=subcats[cat].filter(s=>s!==sub);if(subcatTargets[cat])delete subcatTargets[cat][sub];renderOverview();scheduleSave();}
 function startEdit(id){editingId=id;renderOverview();}
