@@ -857,10 +857,37 @@ const sumCatTargets=()=>Object.values(catTargets).reduce((a,v)=>a+v,0);
 function subcatColor(cat,sub){const l=subcats[cat]||[],i=l.indexOf(sub);return(SUBCAT_TINTS[cat]||[])[i%(SUBCAT_TINTS[cat]?.length||1)]||(COL[cat]||COL["Altro"]).accent;}
 function allocColor(a,t){if(!t)return a>0?"#ffa726":"#64748b";const d=Math.abs(a-t);return d<0.5?"#66bb6a":d<2?"#ffa726":"#ef5350";}
 function targetPill(label,tgt,act,inputId,onchangeCb,small){
-  const cls=small?"target-pill target-pill-sm":"target-pill";
-  const ac=allocColor(act,tgt),sign=act-tgt,ss=sign>=0?`+${sign.toFixed(1)}`:sign.toFixed(1);
-  const allocHtml=(tgt===0&&act===0)?"—":`${act.toFixed(1)}% <span style="color:${ac}">(${ss}%)</span>`;
-  return `<div class="${cls}"><span class="target-pill-label">${label}</span><div style="display:flex;align-items:baseline;gap:2px"><input class="target-pill-input" type="number" inputmode="decimal" value="${tgt}" id="${inputId}" oninput="${onchangeCb}" onchange="${onchangeCb}" min="0" max="100" step="0.5"><span class="target-pill-pct">%</span></div><div class="target-pill-sep"></div><span class="target-pill-alloc">${allocHtml}</span></div>`;
+  // act here is always % of portfolio for display
+  var cls=small?"target-pill target-pill-sm":"target-pill";
+  var ac=allocColor(act,tgt),sign=act-tgt,ss=sign>=0?"+"+sign.toFixed(1):sign.toFixed(1);
+  var allocHtml=(tgt===0&&act===0)?"—":act.toFixed(1)+"% <span style='color:"+ac+"'>("+ss+"%)</span>";
+  return "<div class='"+cls+"'><span class='target-pill-label'>"+label+"</span><div style='display:flex;align-items:baseline;gap:2px'><input class='target-pill-input' type='number' inputmode='decimal' value='"+tgt+"' id='"+inputId+"' oninput='"+onchangeCb+"' onchange='"+onchangeCb+"' min='0' max='100' step='1'><span class='target-pill-pct'>%</span></div><div class='target-pill-sep'></div><span class='target-pill-alloc'>"+allocHtml+"</span></div>";
+}
+
+// Subcat pill: tgt is % of category, actPct is % of portfolio, catTgt is cat % of portfolio
+function subcatPill(sub,cat,tgt,actPortfolioPct,catTgt){
+  var catActPct = (function(){
+    var tot=total(); if(!tot) return 0;
+    var catVal=etfs.filter(function(e){return e.category===cat;}).reduce(function(a,e){return a+e.value;},0);
+    return (catVal/tot)*100;
+  })();
+  var subActOfCat = catActPct>0 ? (actPortfolioPct/catActPct)*100 : 0;
+  var ac=allocColor(subActOfCat,tgt);
+  var sign=subActOfCat-tgt,ss=sign>=0?"+"+sign.toFixed(1):sign.toFixed(1);
+  var allocHtml=(tgt===0&&subActOfCat===0)?"—":subActOfCat.toFixed(1)+"% di cat <span style='color:"+ac+"'>("+ss+"%)</span>";
+  var inputId="starget-"+cat.replace(/\s/g,"_")+"-"+sub.replace(/\s/g,"_");
+  var cb="updateSubcatTarget('"+cat+"','"+sub+"',this.value)";
+  // Sum check for this category
+  var sumSubcats=Object.values(subcatTargets[cat]||{}).reduce(function(a,v){return a+v;},0);
+  var sumOk=Math.abs(sumSubcats-100)<0.1;
+  var border=sumOk?"":"border:1px solid #ffa72622;";
+  return "<div class='target-pill target-pill-sm' style='"+border+"'>"
+    +"<span class='target-pill-label'>% cat</span>"
+    +"<div style='display:flex;align-items:baseline;gap:2px'>"
+    +"<input class='target-pill-input' type='number' inputmode='decimal' value='"+tgt+"' id='"+inputId+"' oninput='"+cb+"' onchange='"+cb+"' min='0' max='100' step='1'>"
+    +"<span class='target-pill-pct'>%</span></div>"
+    +"<div class='target-pill-sep'></div>"
+    +"<span class='target-pill-alloc'>"+allocHtml+"</span></div>";
 }
 
 // ── SYNC ────────────────────────────────────────────────────────────
@@ -916,38 +943,31 @@ function syncBadgeClick(){if(!accessToken)signIn();}
 function getState(){return{etfs,catTargets,subcatTargets,subcats,nextId};}
 function setState(s){
   if(!s) return;
-  if(s.etfs) etfs = s.etfs;
-
-  if(s.catTargets) {
-    // Load saved targets — only strip unknown keys and clamp to 0-100
-    var knownCats = ["Azionario","Obbligazionario","Materie Prime","Immobiliare","Liquidità","Crypto","Altro"];
-    knownCats.forEach(function(c){
-      var v = parseFloat(s.catTargets[c]);
-      catTargets[c] = isNaN(v) ? 0 : Math.max(0, Math.min(100, v));
+  if(s.etfs) etfs = s.etfs.map(function(e){
+    // strip legacy per-ETF target field
+    var n={};Object.keys(e).forEach(function(k){if(k!=="target")n[k]=e[k];});return n;
+  });
+  if(s.catTargets){
+    var known=["Azionario","Obbligazionario","Materie Prime","Immobiliare","Liquidità","Crypto","Altro"];
+    known.forEach(function(c){
+      var v=parseFloat(s.catTargets[c]);
+      catTargets[c]=isNaN(v)?0:Math.max(0,v);
     });
   }
-
-  if(s.subcatTargets) {
+  if(s.subcatTargets){
     Object.keys(s.subcatTargets).forEach(function(cat){
-      if(!subcatTargets[cat]) subcatTargets[cat] = {};
-      var saved = s.subcatTargets[cat] || {};
+      if(!subcatTargets[cat])subcatTargets[cat]={};
+      var saved=s.subcatTargets[cat]||{};
       Object.keys(saved).forEach(function(sub){
-        var v = parseFloat(saved[sub]);
-        subcatTargets[cat][sub] = isNaN(v) ? 0 : Math.max(0, Math.min(100, v));
+        var v=parseFloat(saved[sub]);
+        subcatTargets[cat][sub]=isNaN(v)?0:Math.max(0,v);
       });
     });
   }
-
-  if(s.subcats) subcats = s.subcats;
-  if(s.nextId) nextId = s.nextId;
-
-  // Strip legacy per-ETF target field
-  etfs = etfs.map(function(e){
-    var n = {};
-    Object.keys(e).forEach(function(k){ if(k !== "target") n[k] = e[k]; });
-    return n;
-  });
+  if(s.subcats)subcats=s.subcats;
+  if(s.nextId)nextId=s.nextId;
 }
+
 async function driveRequest(method,url,body,params){const q=params?'?'+new URLSearchParams(params):'';const opts={method,headers:{Authorization:`Bearer ${accessToken}`}};if(body){opts.headers['Content-Type']='application/json';opts.body=JSON.stringify(body);}const r=await fetch(url+q,opts);if(!r.ok)throw new Error(`${r.status}`);return r.json();}
 async function findDriveFile(){const r=await driveRequest('GET',`${DRIVE_API}/files`,null,{q:`name='${DRIVE_FILE}' and trashed=false`,spaces:'drive',fields:'files(id,name,modifiedTime)'});return r.files?.[0]||null;}
 async function loadFromDrive(){try{const f=await findDriveFile();if(f){driveFileId=f.id;const r=await fetch(`${DRIVE_API}/files/${driveFileId}?alt=media`,{headers:{Authorization:`Bearer ${accessToken}`}});if(r.ok){const d=await r.json();setState(d);const dt=new Date(f.modifiedTime);setSyncStatus("connected",`Sync ${dt.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"})}`);}}}catch(e){setSyncStatus("error","Errore");}if(!driveFileId)await saveToDrive();}
@@ -1174,6 +1194,33 @@ function updateTargetUI() {
   var statEl = document.querySelector('.stat-val[data-target-total]');
   if (statEl) { statEl.textContent = sct.toFixed(1) + "%"; statEl.style.color = catTokColor; }
 
+  // Update subcategory sum indicators in cat headers
+  HAS_SUBCATS.forEach(function(cat){
+    var subcatSum=Object.values(subcatTargets[cat]||{}).reduce(function(a,v){return a+v;},0);
+    var ok=Math.abs(subcatSum-100)<0.1;
+    // Find the span after cat-count for this category
+    var pills=document.querySelectorAll('.target-pill-input[id^="starget-'+cat.replace(/\s/g,'_')+'"]');
+    pills.forEach(function(p){
+      var pill=p.closest('.target-pill');
+      if(!pill) return;
+      var alloc=pill.querySelector('.target-pill-alloc');
+      if(!alloc) return;
+      // Recalculate this subcat's display
+      var sub=p.id.replace('starget-'+cat.replace(/\s/g,'_')+'-','').replace(/_/g,' ');
+      // find actual sub name from subcats[cat]
+      if(subcats[cat]) subcats[cat].forEach(function(s){
+        if(s.replace(/\s/g,'_')===p.id.replace('starget-'+cat.replace(/\s/g,'_')+'-','')) sub=s;
+      });
+      var tgt=parseFloat(p.value)||0;
+      var subVal=etfs.filter(function(e){return e.category===cat&&e.subcategory===sub;}).reduce(function(a,e){return a+e.value;},0);
+      var catVal=etfs.filter(function(e){return e.category===cat;}).reduce(function(a,e){return a+e.value;},0);
+      var subActOfCat=catVal>0?(subVal/catVal)*100:0;
+      var ac=allocColor(subActOfCat,tgt);
+      var sign=subActOfCat-tgt,ss=sign>=0?"+"+sign.toFixed(1):sign.toFixed(1);
+      alloc.innerHTML=(tgt===0&&subActOfCat===0)?"—":subActOfCat.toFixed(1)+"% di cat <span style='color:"+ac+"'>("+ss+"%)</span>";
+    });
+  });
+
   // Update summary bar segments and chips
   // Update warn banner
   var warnEl = document.getElementById("cat-sum-bar-warn");
@@ -1328,11 +1375,16 @@ function renderOverview(){
     if(hasSub){
       const usedSubs=subcats[cat].filter(s=>items.some(e=>e.subcategory===s)),uncat=items.filter(e=>!e.subcategory||!subcats[cat].includes(e.subcategory));
       let inner="";
-      usedSubs.forEach(sub=>{const si=items.filter(e=>e.subcategory===sub);if(!si.length)return;const sc=subcatColor(cat,sub),sv=si.reduce((a,e)=>a+e.value,0),sa=tot>0?(sv/tot)*100:0,st=(subcatTargets[cat]||{})[sub]||0;const sp=targetPill("TARGET",st,sa,`starget-${cat.replace(/\s/g,"_")}-${sub.replace(/\s/g,"_")}`,`updateSubcatTarget("${cat}","${sub}",this.value)`,true);inner+=`<div class="subcat-block"><div class="subcat-header"><div class="subcat-left"><div class="subcat-bar-el" style="background:${sc}"></div><span class="subcat-name-text" style="color:${sc}">${sub}</span><span class="subcat-count">${si.length} ETF</span></div><div class="subcat-right"><span class="subcat-val-stat">${fmt(sv)}</span>${sp}<button class="btn-sm btn-sm-danger ripple" onclick="removeSubcat('${cat}','${sub}')">✕</button></div></div>${buildEtfDisplay(si,tot,sc,true)}</div>`;});
+      usedSubs.forEach(sub=>{const si=items.filter(e=>e.subcategory===sub);if(!si.length)return;const sc=subcatColor(cat,sub),sv=si.reduce((a,e)=>a+e.value,0),sa=tot>0?(sv/tot)*100:0,st=(subcatTargets[cat]||{})[sub]||0;
+        const sp=subcatPill(sub,cat,st,sa,catTarget);
+        inner+=`<div class="subcat-block"><div class="subcat-header"><div class="subcat-left"><div class="subcat-bar-el" style="background:${sc}"></div><span class="subcat-name-text" style="color:${sc}">${sub}</span><span class="subcat-count">${si.length} ETF</span></div><div class="subcat-right"><span class="subcat-val-stat">${fmt(sv)}</span>${sp}<button class="btn-sm btn-sm-danger ripple" onclick="removeSubcat('${cat}','${sub}')">✕</button></div></div>${buildEtfDisplay(si,tot,sc,true)}</div>`;});
       if(uncat.length)inner+=`<div class="subcat-block"><div class="subcat-header"><div class="subcat-left"><div class="subcat-bar-el" style="background:#334155"></div><span class="subcat-name-text" style="color:#475569">Senza sottocategoria</span><span class="subcat-count">${uncat.length} ETF</span></div></div>${buildEtfDisplay(uncat,tot,col.accent,true)}</div>`;
       const tags=subcats[cat].map(s=>`<div class="subcat-tag"><span class="subcat-tag-name">${s}</span><button class="subcat-tag-del ripple" onclick="removeSubcat('${cat}','${s}')">✕</button></div>`).join("");
       const strip=`<div class="subcat-manager"><span class="subcat-manager-label">Sottocategorie:</span>${tags}<div class="subcat-add-form"><input class="subcat-add-input" type="text" id="new-sub-${cat.replace(/\s/g,"_")}" placeholder="Nuova…" onkeydown="if(event.key==='Enter')addSubcat('${cat}')"><button class="btn-sm ripple" onclick="addSubcat('${cat}')">+ Aggiungi</button></div></div>`;
-      catHtml+=`<div class="cat-block"><div class="cat-header" style="background:${col.bg}"><div class="cat-title"><div class="cat-dot" style="background:${col.accent}"></div><span class="cat-name-text" style="color:${col.accent}">${cat.toUpperCase()}</span><span class="cat-count" style="color:${col.accent}">${items.length} ETF</span></div><div class="cat-right"><span class="cat-val-stat">${fmt(catTot)}</span>${cpill}</div></div>${inner}${strip}</div>`;
+      var subcatSum=HAS_SUBCATS.includes(cat)?Object.values(subcatTargets[cat]||{}).reduce(function(a,v){return a+v;},0):100;
+      var subcatSumOk=!HAS_SUBCATS.includes(cat)||Math.abs(subcatSum-100)<0.1;
+      var subcatSumLabel=HAS_SUBCATS.includes(cat)?`<span style="font-size:10px;font-family:'DM Mono',monospace;color:${subcatSumOk?"#66bb6a":"#ffa726"};margin-left:6px">${subcatSum.toFixed(0)}%</span>`:"";
+      catHtml+=`<div class="cat-block"><div class="cat-header" style="background:${col.bg}"><div class="cat-title"><div class="cat-dot" style="background:${col.accent}"></div><span class="cat-name-text" style="color:${col.accent}">${cat.toUpperCase()}</span><span class="cat-count" style="color:${col.accent}">${items.length} ETF</span>${subcatSumLabel}</div><div class="cat-right"><span class="cat-val-stat">${fmt(catTot)}</span>${cpill}</div></div>${inner}${strip}</div>`;
     }else{
       catHtml+=`<div class="cat-block"><div class="cat-header" style="background:${col.bg}"><div class="cat-title"><div class="cat-dot" style="background:${col.accent}"></div><span class="cat-name-text" style="color:${col.accent}">${cat.toUpperCase()}</span><span class="cat-count" style="color:${col.accent}">${items.length} ETF</span></div><div class="cat-right"><span class="cat-val-stat">${fmt(catTot)}</span>${cpill}</div></div>${buildEtfDisplay(items,tot,col.accent,false)}</div>`;
     }
@@ -1342,7 +1394,40 @@ function renderOverview(){
 }
 
 // ── REBALANCE ────────────────────────────────────────────────────────
-function calcEtfTargets(newTot){return etfs.map(e=>{const cat=e.category,sub=e.subcategory;let gT=(catTargets[cat]||0)/100;if(HAS_SUBCATS.includes(cat)&&sub&&subcats[cat]?.includes(sub))gT=((subcatTargets[cat]||{})[sub]||0)/100;const gI=etfs.filter(x=>{if(x.category!==cat)return false;if(HAS_SUBCATS.includes(cat)&&sub&&subcats[cat]?.includes(sub))return x.subcategory===sub;if(HAS_SUBCATS.includes(cat)&&(!sub||!subcats[cat]?.includes(sub)))return!x.subcategory||!subcats[cat]?.includes(x.subcategory);return true;});const gV=gI.reduce((a,x)=>a+x.value,0),w=gV>0?e.value/gV:1/Math.max(gI.length,1),tv=gT*w*newTot;return{...e,targetValue:tv,diff:tv-e.value};});}
+function calcEtfTargets(newTot){
+  return etfs.map(function(e){
+    var cat=e.category, sub=e.subcategory;
+    var catPct=(catTargets[cat]||0)/100; // fraction of total portfolio
+
+    var etfTargetValue;
+    if(HAS_SUBCATS.includes(cat) && sub && subcats[cat] && subcats[cat].includes(sub)){
+      // subcatTarget is % OF CATEGORY → convert to % of portfolio
+      var subcatPct=((subcatTargets[cat]||{})[sub]||0)/100;
+      var subcatPortfolioPct = catPct * subcatPct; // fraction of total portfolio for this subcat
+      // Weight this ETF within its subcategory proportionally to its current value
+      var subItems=etfs.filter(function(x){return x.category===cat&&x.subcategory===sub;});
+      var subVal=subItems.reduce(function(a,x){return a+x.value;},0);
+      var w=subVal>0?e.value/subVal:1/Math.max(subItems.length,1);
+      etfTargetValue = subcatPortfolioPct * w * newTot;
+    } else {
+      // No subcategory: spread cat target among ungrouped ETFs proportionally
+      var ungrouped=etfs.filter(function(x){
+        if(x.category!==cat)return false;
+        if(!HAS_SUBCATS.includes(cat))return true;
+        return !x.subcategory||!subcats[cat]||!subcats[cat].includes(x.subcategory);
+      });
+      // How much of catPct is already allocated to named subcats?
+      var subcatSum=HAS_SUBCATS.includes(cat)
+        ? Object.values(subcatTargets[cat]||{}).reduce(function(a,v){return a+v;},0)/100
+        : 0;
+      var remainFrac=Math.max(0,1-subcatSum); // fraction of category left for ungrouped
+      var ungroupedVal=ungrouped.reduce(function(a,x){return a+x.value;},0);
+      var w=ungroupedVal>0?e.value/ungroupedVal:1/Math.max(ungrouped.length,1);
+      etfTargetValue=catPct*remainFrac*w*newTot;
+    }
+    return Object.assign({},e,{targetValue:etfTargetValue,diff:etfTargetValue-e.value});
+  });
+}
 function renderRebalance(){
   const tot=total(),capEl=document.getElementById("new-capital"),cap=capEl?parseFloat(capEl.value)||0:0,newTot=tot+cap,sct=sumCatTargets(),tok=Math.abs(sct-100)<0.05;
   const warn=!tok?`<div class="warn-box">⚠ I target di categoria non sommano al 100% (${sct.toFixed(1)}%). Torna all'Overview per correggerli.</div>`:"";
@@ -1369,14 +1454,14 @@ function resetCatTargets() {
 
 function updateCatTarget(cat, val) {
   var v = parseFloat(val);
-  if (isNaN(v) || val === '') return;
-  catTargets[cat] = Math.max(0, v); // allow > 100 while editing, UI shows warning
+  if (isNaN(v)) return;
+  catTargets[cat] = Math.max(0, v);
   updateTargetUI();
   scheduleSave();
 }
 function updateSubcatTarget(cat, sub, val) {
   var v = parseFloat(val);
-  if (isNaN(v) || val === '') return;
+  if (isNaN(v)) return;
   if (!subcatTargets[cat]) subcatTargets[cat] = {};
   subcatTargets[cat][sub] = Math.max(0, v);
   updateTargetUI();
