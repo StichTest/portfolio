@@ -464,6 +464,8 @@ document.addEventListener("pointerdown",function(e){
 
 // ── BACK BUTTON ─────────────────────────────────────────────────────
 function pushState(id){history.pushState({panel:id},"");}
+// Save targets to localStorage before page unloads
+window.addEventListener("beforeunload",function(){saveTargetsLocal();});
 window.addEventListener("popstate",function(){
   if(document.getElementById("edit-modal").style.display!=="none"){closeEditModal();return;}
   if(document.getElementById("add-modal").style.display!=="none"){closeAddModal();return;}
@@ -630,7 +632,7 @@ function signIn(){
     alert("Errore JavaScript: "+e.message);
   }
 }
-function useOffline(){isOffline=true;document.getElementById("login-screen").style.display="none";document.getElementById("app").style.display="block";setSyncStatus("off","Locale");renderOverview();}
+function useOffline(){isOffline=true;document.getElementById("login-screen").style.display="none";document.getElementById("app").style.display="block";setSyncStatus("off","Locale");loadTargetsLocal();renderOverview();}
 function syncClick(){if(!accessToken)signIn();}
 function getState(){
   return {etfs:etfs.map(function(e){return {id:e.id,t:e.t,i:e.i,n:e.n,c:e.c,s:e.s,v:e.v};}),
@@ -665,6 +667,8 @@ function setState(d){
     });
   }
   if(d.nextId)nextId=d.nextId;
+  // Apply localStorage targets (always more recent than Drive)
+  loadTargetsLocal();
 }
 async function driveReq(method,url,body,params){
   var q=params?"?"+new URLSearchParams(params):"";
@@ -799,9 +803,28 @@ function showDetected(etf){
 // ── TARGET FUNCTIONS ─────────────────────────────────────────────────
 // catTargets: % of total portfolio
 // subcatTargets[cat][sub]: % OF CATEGORY (NOT portfolio)
+// ── TARGET PERSISTENCE ─────────────────────────────────────────────
+// Save targets to localStorage immediately (Drive has 1.5s delay)
+function saveTargetsLocal(){
+  try{
+    localStorage.setItem("pf_catTargets", JSON.stringify(catTargets));
+    localStorage.setItem("pf_subcatTargets", JSON.stringify(subcatTargets));
+    localStorage.setItem("pf_targetsTs", Date.now().toString());
+  }catch(e){}
+}
+function loadTargetsLocal(){
+  try{
+    var ct=localStorage.getItem("pf_catTargets");
+    var st=localStorage.getItem("pf_subcatTargets");
+    if(ct){var parsed=JSON.parse(ct);CATS.forEach(function(c){var v=parseFloat(parsed[c]);if(!isNaN(v))catTargets[c]=Math.max(0,v);});}
+    if(st){var parsed=JSON.parse(st);Object.keys(parsed).forEach(function(cat){if(!subcatTargets[cat])subcatTargets[cat]={};Object.keys(parsed[cat]).forEach(function(sub){var v=parseFloat(parsed[cat][sub]);if(!isNaN(v))subcatTargets[cat][sub]=v;});});}
+  }catch(e){}
+}
+
 function updateCatTarget(cat,val){
   var v=parseFloat(val);if(isNaN(v))return;
   catTargets[cat]=Math.max(0,v);
+  saveTargetsLocal();
   refreshSummaryBar();
   scheduleSave();
 }
@@ -809,6 +832,7 @@ function updateSubcatTarget(cat,sub,val){
   var v=parseFloat(val);if(isNaN(v))return;
   if(!subcatTargets[cat])subcatTargets[cat]={};
   subcatTargets[cat][sub]=Math.max(0,v);
+  saveTargetsLocal();
   refreshSubcatBadge(cat);
   refreshSubcatPillAlloc(cat,sub);
   scheduleSave();
@@ -816,6 +840,8 @@ function updateSubcatTarget(cat,sub,val){
 function resetCatTargets(){
   if(!confirm("Resettare i target di categoria ai valori di default?"))return;
   catTargets={Azionario:60,Obbligazionario:18,"Materie Prime":8,Immobiliare:6,"Liquidità":8,Crypto:0,Altro:0};
+  subcatTargets={Azionario:{Globale:0,USA:0,Europa:0,Emergenti:0,Pacifico:0},Obbligazionario:{Governativo:0,Corporate:0,"High Yield":0,Emergenti:0}};
+  saveTargetsLocal();
   renderOverview();scheduleSave();
 }
 // live DOM updates without full re-render
