@@ -574,6 +574,33 @@ var nextId=30;
 var catTargets={Azionario:60,Obbligazionario:18,"Materie Prime":8,Immobiliare:6,"Liquidità":8,Crypto:0,Altro:0};
 var subcatTargets={Azionario:{Globale:0,USA:0,Europa:0,Emergenti:0,Pacifico:0},Obbligazionario:{Governativo:0,Corporate:0,"High Yield":0,Emergenti:0}};
 var subcats={Azionario:["Globale","USA","Europa","Emergenti","Pacifico"],Obbligazionario:["Governativo","Corporate","High Yield","Emergenti"]};
+
+// ── LOAD TARGETS FROM LOCALSTORAGE IMMEDIATELY ON STARTUP ──────────
+// This runs before Drive, before login, before anything else.
+// Targets are NEVER saved to Drive — only in localStorage.
+(function(){
+  try{
+    var ct=localStorage.getItem("pf_catTargets");
+    if(ct){
+      var parsed=JSON.parse(ct);
+      ["Azionario","Obbligazionario","Materie Prime","Immobiliare","Liquidità","Crypto","Altro"].forEach(function(c){
+        var v=parseFloat(parsed[c]);
+        if(!isNaN(v)&&v>=0)catTargets[c]=v;
+      });
+    }
+    var st=localStorage.getItem("pf_subcatTargets");
+    if(st){
+      var parsed2=JSON.parse(st);
+      Object.keys(parsed2).forEach(function(cat){
+        if(!subcatTargets[cat])subcatTargets[cat]={};
+        Object.keys(parsed2[cat]).forEach(function(sub){
+          var v=parseFloat(parsed2[cat][sub]);
+          if(!isNaN(v)&&v>=0)subcatTargets[cat][sub]=v;
+        });
+      });
+    }
+  }catch(e){}
+})();
 var etfs=[
   {id:1,t:"VWCE",i:"IE00B3RBWM25",n:"Vanguard FTSE All-World",c:"Azionario",s:"Globale",v:8000},
   {id:2,t:"CSPX",i:"IE00B5BMR087",n:"iShares Core S&P 500",c:"Azionario",s:"USA",v:5000},
@@ -632,7 +659,7 @@ function signIn(){
     alert("Errore JavaScript: "+e.message);
   }
 }
-function useOffline(){isOffline=true;document.getElementById("login-screen").style.display="none";document.getElementById("app").style.display="block";setSyncStatus("off","Locale");loadTargetsLocal();renderOverview();}
+function useOffline(){isOffline=true;document.getElementById("login-screen").style.display="none";document.getElementById("app").style.display="block";setSyncStatus("off","Locale");renderOverview();}
 function syncClick(){if(!accessToken)signIn();}
 function getState(){
   // Save ONLY etfs and subcats to Drive; targets live in localStorage
@@ -653,8 +680,7 @@ function setState(d){
     });
   }
   if(d.nextId)nextId=d.nextId;
-  // Targets live ONLY in localStorage — never overwrite from Drive
-  loadTargetsLocal();
+  // Note: targets are loaded at script startup from localStorage, not from Drive
 }
 async function driveReq(method,url,body,params){
   var q=params?"?"+new URLSearchParams(params):"";
@@ -793,38 +819,11 @@ function showDetected(etf){
 // Save targets to localStorage immediately (Drive has 1.5s delay)
 function saveTargetsLocal(){
   try{
-    localStorage.setItem("pf_catTargets", JSON.stringify(catTargets));
-    localStorage.setItem("pf_subcatTargets", JSON.stringify(subcatTargets));
-    localStorage.setItem("pf_targetsTs", Date.now().toString());
-    console.log("[targets] saved to localStorage:", JSON.stringify(catTargets));
-  }catch(e){console.error("[targets] save error:",e);}
+    localStorage.setItem("pf_catTargets",JSON.stringify(catTargets));
+    localStorage.setItem("pf_subcatTargets",JSON.stringify(subcatTargets));
+  }catch(e){}
 }
-function loadTargetsLocal(){
-  try{
-    var ct=localStorage.getItem("pf_catTargets");
-    if(ct){
-      var parsed=JSON.parse(ct);
-      CATS.forEach(function(c){
-        var v=parseFloat(parsed[c]);
-        if(!isNaN(v))catTargets[c]=Math.max(0,v);
-      });
-      console.log("[targets] loaded from localStorage:", JSON.stringify(catTargets));
-    } else {
-      console.log("[targets] no localStorage data, using defaults");
-    }
-    var st=localStorage.getItem("pf_subcatTargets");
-    if(st){
-      var parsed=JSON.parse(st);
-      Object.keys(parsed).forEach(function(cat){
-        if(!subcatTargets[cat])subcatTargets[cat]={};
-        Object.keys(parsed[cat]).forEach(function(sub){
-          var v=parseFloat(parsed[cat][sub]);
-          if(!isNaN(v))subcatTargets[cat][sub]=v;
-        });
-      });
-    }
-  }catch(e){console.error("[targets] load error:",e);}
-}
+// loadTargetsLocal() removed — targets loaded at startup via IIFE
 
 function updateCatTarget(cat,val){
   var v=parseFloat(val);if(isNaN(v))return;
