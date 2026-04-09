@@ -635,39 +635,25 @@ function signIn(){
 function useOffline(){isOffline=true;document.getElementById("login-screen").style.display="none";document.getElementById("app").style.display="block";setSyncStatus("off","Locale");loadTargetsLocal();renderOverview();}
 function syncClick(){if(!accessToken)signIn();}
 function getState(){
-  return {etfs:etfs.map(function(e){return {id:e.id,t:e.t,i:e.i,n:e.n,c:e.c,s:e.s,v:e.v};}),
-    catTargets:catTargets,subcatTargets:subcatTargets,subcats:subcats,nextId:nextId};
+  // Save ONLY etfs and subcats to Drive; targets live in localStorage
+  return {etfs:etfs.map(function(e){return {id:e.id,t:e.t,i:e.i,n:e.n,c:e.c,s:e.s,v:e.v};}),subcats:subcats,nextId:nextId};
 }
 function setState(d){
   if(!d)return;
-  if(d.etfs)etfs=d.etfs.map(function(e){return {id:e.id,t:e.t||null,i:e.i||null,n:e.n||"",c:e.c||"Altro",s:e.s||null,v:parseFloat(e.v||e.value)||0};});
-  if(d.subcats)subcats=d.subcats;
-  // load subcatTargets
-  if(d.subcatTargets){
-    subcatTargets={};
-    Object.keys(d.subcatTargets).forEach(function(cat){
-      subcatTargets[cat]={};
-      var saved=d.subcatTargets[cat]||{};
-      Object.keys(saved).forEach(function(sub){
-        var v=parseFloat(saved[sub]);
-        subcatTargets[cat][sub]=isNaN(v)?0:Math.max(0,v);
-      });
-    });
-    // ensure all current subcats have an entry
+  if(d.etfs)etfs=d.etfs.map(function(e){
+    return {id:e.id,t:e.t||null,i:e.i||null,n:e.n||"",c:e.c||"Altro",s:e.s||null,v:parseFloat(e.v||e.value)||0};
+  });
+  if(d.subcats){
+    subcats=d.subcats;
     Object.keys(subcats).forEach(function(cat){
       if(!subcatTargets[cat])subcatTargets[cat]={};
-      (subcats[cat]||[]).forEach(function(sub){if(subcatTargets[cat][sub]===undefined)subcatTargets[cat][sub]=0;});
-    });
-  }
-  // load catTargets
-  if(d.catTargets){
-    CATS.forEach(function(c){
-      var v=parseFloat(d.catTargets[c]);
-      catTargets[c]=isNaN(v)?0:Math.max(0,v);
+      (subcats[cat]||[]).forEach(function(sub){
+        if(subcatTargets[cat][sub]===undefined)subcatTargets[cat][sub]=0;
+      });
     });
   }
   if(d.nextId)nextId=d.nextId;
-  // Apply localStorage targets (always more recent than Drive)
+  // Targets live ONLY in localStorage — never overwrite from Drive
   loadTargetsLocal();
 }
 async function driveReq(method,url,body,params){
@@ -810,15 +796,34 @@ function saveTargetsLocal(){
     localStorage.setItem("pf_catTargets", JSON.stringify(catTargets));
     localStorage.setItem("pf_subcatTargets", JSON.stringify(subcatTargets));
     localStorage.setItem("pf_targetsTs", Date.now().toString());
-  }catch(e){}
+    console.log("[targets] saved to localStorage:", JSON.stringify(catTargets));
+  }catch(e){console.error("[targets] save error:",e);}
 }
 function loadTargetsLocal(){
   try{
     var ct=localStorage.getItem("pf_catTargets");
+    if(ct){
+      var parsed=JSON.parse(ct);
+      CATS.forEach(function(c){
+        var v=parseFloat(parsed[c]);
+        if(!isNaN(v))catTargets[c]=Math.max(0,v);
+      });
+      console.log("[targets] loaded from localStorage:", JSON.stringify(catTargets));
+    } else {
+      console.log("[targets] no localStorage data, using defaults");
+    }
     var st=localStorage.getItem("pf_subcatTargets");
-    if(ct){var parsed=JSON.parse(ct);CATS.forEach(function(c){var v=parseFloat(parsed[c]);if(!isNaN(v))catTargets[c]=Math.max(0,v);});}
-    if(st){var parsed=JSON.parse(st);Object.keys(parsed).forEach(function(cat){if(!subcatTargets[cat])subcatTargets[cat]={};Object.keys(parsed[cat]).forEach(function(sub){var v=parseFloat(parsed[cat][sub]);if(!isNaN(v))subcatTargets[cat][sub]=v;});});}
-  }catch(e){}
+    if(st){
+      var parsed=JSON.parse(st);
+      Object.keys(parsed).forEach(function(cat){
+        if(!subcatTargets[cat])subcatTargets[cat]={};
+        Object.keys(parsed[cat]).forEach(function(sub){
+          var v=parseFloat(parsed[cat][sub]);
+          if(!isNaN(v))subcatTargets[cat][sub]=v;
+        });
+      });
+    }
+  }catch(e){console.error("[targets] load error:",e);}
 }
 
 function updateCatTarget(cat,val){
