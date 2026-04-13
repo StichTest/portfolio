@@ -319,6 +319,7 @@ tr.drag-over td{border-top:2px solid var(--accent)}
       <button class="tab-btn ripple" onclick="switchTab('ribilancia')">Ribilancia</button>
       <button class="btn-add-dt ripple" onclick="openAddModal()">+ Aggiungi ETF</button>
       <button class="btn-export ripple" onclick="openExport()">🤖 Esporta AI</button>
+      <button class="btn-add-dt ripple" onclick="openTargetModal()" style="background:#0e2a1e;border:1px solid #166534;color:#86efac">⚙ Target</button>
       <div class="sync-badge off" id="sync-badge" onclick="syncClick()"><div class="sdot"></div><span id="sync-lbl">Non connesso</span></div>
     </div>
   </div>
@@ -364,6 +365,40 @@ tr.drag-over td{border-top:2px solid var(--accent)}
     <div style="background:#12082a;border:1px solid #4c1d95;border-radius:10px;padding:12px 14px;font-size:11px;color:#c4b5fd;line-height:1.6">💡 Clicca un prompt per copiarlo con i tuoi dati.</div>
   </div>
 </div>
+
+<!-- TARGET EDITOR MODAL -->
+<div class="modal-ov" id="target-modal" style="display:none" onclick="if(event.target===this)closeTargetModal()">
+  <div class="modal" style="max-height:96vh">
+    <div class="modal-handle"></div>
+    <h3>Target allocazione</h3>
+    <p class="modal-sub">Imposta gli obiettivi di allocazione. Salva per confermare.</p>
+
+    <!-- CAT TARGETS -->
+    <div style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span style="font-size:12px;font-weight:600;color:#94a3b8">CATEGORIE <span style="font-weight:400;color:var(--muted)">(somma = 100%)</span></span>
+        <span id="tgt-cat-sum" style="font-family:DM Mono,monospace;font-size:13px;font-weight:700">0%</span>
+      </div>
+      <div id="tgt-cat-rows" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+
+    <hr class="modal-div">
+
+    <!-- SUBCAT TARGETS -->
+    <div id="tgt-subcat-section">
+      <div style="font-size:12px;font-weight:600;color:#94a3b8;margin-bottom:10px">SOTTOCATEGORIE <span style="font-weight:400;color:var(--muted)">(somma = 100% per cat)</span></div>
+      <div id="tgt-subcat-rows" style="display:flex;flex-direction:column;gap:16px"></div>
+    </div>
+
+    <div id="tgt-error" style="display:none;background:#2a1a1a;border:1px solid #7f1d1d;border-radius:8px;padding:10px 13px;color:#fca5a5;font-size:12px;margin-top:12px"></div>
+
+    <div class="modal-btns">
+      <button class="btn-cancel ripple" onclick="closeTargetModal()">Annulla</button>
+      <button class="btn-ok ripple" onclick="saveTargetModal()" id="tgt-save-btn">✓ Salva target</button>
+    </div>
+  </div>
+</div>
+
 
 <!-- ADD MODAL -->
 <div class="modal-ov" id="add-modal" style="display:none" onclick="if(event.target===this)closeAddModal()">
@@ -662,8 +697,9 @@ function signIn(){
 function useOffline(){isOffline=true;document.getElementById("login-screen").style.display="none";document.getElementById("app").style.display="block";setSyncStatus("off","Locale");renderOverview();}
 function syncClick(){if(!accessToken)signIn();}
 function getState(){
-  // Save ONLY etfs and subcats to Drive; targets live in localStorage
-  return {etfs:etfs.map(function(e){return {id:e.id,t:e.t,i:e.i,n:e.n,c:e.c,s:e.s,v:e.v};}),subcats:subcats,nextId:nextId};
+  return {etfs:etfs.map(function(e){return {id:e.id,t:e.t,i:e.i,n:e.n,c:e.c,s:e.s,v:e.v};}),
+    subcats:subcats,nextId:nextId,
+    catTargets:catTargets,subcatTargets:subcatTargets};
 }
 function setState(d){
   if(!d)return;
@@ -680,7 +716,28 @@ function setState(d){
     });
   }
   if(d.nextId)nextId=d.nextId;
-  // Note: targets are loaded at script startup from localStorage, not from Drive
+  // Load targets: localStorage takes priority over Drive
+  // (Drive is fallback for new devices)
+  var lsTargets=null;
+  try{var ct=localStorage.getItem("pf_catTargets");if(ct)lsTargets=JSON.parse(ct);}catch(e){}
+  if(lsTargets){
+    CATS.forEach(function(c){var v=parseFloat(lsTargets[c]);if(!isNaN(v)&&v>=0)catTargets[c]=v;});
+  } else if(d.catTargets){
+    CATS.forEach(function(c){var v=parseFloat(d.catTargets[c]);if(!isNaN(v)&&v>=0)catTargets[c]=v;});
+  }
+  var lsSub=null;
+  try{var st=localStorage.getItem("pf_subcatTargets");if(st)lsSub=JSON.parse(st);}catch(e){}
+  if(lsSub){
+    Object.keys(lsSub).forEach(function(cat){
+      if(!subcatTargets[cat])subcatTargets[cat]={};
+      Object.keys(lsSub[cat]).forEach(function(sub){var v=parseFloat(lsSub[cat][sub]);if(!isNaN(v))subcatTargets[cat][sub]=v;});
+    });
+  } else if(d.subcatTargets){
+    Object.keys(d.subcatTargets).forEach(function(cat){
+      if(!subcatTargets[cat])subcatTargets[cat]={};
+      Object.keys(d.subcatTargets[cat]).forEach(function(sub){var v=parseFloat(d.subcatTargets[cat][sub]);if(!isNaN(v))subcatTargets[cat][sub]=v;});
+    });
+  }
 }
 async function driveReq(method,url,body,params){
   var q=params?"?"+new URLSearchParams(params):"";
@@ -1000,27 +1057,18 @@ function buildEtfDisplay(items,tot,accentColor,leftPad){
 function catPillHtml(cat,tgt,act){
   var ac=allocColor(act,tgt),sign=act-tgt,ss=sign>=0?"+"+sign.toFixed(1):sign.toFixed(1);
   var allocHtml=(tgt===0&&act===0)?"—":act.toFixed(1)+"% <span style='color:"+ac+"'>("+ss+"%)</span>";
-  var id="ctarget-"+cat.replace(/\s/g,"_");
-  var cb="updateCatTarget('"+cat+"',this.value)";
-  return "<div class='tpill'><span class='tpill-lbl'>TARGET</span>"
-    +"<div style='display:flex;align-items:baseline;gap:2px'>"
-    +"<input class='tpill-inp' type='number' inputmode='decimal' value='"+tgt+"' id='"+id+"' oninput='"+cb+"' onchange='"+cb+"' min='0' max='100' step='1'>"
-    +"<span class='tpill-pct'>%</span></div>"
+  return "<div class='tpill'>"
+    +"<span class='tpill-lbl'>TARGET</span>"
+    +"<span style='font-family:DM Mono,monospace;font-size:14px;font-weight:700;color:var(--text)'>"+tgt+"<span style='font-size:12px;color:var(--muted)'>%</span></span>"
     +"<div class='tpill-sep'></div>"
     +"<span class='tpill-alloc'>"+allocHtml+"</span></div>";
 }
 function subcatPillHtml(cat,sub,tgt,actOfCat){
-  // tgt = % of category, actOfCat = actual % of category
   var ac=allocColor(actOfCat,tgt),sign=actOfCat-tgt,ss=sign>=0?"+"+sign.toFixed(1):sign.toFixed(1);
   var allocHtml=(tgt===0&&actOfCat===0)?"—":actOfCat.toFixed(1)+"% di cat <span style='color:"+ac+"'>("+ss+"%)</span>";
-  var id="starget-"+cat.replace(/\s/g,"_")+"-"+sub.replace(/\s/g,"_");
-  var cb="updateSubcatTarget('"+cat+"','"+sub+"',this.value)";
-  var sum=sumSubcatTargets(cat),ok=Math.abs(sum-100)<0.1;
-  return "<div class='tpill tpill-sm' style='"+(ok?"":"outline:1px solid #ffa72666")+"'>"
+  return "<div class='tpill tpill-sm'>"
     +"<span class='tpill-lbl'>% cat</span>"
-    +"<div style='display:flex;align-items:baseline;gap:2px'>"
-    +"<input class='tpill-inp' type='number' inputmode='decimal' value='"+tgt+"' id='"+id+"' oninput='"+cb+"' onchange='"+cb+"' min='0' max='100' step='1'>"
-    +"<span class='tpill-pct'>%</span></div>"
+    +"<span style='font-family:DM Mono,monospace;font-size:12px;font-weight:700;color:var(--text)'>"+tgt+"<span style='font-size:10px;color:var(--muted)'>%</span></span>"
     +"<div class='tpill-sep'></div>"
     +"<span class='tpill-alloc'>"+allocHtml+"</span></div>";
 }
@@ -1444,6 +1492,176 @@ function openExport(){setFmt("summary");document.getElementById("exp-overlay").c
 function closeExport(){document.getElementById("exp-overlay").classList.remove("open");document.getElementById("exp-drawer").classList.remove("open");}
 function copyExport(){navigator.clipboard.writeText(curExpTxt).then(function(){var b=document.getElementById("btn-copy");b.classList.add("copied");b.textContent="✓ Copiato!";setTimeout(function(){b.classList.remove("copied");b.textContent="📋 Copia";},2000);});}
 function dlExport(){var ext=expFmt==="json"?"json":expFmt==="csv"?"csv":"txt",mime=expFmt==="json"?"application/json":expFmt==="csv"?"text/csv":"text/plain",date=new Date().toISOString().slice(0,10);var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([curExpTxt],{type:mime}));a.download="portfolio_"+date+"."+ext;a.click();}
+
+// ── TARGET EDITOR MODAL ───────────────────────────────────────────────
+var tempCatTargets={}, tempSubcatTargets={};
+
+function openTargetModal(){
+  // Deep copy current targets into temp
+  tempCatTargets={};
+  CATS.forEach(function(c){ tempCatTargets[c]=catTargets[c]||0; });
+  tempSubcatTargets={};
+  Object.keys(subcatTargets).forEach(function(cat){
+    tempSubcatTargets[cat]={};
+    Object.keys(subcatTargets[cat]).forEach(function(sub){
+      tempSubcatTargets[cat][sub]=subcatTargets[cat][sub]||0;
+    });
+  });
+  renderTargetEditor();
+  document.getElementById("target-modal").style.display="flex";
+  pushState("target");
+}
+function closeTargetModal(){
+  document.getElementById("target-modal").style.display="none";
+}
+
+function renderTargetEditor(){
+  // Category rows
+  var catSum=Object.values(tempCatTargets).reduce(function(a,v){return a+v;},0);
+  var sumEl=document.getElementById("tgt-cat-sum");
+  if(sumEl){
+    sumEl.textContent=catSum.toFixed(1)+"%";
+    sumEl.style.color=Math.abs(catSum-100)<0.1?"#66bb6a":catSum>100?"#ef5350":"#ffa726";
+  }
+  var catRows=document.getElementById("tgt-cat-rows");
+  if(catRows){
+    catRows.innerHTML=CATS.map(function(c){
+      var col=(COL[c]||COL.Altro).accent;
+      var v=tempCatTargets[c]||0;
+      var catVal=etfs.filter(function(e){return e.c===c;}).reduce(function(a,e){return a+e.v;},0);
+      var tot=total();
+      var act=tot>0?(catVal/tot)*100:0;
+      var diff=act-v,ds=diff>=0?"+"+diff.toFixed(1):diff.toFixed(1);
+      var dc=Math.abs(diff)<0.5?"#66bb6a":Math.abs(diff)<3?"#ffa726":"#ef5350";
+      return "<div style='display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2);border-radius:10px;border:1px solid var(--border)'>"
+        +"<div style='width:9px;height:9px;border-radius:50%;background:"+col+";flex-shrink:0'></div>"
+        +"<span style='flex:1;font-size:13px;color:var(--text)'>"+c+"</span>"
+        +"<span style='font-size:11px;color:var(--muted);font-family:DM Mono,monospace'>att:"+act.toFixed(1)+"%</span>"
+        +"<span style='font-size:11px;color:"+dc+";font-family:DM Mono,monospace'>"+ds+"%</span>"
+        +"<div style='display:flex;align-items:center;gap:4px'>"
+        +"<input type='number' inputmode='decimal' min='0' max='100' step='1' value='"+v+"'"
+        +" data-cat='"+c+"'"
+        +" oninput='onTempCatInput(this)'"
+        +" style='width:60px;background:var(--bg);border:1px solid #1e3a5f;border-radius:8px;padding:7px 8px;color:var(--text);font-family:DM Mono,monospace;font-size:16px;text-align:center;outline:none'>"
+        +"<span style='color:var(--muted);font-size:12px'>%</span></div>"
+        +"</div>";
+    }).join("");
+  }
+
+  // Subcat rows
+  var subcatSection=document.getElementById("tgt-subcat-rows");
+  if(subcatSection){
+    var html="";
+    HAS_SUBCATS.forEach(function(cat){
+      var catItems=etfs.filter(function(e){return e.c===cat;});
+      if(!catItems.length)return;
+      var col=(COL[cat]||COL.Altro).accent;
+      var catVal=catItems.reduce(function(a,e){return a+e.v;},0);
+      var subcatSum=Object.values(tempSubcatTargets[cat]||{}).reduce(function(a,v){return a+v;},0);
+      var sumOk=Math.abs(subcatSum-100)<0.1;
+      html+="<div>"
+        +"<div style='display:flex;align-items:center;gap:8px;margin-bottom:8px'>"
+        +"<div style='width:8px;height:8px;border-radius:50%;background:"+col+"'></div>"
+        +"<span style='font-size:12px;font-weight:600;color:"+col+"'>"+cat.toUpperCase()+"</span>"
+        +"<span style='font-size:10px;font-family:DM Mono,monospace;color:"+(sumOk?"#66bb6a":"#ffa726")+"'>"+subcatSum.toFixed(0)+"%</span>"
+        +"</div>"
+        +"<div style='display:flex;flex-direction:column;gap:6px;padding-left:16px'>";
+      (subcats[cat]||[]).forEach(function(sub){
+        var v=(tempSubcatTargets[cat]||{})[sub]||0;
+        var subVal=catItems.filter(function(e){return e.s===sub;}).reduce(function(a,e){return a+e.v;},0);
+        var actOfCat=catVal>0?(subVal/catVal)*100:0;
+        var diff=actOfCat-v,ds=diff>=0?"+"+diff.toFixed(1):diff.toFixed(1);
+        var dc=Math.abs(diff)<0.5?"#66bb6a":Math.abs(diff)<3?"#ffa726":"#ef5350";
+        var sc=subcatColor(cat,sub);
+        html+="<div style='display:flex;align-items:center;gap:10px;padding:7px 10px;background:var(--s2);border-radius:8px;border:1px solid var(--border)'>"
+          +"<div style='width:3px;height:16px;border-radius:2px;background:"+sc+";flex-shrink:0'></div>"
+          +"<span style='flex:1;font-size:12px'>"+sub+"</span>"
+          +"<span style='font-size:11px;color:var(--muted);font-family:DM Mono,monospace'>att:"+actOfCat.toFixed(1)+"%</span>"
+          +"<span style='font-size:11px;color:"+dc+";font-family:DM Mono,monospace'>"+ds+"%</span>"
+          +"<div style='display:flex;align-items:center;gap:4px'>"
+          +"<input type='number' inputmode='decimal' min='0' max='100' step='1' value='"+v+"'"
+          +" data-cat='"+cat+"' data-sub='"+sub+"'"
+          +" oninput='onTempSubcatInput(this)'"
+          +" style='width:60px;background:var(--bg);border:1px solid #1e3a5f;border-radius:8px;padding:7px 8px;color:var(--text);font-family:DM Mono,monospace;font-size:16px;text-align:center;outline:none'>"
+          +"<span style='color:var(--muted);font-size:12px'>% cat</span></div>"
+          +"</div>";
+      });
+      html+="</div></div>";
+    });
+    subcatSection.innerHTML=html;
+  }
+  // hide error
+  document.getElementById("tgt-error").style.display="none";
+}
+
+function onTempCatInput(inp){
+  var cat=inp.dataset.cat;
+  var v=parseFloat(inp.value);
+  tempCatTargets[cat]=isNaN(v)?0:Math.max(0,v);
+  // update sum display
+  var catSum=Object.values(tempCatTargets).reduce(function(a,v){return a+v;},0);
+  var sumEl=document.getElementById("tgt-cat-sum");
+  if(sumEl){
+    sumEl.textContent=catSum.toFixed(1)+"%";
+    sumEl.style.color=Math.abs(catSum-100)<0.1?"#66bb6a":catSum>100?"#ef5350":"#ffa726";
+  }
+}
+function onTempSubcatInput(inp){
+  var cat=inp.dataset.cat,sub=inp.dataset.sub;
+  var v=parseFloat(inp.value);
+  if(!tempSubcatTargets[cat])tempSubcatTargets[cat]={};
+  tempSubcatTargets[cat][sub]=isNaN(v)?0:Math.max(0,v);
+  // update subcat sum display in header
+  var sum=Object.values(tempSubcatTargets[cat]).reduce(function(a,v){return a+v;},0);
+  // find the badge for this cat
+  var rows=document.getElementById("tgt-subcat-rows");
+  if(rows){
+    var headers=rows.querySelectorAll("span[style*='DM Mono']");
+    // simpler: re-render just the sum badges
+  }
+}
+
+function saveTargetModal(){
+  // Validate cat sum
+  var catSum=Object.values(tempCatTargets).reduce(function(a,v){return a+v;},0);
+  if(Math.abs(catSum-100)>0.1){
+    var errEl=document.getElementById("tgt-error");
+    errEl.textContent="⚠ La somma dei target di categoria è "+catSum.toFixed(1)+"% — deve essere esattamente 100%.";
+    errEl.style.display="block";
+    return;
+  }
+  // Validate subcats
+  var subcatErrors=[];
+  HAS_SUBCATS.forEach(function(cat){
+    if(!etfs.some(function(e){return e.c===cat;}))return;
+    var sum=Object.values(tempSubcatTargets[cat]||{}).reduce(function(a,v){return a+v;},0);
+    if(sum>0&&Math.abs(sum-100)>0.1)subcatErrors.push(cat+": "+sum.toFixed(1)+"%");
+  });
+  if(subcatErrors.length){
+    var errEl=document.getElementById("tgt-error");
+    errEl.textContent="⚠ Sottocategorie non bilanciate (devono sommare 100% o 0%): "+subcatErrors.join(", ");
+    errEl.style.display="block";
+    return;
+  }
+  // Apply
+  CATS.forEach(function(c){catTargets[c]=tempCatTargets[c]||0;});
+  Object.keys(tempSubcatTargets).forEach(function(cat){
+    subcatTargets[cat]={};
+    Object.keys(tempSubcatTargets[cat]).forEach(function(sub){
+      subcatTargets[cat][sub]=tempSubcatTargets[cat][sub]||0;
+    });
+  });
+  // Save to localStorage
+  try{
+    localStorage.setItem("pf_catTargets",JSON.stringify(catTargets));
+    localStorage.setItem("pf_subcatTargets",JSON.stringify(subcatTargets));
+  }catch(e){}
+  // Save to Drive
+  scheduleSave();
+  closeTargetModal();
+  renderOverview();
+}
+
 
 // ── TABS ──────────────────────────────────────────────────────────────
 function switchTab(t){
