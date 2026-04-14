@@ -1259,7 +1259,7 @@ function removeSubcat(cat,sub){
   if(aff.length)etfs=etfs.map(function(e){return e.c===cat&&e.s===sub?Object.assign({},e,{s:null}):e;});
   if(subcats[cat])subcats[cat]=subcats[cat].filter(function(s){return s!==sub;});
   if(subcatTargets[cat])delete subcatTargets[cat][sub];
-  renderOverview();scheduleSave();
+  renderOverview();saveToDrive();
 }
 function startInlineEdit(id){editingId=id;renderOverview();}
 function saveInlineEdit(id){
@@ -1267,7 +1267,7 @@ function saveInlineEdit(id){
   if(el){var v=parseFloat(el.value);if(!isNaN(v))etfs=etfs.map(function(e){return e.id===id?Object.assign({},e,{v:v}):e;});}
   editingId=null;renderOverview();scheduleSave();
 }
-function removeEtf(id){if(confirm("Rimuovere questo ETF?")){etfs=etfs.filter(function(e){return e.id!==id;});renderOverview();scheduleSave();}}
+function removeEtf(id){if(confirm("Rimuovere questo ETF?")){etfs=etfs.filter(function(e){return e.id!==id;});renderOverview();saveToDrive();}}
 
 // ── DRAG AND DROP ─────────────────────────────────────────────────────
 var dragSrcId=null;
@@ -1367,7 +1367,9 @@ function confirmAdd(){
   var dbMatch=DB_ISIN[isin];
   if(!ticker&&dbMatch)ticker=dbMatch.t||null;
   etfs.push({id:nextId++,t:ticker,i:isin,n:name,c:cat,s:sub||null,v:parseFloat(document.getElementById("add-value").value)||0});
-  closeAddModal();renderOverview();scheduleSave();
+  closeAddModal();renderOverview();
+  // Save immediately (not debounced) to avoid losing data on quick navigation
+  saveToDrive();
 }
 
 // ── EDIT MODAL ────────────────────────────────────────────────────────
@@ -1409,7 +1411,7 @@ function confirmEdit(){
   var ss=document.getElementById("edit-subcat");
   var sub=HAS_SUBCATS.includes(cat)&&ss&&ss.value?ss.value:null;
   etfs=etfs.map(function(e){return e.id!==editEtfId?e:{id:e.id,t:ticker||null,i:isin||null,n:name,c:cat,s:sub,v:v};});
-  closeEditModal();renderOverview();scheduleSave();
+  closeEditModal();renderOverview();saveToDrive();
 }
 
 // ── EXPORT ────────────────────────────────────────────────────────────
@@ -1422,13 +1424,13 @@ var PROMPTS=[
   {icon:"🌍",title:"Esposizione geografica",text:"Analizza l'esposizione geografica implicita considerando la composizione interna degli ETF."}
 ];
 var curExpTxt="";
-function getExpText(fmt){
+function getExpText(format){
   var tot=total(),nl="\n",now=new Date().toLocaleDateString("it-IT",{day:"2-digit",month:"long",year:"numeric"});
-  if(fmt==="json"){
+  if(format==="json"){
     var obj={exportDate:new Date().toISOString(),totalValue:tot,currency:"EUR",categoryTargets:catTargets,subcategoryTargets:subcatTargets,etfs:etfs.map(function(e){return{ticker:e.t,isin:e.i,name:e.n,category:e.c,subcategory:e.s,value:e.v,allocationPct:tot>0?parseFloat(((e.v/tot)*100).toFixed(2)):0};})};
     return JSON.stringify(obj,null,2);
   }
-  if(fmt==="csv"){
+  if(format==="csv"){
     var header="Ticker,ISIN,Nome,Categoria,Sottocategoria,Valore EUR,Allocazione %,Target Cat %,Target SubCat %";
     var rows=etfs.map(function(e){
       var p=tot>0?((e.v/tot)*100).toFixed(2):"0";
@@ -1454,7 +1456,7 @@ function getExpText(fmt){
   });
   l.push("","ETF:");
   etfs.forEach(function(e){var p=tot>0?((e.v/tot)*100).toFixed(1):0;l.push("  "+(e.t||"")+"/"+(e.i||"")+"  "+fmt(e.v)+" ("+p+"%)  "+e.c+(e.s?" › "+e.s:""));});
-  if(fmt==="full"){
+  if(format==="full"){
     l.push("","─".repeat(48),"RIBILANCIAMENTO:");
     var acts=calcTargets(tot);
     var buys=acts.filter(function(e){return e.diff>1;}).sort(function(a,b){return b.diff-a.diff;});
@@ -1656,8 +1658,8 @@ function saveTargetModal(){
     localStorage.setItem("pf_catTargets",JSON.stringify(catTargets));
     localStorage.setItem("pf_subcatTargets",JSON.stringify(subcatTargets));
   }catch(e){}
-  // Save to Drive
-  scheduleSave();
+  // Save to Drive immediately
+  saveToDrive();
   closeTargetModal();
   renderOverview();
 }
