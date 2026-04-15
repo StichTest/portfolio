@@ -1416,12 +1416,13 @@ function confirmEdit(){
 
 // ── EXPORT ────────────────────────────────────────────────────────────
 var PROMPTS=[
-  {icon:"📊",title:"Analisi allocazione",text:"Analizza la mia allocazione attuale rispetto ai target. Evidenzia gli scostamenti più significativi e dimmi se la struttura è coerente con un profilo moderato di lungo periodo."},
-  {icon:"⚖️",title:"Piano di ribilanciamento",text:"Proponi un piano di ribilanciamento ottimale. Considera acquisto di nuovi ETF e riallocazione. Stima le implicazioni fiscali in Italia (capital gain 26%)."},
-  {icon:"🔍",title:"Sovrapposizioni ETF",text:"Analizza le potenziali sovrapposizioni tra gli ETF. Ci sono strumenti che replicano gli stessi indici o hanno elevata percentuale di titoli in comune?"},
-  {icon:"💡",title:"Ottimizzazione",text:"Il portafoglio potrebbe essere semplificato? ETF da eliminare o sostituire con strumenti più efficienti (TER, replica, liquidità)?"},
-  {icon:"📈",title:"Rendimento atteso",text:"Stima rendimento annuo atteso e volatilità usando dati storici. Confronta con benchmark 60/40."},
-  {icon:"🌍",title:"Esposizione geografica",text:"Analizza l'esposizione geografica implicita considerando la composizione interna degli ETF."}
+  {icon:"🔥",title:"Analisi FIRE completa",text:"Analizza questo portafoglio in ottica FIRE (Financial Independence, Retire Early). Valuta: (1) se l'asset allocation è adatta a una strategia di accumulo aggressivo per FIRE, (2) il tasso di prelievo sicuro (SWR) sostenibile in base alla composizione, (3) stima del patrimonio necessario per il FIRE usando la regola del 4% e varianti più conservative, (4) suggerimenti specifici per ottimizzare il portafoglio verso l'obiettivo FIRE. Considera l'orizzonte temporale tipico di un investitore FIRE e la fase di accumulazione vs decumulazione."},
+  {icon:"⚖️",title:"Piano di ribilanciamento",text:"Analizza gli scostamenti dal target e proponi un piano di ribilanciamento concreto. Per ogni ETF indica: acquistare/mantenere/ridurre e l'importo. Considera: (1) priorità agli acquisti rispetto alle vendite per minimizzare la tassazione italiana (capital gain 26%), (2) utilizzo del nuovo capitale disponibile prima di vendere posizioni esistenti, (3) costo di transazione stimato. Ordina le azioni per impatto sul portafoglio."},
+  {icon:"📊",title:"Analisi rischio/rendimento",text:"Valuta il profilo rischio/rendimento di questo portafoglio: (1) rendimento annuo atteso e volatilità storica basati sulla composizione degli ETF, (2) max drawdown storico stimato, (3) Sharpe ratio approssimativo, (4) correlazione tra le posizioni, (5) comportamento atteso in scenari di stress (crisi 2008, COVID 2020, inflazione alta). Confronta con benchmark 60/40 e All-World puro."},
+  {icon:"🔍",title:"Efficienza e sovrapposizioni",text:"Analizza l'efficienza del portafoglio: (1) sovrapposizioni tra ETF — quali titoli sono presenti in più strumenti e in che percentuale?, (2) TER medio ponderato del portafoglio, (3) ETF da eliminare o consolidare per ridurre complessità senza perdere diversificazione, (4) alternative più efficienti (TER più basso, replica fisica, maggiore liquidità, UCITS conformi). Proponi la versione semplificata ottimale."},
+  {icon:"🌍",title:"Esposizione reale e concentrazione",text:"Analizza l'esposizione reale del portafoglio considerando la composizione interna degli ETF: (1) esposizione geografica effettiva (% USA, Europa, Asia, EM), (2) esposizione settoriale implicita (tech, finance, healthcare, ecc.), (3) valute di esposizione e rischio cambio, (4) concentrazione su singoli titoli (es. Apple, Microsoft nei vari ETF), (5) eventuali bias non intenzionali rispetto a un indice globale neutro."},
+  {icon:"💰",title:"Strategia PAC ottimale",text:"Suggerisci una strategia di Piano di Accumulo (PAC) ottimale per questo portafoglio: (1) come allocare il nuovo capitale mensile/periodico per ribilanciare naturalmente senza vendere (tax-efficient), (2) ordine di priorità degli acquisti in base agli scostamenti dal target, (3) soglie di ribilanciamento consigliate (quando è il momento di intervenire), (4) gestione fiscale italiana: ottimizzazione minusvalenze, timing delle vendite, compensazione plusvalenze/minusvalenze."},
+  {icon:"🛡️",title:"Resilienza e scenari di stress",text:"Valuta la resilienza di questo portafoglio in diversi scenari: (1) recessione severa (-40% azionario): impatto sul patrimonio e tempo di recupero storico, (2) inflazione alta prolungata: quali componenti proteggono e quali soffrono, (3) crash obbligazionario: impatto sulla componente fixed income, (4) stagflazione anni '70: comportamento stimato, (5) scenario FIRE: se già in fase di prelievo, la sequenza dei rendimenti è gestibile? Suggerisci eventuali coperture o aggiustamenti."}
 ];
 var curExpTxt="";
 function getExpText(format){
@@ -1561,13 +1562,22 @@ function renderTargetEditor(){
       var catVal=catItems.reduce(function(a,e){return a+e.v;},0);
       var subcatSum=Object.values(tempSubcatTargets[cat]||{}).reduce(function(a,v){return a+v;},0);
       var sumOk=Math.abs(subcatSum-100)<0.1;
+      var catId=cat.replace(/\s/g,"-");
       html+="<div>"
-        +"<div style='display:flex;align-items:center;gap:8px;margin-bottom:8px'>"
+        +"<div style='display:flex;align-items:center;gap:8px;margin-bottom:6px'>"
         +"<div style='width:8px;height:8px;border-radius:50%;background:"+col+"'></div>"
         +"<span style='font-size:12px;font-weight:600;color:"+col+"'>"+cat.toUpperCase()+"</span>"
-        +"<span style='font-size:10px;font-family:DM Mono,monospace;color:"+(sumOk?"#66bb6a":"#ffa726")+"'>"+subcatSum.toFixed(0)+"%</span>"
+        +"<span id='tsc-badge-"+catId+"' style='font-size:11px;font-family:DM Mono,monospace;font-weight:700;color:"+(sumOk?"#66bb6a":subcatSum>100?"#ef5350":"#ffa726")+"'>"+subcatSum.toFixed(1)+"%</span>"
+        +"<span id='tsc-remain-"+catId+"' style='font-size:10px;font-family:DM Mono,monospace;color:"+(sumOk?"#66bb6a":subcatSum>100?"#ef5350":"#ffa726")+";margin-left:4px'>"
+        +(sumOk?"✓ Perfetto":subcatSum>100?"Superi di "+(subcatSum-100).toFixed(1)+"%":"Mancano "+(100-subcatSum).toFixed(1)+"%")
+        +"</span>"
         +"</div>"
-        +"<div style='display:flex;flex-direction:column;gap:6px;padding-left:16px'>";
+        // Progress bar
+        +"<div style='height:6px;background:#1e293b;border-radius:3px;margin-bottom:10px;overflow:hidden'>"
+        +"<div id='tsc-bar-"+catId+"' style='height:100%;border-radius:3px;transition:width .3s,background .3s;width:"+Math.min(subcatSum,100)+"%;background:"+(sumOk?"#66bb6a":subcatSum>100?"#ef5350":"#ffa726")+"'>'"
+        +"</div>"
+        +"</div>"
+        +"<div style='display:flex;flex-direction:column;gap:6px;padding-left:0'>";
       (subcats[cat]||[]).forEach(function(sub){
         var v=(tempSubcatTargets[cat]||{})[sub]||0;
         var subVal=catItems.filter(function(e){return e.s===sub;}).reduce(function(a,e){return a+e.v;},0);
@@ -1588,7 +1598,7 @@ function renderTargetEditor(){
           +"<span style='color:var(--muted);font-size:12px'>% cat</span></div>"
           +"</div>";
       });
-      html+="</div></div>";
+      html+="</div></div></div>";
     });
     subcatSection.innerHTML=html;
   }
@@ -1613,14 +1623,34 @@ function onTempSubcatInput(inp){
   var v=parseFloat(inp.value);
   if(!tempSubcatTargets[cat])tempSubcatTargets[cat]={};
   tempSubcatTargets[cat][sub]=isNaN(v)?0:Math.max(0,v);
-  // update subcat sum display in header
+  // Update live sum badge for this category
   var sum=Object.values(tempSubcatTargets[cat]).reduce(function(a,v){return a+v;},0);
-  // find the badge for this cat
-  var rows=document.getElementById("tgt-subcat-rows");
-  if(rows){
-    var headers=rows.querySelectorAll("span[style*='DM Mono']");
-    // simpler: re-render just the sum badges
+  var badge=document.getElementById("tsc-badge-"+cat.replace(/\s/g,"-"));
+  var bar=document.getElementById("tsc-bar-"+cat.replace(/\s/g,"-"));
+  var remain=document.getElementById("tsc-remain-"+cat.replace(/\s/g,"-"));
+  var ok=Math.abs(sum-100)<0.1,over=sum>100.05;
+  if(badge){
+    badge.textContent=sum.toFixed(1)+"%";
+    badge.style.color=ok?"#66bb6a":over?"#ef5350":"#ffa726";
+    badge.style.fontWeight="700";
   }
+  if(remain){
+    var r=100-sum;
+    if(ok)remain.textContent="✓ Perfetto";
+    else if(over)remain.textContent="Superi di "+(-r).toFixed(1)+"%";
+    else remain.textContent="Mancano "+r.toFixed(1)+"%";
+    remain.style.color=ok?"#66bb6a":over?"#ef5350":"#ffa726";
+  }
+  if(bar){
+    var pct=Math.min(sum,100);
+    bar.style.width=pct+"%";
+    bar.style.background=ok?"#66bb6a":over?"#ef5350":"#ffa726";
+  }
+  // Highlight the input row if over budget
+  var allInps=document.querySelectorAll("input[data-cat='"+cat+"']");
+  allInps.forEach(function(i){
+    i.style.borderColor=over?"#ef5350":"#1e3a5f";
+  });
 }
 
 function saveTargetModal(){
