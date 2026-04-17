@@ -1427,48 +1427,115 @@ var PROMPTS=[
 var curExpTxt="";
 function getExpText(format){
   var tot=total(),nl="\n",now=new Date().toLocaleDateString("it-IT",{day:"2-digit",month:"long",year:"numeric"});
+  var nEtf=etfs.length;
+
   if(format==="json"){
-    var obj={exportDate:new Date().toISOString(),totalValue:tot,currency:"EUR",categoryTargets:catTargets,subcategoryTargets:subcatTargets,etfs:etfs.map(function(e){return{ticker:e.t,isin:e.i,name:e.n,category:e.c,subcategory:e.s,value:e.v,allocationPct:tot>0?parseFloat(((e.v/tot)*100).toFixed(2)):0};})};
-    return JSON.stringify(obj,null,2);
+    return JSON.stringify({
+      exportDate:new Date().toISOString(),
+      note:"Valori assoluti omessi per privacy. Solo allocazioni percentuali.",
+      nEtf:nEtf,
+      categoryTargets:catTargets,
+      subcategoryTargets:subcatTargets,
+      etfs:etfs.map(function(e){
+        return {
+          ticker:e.t,isin:e.i,name:e.n,category:e.c,subcategory:e.s,
+          allocationPct:tot>0?parseFloat(((e.v/tot)*100).toFixed(2)):0,
+          targetCatPct:catTargets[e.c]||0,
+          targetSubcatPct:(e.s&&subcatTargets[e.c])?((subcatTargets[e.c]||{})[e.s]||0):null
+        };
+      })
+    },null,2);
   }
+
   if(format==="csv"){
-    var header="Ticker,ISIN,Nome,Categoria,Sottocategoria,Valore EUR,Allocazione %,Target Cat %,Target SubCat %";
+    var header="Ticker,ISIN,Nome,Categoria,Sottocategoria,Allocazione %,Target Cat %,Target SubCat %,Scostamento Cat %";
     var rows=etfs.map(function(e){
-      var p=tot>0?((e.v/tot)*100).toFixed(2):"0";
-      return [e.t||"",e.i||"",'"'+e.n+'"',e.c,e.s||"",e.v,p,catTargets[e.c]||0,(e.s&&subcatTargets[e.c])?((subcatTargets[e.c]||{})[e.s]||0):""].join(",");
+      var actPct=tot>0?((e.v/tot)*100):0;
+      var tgtCat=catTargets[e.c]||0;
+      var catVal=etfs.filter(function(x){return x.c===e.c;}).reduce(function(a,x){return a+x.v;},0);
+      var actOfCat=catVal>0?(e.v/catVal)*100:0;
+      var tgtSub=(e.s&&subcatTargets[e.c])?((subcatTargets[e.c]||{})[e.s]||0):null;
+      var scostCat=(actPct-tgtCat).toFixed(1);
+      return [e.t||"",e.i||"",'"'+e.n+'"',e.c,e.s||"",
+        actPct.toFixed(2),tgtCat,tgtSub!==null?tgtSub:"",scostCat].join(",");
     });
     return [header].concat(rows).join(nl);
   }
-  var l=["PORTFOLIO — "+now,"─".repeat(48),"Totale: "+fmt(tot)+" | "+etfs.length+" ETF","","TARGET CATEGORIE:"];
+
+  // summary and full: no absolute values
+  var l=[];
+  l.push("PORTFOLIO ALLOCATION — "+now);
+  l.push("(Valori assoluti omessi per privacy — solo allocazioni %)");
+  l.push("─".repeat(52));
+  l.push("N° ETF: "+nEtf);
+  l.push("");
+
+  // Category summary
+  l.push("CATEGORIE  (target % portfolio | attuale % | scostamento)");
   CATS.forEach(function(c){
-    var ct=catTargets[c]||0,items=etfs.filter(function(e){return e.c===c;});
-    if(!ct&&!items.length)return;
-    var val=items.reduce(function(a,e){return a+e.v;},0),act=tot>0?((val/tot)*100).toFixed(1):0;
-    l.push("  "+c+"  target:"+ct+"%  att:"+act+"%  "+fmt(val));
-    if(HAS_SUBCATS.includes(c)&&subcats[c]){
-      var catV=val;
-      subcats[c].forEach(function(s){
-        var st=(subcatTargets[c]||{})[s]||0,si=items.filter(function(e){return e.s===s;});
+    var tgt=catTargets[c]||0;
+    var items=etfs.filter(function(e){return e.c===c;});
+    if(!tgt&&!items.length)return;
+    var catVal=items.reduce(function(a,e){return a+e.v;},0);
+    var act=tot>0?(catVal/tot)*100:0;
+    var diff=act-tgt,ds=(diff>=0?"+":"")+diff.toFixed(1);
+    l.push("  "+c.padEnd(20)+" tgt:"+String(tgt+"%").padEnd(6)+" att:"+act.toFixed(1)+"% ("+ds+"%)");
+
+    if(HAS_SUBCATS.includes(c)&&(subcats[c]||[]).length){
+      subcats[c].forEach(function(sub){
+        var st=(subcatTargets[c]||{})[sub]||0;
+        var si=items.filter(function(e){return e.s===sub;});
         if(!st&&!si.length)return;
-        var sv=si.reduce(function(a,e){return a+e.v;},0),saOfCat=catV>0?((sv/catV)*100).toFixed(1):0;
-        l.push("    └ "+s+"  target:"+st+"% di cat  att:"+saOfCat+"% di cat");
+        var sv=si.reduce(function(a,e){return a+e.v;},0);
+        var actOfCat=catVal>0?(sv/catVal)*100:0;
+        var actPort=tot>0?(sv/tot)*100:0;
+        var d=actOfCat-st,dd=(d>=0?"+":"")+d.toFixed(1);
+        l.push("    └ "+sub.padEnd(18)+" tgt:"+String(st+"%").padEnd(6)+"di cat | att:"+actOfCat.toFixed(1)+"% di cat ("+dd+"%) | "+actPort.toFixed(1)+"% portaf.");
       });
     }
   });
-  l.push("","ETF:");
-  etfs.forEach(function(e){var p=tot>0?((e.v/tot)*100).toFixed(1):0;l.push("  "+(e.t||"")+"/"+(e.i||"")+"  "+fmt(e.v)+" ("+p+"%)  "+e.c+(e.s?" › "+e.s:""));});
+
+  l.push("");
+  l.push("ETF  (ticker | % portfolio | % del gruppo | scostamento vs target subcat)");
+  etfs.forEach(function(e){
+    var actPct=tot>0?(e.v/tot)*100:0;
+    var catVal=etfs.filter(function(x){return x.c===e.c;}).reduce(function(a,x){return a+x.v;},0);
+    var actOfCat=catVal>0?(e.v/catVal)*100:0;
+    var tgtSub=e.s?(subcatTargets[e.c]||{})[e.s]||0:null;
+    var scostLine="";
+    if(tgtSub!==null){
+      // weight of this ETF within subcat
+      var subVal=etfs.filter(function(x){return x.c===e.c&&x.s===e.s;}).reduce(function(a,x){return a+x.v;},0);
+      var actOfSubcat=subVal>0?(e.v/subVal)*100:0;
+      var tgtCat=catTargets[e.c]||0;
+      var tgtEtfPort=(tgtCat/100)*(tgtSub/100)*(subVal>0?e.v/subVal:1)*100;
+      var scost=actPct-tgtEtfPort,ds=(scost>=0?"+":"")+scost.toFixed(1);
+      scostLine=" | scost.portaf.:"+ds+"%";
+    }
+    var id=(e.t||e.i||"—").padEnd(8);
+    l.push("  "+id+" "+actPct.toFixed(1)+"% portaf. | "+actOfCat.toFixed(1)+"% di cat"+scostLine+" | "+e.c+(e.s?" › "+e.s:""));
+  });
+
   if(format==="full"){
-    l.push("","─".repeat(48),"RIBILANCIAMENTO:");
+    l.push("");l.push("─".repeat(52));l.push("RIBILANCIAMENTO (direzione):");
     var acts=calcTargets(tot);
     var buys=acts.filter(function(e){return e.diff>1;}).sort(function(a,b){return b.diff-a.diff;});
     var sells=acts.filter(function(e){return e.diff<-1;});
     var ok=acts.filter(function(e){return Math.abs(e.diff)<=1;});
-    if(buys.length){l.push("ACQUISTARE:");buys.forEach(function(e){l.push("  + "+(e.t||"")+"  "+fmt(e.diff));});}
-    if(sells.length){l.push("SOVRAPPESO:");sells.forEach(function(e){l.push("  - "+(e.t||"")+"  "+fmt(e.diff));});}
+    if(buys.length){l.push("ACQUISTARE (sottopeso):");buys.forEach(function(e){
+      var pct=tot>0?((e.tv/tot)*100).toFixed(1):0;
+      l.push("  ▲ "+(e.t||e.i||"—").padEnd(8)+" → target "+pct+"% portaf.");
+    });}
+    if(sells.length){l.push("SOVRAPPESO:");sells.forEach(function(e){
+      var pct=tot>0?((e.tv/tot)*100).toFixed(1):0;
+      l.push("  ▼ "+(e.t||e.i||"—").padEnd(8)+" → target "+pct+"% portaf.");
+    });}
     if(ok.length)l.push("BILANCIATI: "+ok.map(function(e){return e.t||e.i;}).join(", "));
   }
+
   return l.join(nl);
 }
+
 function setFmt(f){
   expFmt=f;
   document.querySelectorAll(".fmt-tab").forEach(function(b){b.classList.remove("active");});
