@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Indipendenza Finanziaria — Calcolatore FIRE</title>
+<title>Indipendenza Finanziaria — FIRE</title>
 <style>
 :root {
   --bg:#fafaf8;--bg2:#f0efeb;--bg3:#e5e4df;
   --text:#1a1a18;--text2:#5a5a55;--text3:#9a9a94;
-  --border:rgba(0,0,0,0.1);--border2:rgba(0,0,0,0.18);
+  --border:rgba(0,0,0,0.1);--border2:rgba(0,0,0,0.2);
   --green:#1a7a50;--green-bg:#eaf5f0;--green-lt:#b8e8d0;
   --amber:#9a5808;--amber-bg:#fdf3e3;--amber-lt:#f0d090;
   --red:#802010;--red-bg:#fdecea;--red-lt:#f0b0a8;
@@ -26,7 +26,7 @@
 }}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;}
-.wrap{max-width:780px;margin:0 auto;padding:1.75rem 1.25rem 4rem;}
+.wrap{max-width:800px;margin:0 auto;padding:1.75rem 1.25rem 4rem;}
 h1{font-size:21px;font-weight:600;letter-spacing:-.3px;}
 .sub{font-size:12px;color:var(--text3);margin-top:3px;margin-bottom:1.75rem;}
 .savebar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;background:var(--bg2);border-radius:var(--r);padding:7px 12px;margin-bottom:1.5rem;}
@@ -45,11 +45,19 @@ h1{font-size:21px;font-weight:600;letter-spacing:-.3px;}
 .field input[type=range]{flex:1;accent-color:var(--text);cursor:pointer;}
 .field .val{font-size:13px;font-weight:600;min-width:72px;text-align:right;color:var(--text);font-variant-numeric:tabular-nums;}
 .field .val.sm{min-width:52px;}
+.field .hint{font-size:10px;color:var(--text3);margin-top:2px;}
 .ck-row{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);cursor:pointer;margin-bottom:10px;}
 .ck-row input{cursor:pointer;accent-color:var(--blue);}
 .adv-btn{font-size:11px;color:var(--text3);cursor:pointer;border:none;background:none;padding:0;margin-bottom:10px;text-decoration:underline dotted;}
 .adv-body{display:none;}
 .adv-body.open{display:block;}
+
+/* Scenario tabs */
+.tabs{display:flex;gap:0;margin-bottom:14px;border:.5px solid var(--border2);border-radius:var(--r);overflow:hidden;}
+.tab{flex:1;padding:8px 6px;font-size:11px;font-weight:500;text-align:center;cursor:pointer;background:transparent;border:none;color:var(--text3);transition:all .15s;}
+.tab:not(:last-child){border-right:.5px solid var(--border2);}
+.tab.act{background:var(--text);color:var(--bg);}
+
 /* Results */
 .results{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:1.5rem;}
 @media(max-width:540px){.results{grid-template-columns:1fr;}}
@@ -57,18 +65,18 @@ h1{font-size:21px;font-weight:600;letter-spacing:-.3px;}
 .rcard .rh{padding:10px 14px 9px;}
 .rcard .rl{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:1px;}
 .rcard .rs{font-size:11px;color:var(--text2);}
-.rcard .rb{}
 .rcard .rr{padding:10px 14px;border-bottom:.5px solid var(--border);}
 .rcard .rr:last-child{border-bottom:none;}
-.rcard .rrl{font-size:10px;color:var(--text3);margin-bottom:3px;}
-.rcard .rfn{font-size:13px;font-weight:600;color:var(--text);margin-bottom:1px;font-variant-numeric:tabular-nums;}
-.rcard .rsp{font-size:10px;color:var(--text3);margin-bottom:3px;}
-.rcard .ra{font-size:15px;font-weight:700;}
+.rcard .rrl{font-size:10px;color:var(--text3);margin-bottom:4px;display:flex;align-items:center;gap:3px;}
+.rcard .rfn{font-size:13px;font-weight:600;color:var(--text);font-variant-numeric:tabular-nums;}
+.rcard .rsp{font-size:10px;color:var(--text3);margin-bottom:4px;margin-top:1px;}
+.rcard .ra{font-size:16px;font-weight:700;margin-top:2px;}
 .rcard .re{font-size:10px;color:var(--text3);}
-.rcard .rn{font-size:10px;color:var(--blue);margin-top:2px;}
-.lean .rh{background:var(--green-bg);} .lean .rl{color:var(--green);} .lean .ra{color:var(--green);}
-.normal .rh{background:var(--amber-bg);} .normal .rl{color:var(--amber);} .normal .ra{color:var(--amber);}
-.fat .rh{background:var(--red-bg);} .fat .rl{color:var(--red);} .fat .ra{color:var(--red);}
+.rcard .rn{font-size:10px;color:var(--blue);margin-top:2px;background:var(--blue-bg);border-radius:4px;padding:3px 6px;margin-top:3px;}
+.lean .rh{background:var(--green-bg);} .lean .rl,.lean .ra{color:var(--green);}
+.normal .rh{background:var(--amber-bg);} .normal .rl,.normal .ra{color:var(--amber);}
+.fat .rh{background:var(--red-bg);} .fat .rl,.fat .ra{color:var(--red);}
+
 /* SWR */
 .swr-safe{border-radius:6px;padding:7px 10px;font-size:11px;margin-bottom:8px;}
 .swr-tbl{width:100%;border-collapse:collapse;font-size:11px;}
@@ -77,16 +85,20 @@ h1{font-size:21px;font-weight:600;letter-spacing:-.3px;}
 .swr-tbl td{padding:4px 7px;color:var(--text2);}
 .swr-tbl td:not(:first-child){text-align:center;border-radius:3px;}
 .swr-tbl tr.sel td:first-child{font-weight:700;color:var(--text);}
-/* Chart */
+
+/* Legend & chart */
 .legend{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:7px;}
 .li{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2);}
 .ld{width:14px;height:2px;display:inline-block;flex-shrink:0;}
+
+/* Scenario description badge */
+.scenario-badge{font-size:11px;background:var(--blue-bg);color:var(--blue);border-radius:6px;padding:6px 10px;margin-bottom:14px;line-height:1.5;}
 </style>
 </head>
 <body>
 <div class="wrap">
 <h1>Indipendenza Finanziaria</h1>
-<p class="sub">Scopri in quanti anni raggiungi il FIRE nei diversi scenari di spesa e abitazione. I rendimenti sono reali (già corretti per inflazione).</p>
+<p class="sub">Calcola in quanti anni raggiungi il FIRE nei tre scenari di spesa, per ogni situazione abitativa. Rendimenti già corretti per inflazione.</p>
 
 <div class="savebar">
   <span class="st" id="ss">Nessun dato salvato</span>
@@ -98,98 +110,266 @@ h1{font-size:21px;font-weight:600;letter-spacing:-.3px;}
   </div>
 </div>
 
+<!-- SITUAZIONE ATTUALE -->
 <div class="sec">
-  <div class="sec-t">Situazione attuale</div>
+  <div class="sec-t">La tua situazione attuale</div>
   <div class="panel">
     <div class="g2">
-      <div class="field"><label>Patrimonio investito attuale</label><div class="row"><input type="range" id="pat" min="0" max="800000" step="5000" value="60000"><span class="val" id="pat-o"></span></div></div>
-      <div class="field"><label>Risparmio annuale investito</label><div class="row"><input type="range" id="risp" min="1000" max="80000" step="500" value="15000"><span class="val" id="risp-o"></span></div></div>
-      <div class="field"><label>Rendimento reale annuo atteso</label><div class="row"><input type="range" id="rend" min="1" max="10" step="0.5" value="5"><span class="val" id="rend-o"></span></div></div>
-      <div class="field"><label>Età attuale</label><div class="row"><input type="range" id="eta" min="20" max="60" step="1" value="35"><span class="val" id="eta-o"></span></div></div>
+      <div class="field">
+        <label>Patrimonio investito attuale</label>
+        <div class="row"><input type="range" id="pat" min="0" max="800000" step="5000" value="60000"><span class="val" id="pat-o"></span></div>
+      </div>
+      <div class="field">
+        <label>Quanto investi ogni anno (netto)</label>
+        <div class="row"><input type="range" id="risp" min="1000" max="80000" step="500" value="15000"><span class="val" id="risp-o"></span></div>
+        <div class="hint">Dopo tutte le spese correnti (affitto/mutuo inclusi)</div>
+      </div>
+      <div class="field">
+        <label>Rendimento reale annuo atteso</label>
+        <div class="row"><input type="range" id="rend" min="1" max="10" step="0.5" value="5"><span class="val" id="rend-o"></span></div>
+      </div>
+      <div class="field">
+        <label>Età attuale</label>
+        <div class="row"><input type="range" id="eta" min="20" max="60" step="1" value="35"><span class="val" id="eta-o"></span></div>
+      </div>
     </div>
   </div>
 </div>
 
+<!-- SPESE FIRE -->
 <div class="sec">
-  <div class="sec-t">Spese annuali in FIRE <span style="font-weight:400;text-transform:none;letter-spacing:0">(esclusa voce abitazione)</span></div>
+  <div class="sec-t">Spese annuali in FIRE <span style="font-weight:400;text-transform:none;letter-spacing:0">(vitto, svago, viaggi — esclusa voce abitazione)</span></div>
   <div class="panel">
     <div class="g3">
-      <div class="field"><label style="color:var(--green)">🌿 Lean</label><div class="row"><input type="range" id="lean" min="5000" max="35000" step="500" value="13000"><span class="val sm" id="lean-o"></span></div></div>
-      <div class="field"><label style="color:var(--amber)">☀️ Normal</label><div class="row"><input type="range" id="normal" min="10000" max="70000" step="1000" value="25000"><span class="val sm" id="normal-o"></span></div></div>
-      <div class="field"><label style="color:var(--red)">🔥 Fat</label><div class="row"><input type="range" id="fat" min="25000" max="150000" step="2000" value="50000"><span class="val sm" id="fat-o"></span></div></div>
+      <div class="field">
+        <label style="color:var(--green)">🌿 Lean</label>
+        <div class="row"><input type="range" id="lean" min="5000" max="40000" step="500" value="13000"><span class="val sm" id="lean-o"></span></div>
+      </div>
+      <div class="field">
+        <label style="color:var(--amber)">☀️ Normal</label>
+        <div class="row"><input type="range" id="normal" min="8000" max="70000" step="1000" value="25000"><span class="val sm" id="normal-o"></span></div>
+      </div>
+      <div class="field">
+        <label style="color:var(--red)">🔥 Fat</label>
+        <div class="row"><input type="range" id="fat" min="20000" max="150000" step="2000" value="50000"><span class="val sm" id="fat-o"></span></div>
+      </div>
     </div>
   </div>
 </div>
 
+<!-- SCENARIO ABITATIVO -->
 <div class="sec">
   <div class="sec-t">Scenario abitativo</div>
   <div class="panel">
-    <div class="g2" style="margin-bottom:14px">
-      <div class="field"><label>🏠 Costi proprietà/anno (IMU + manutenzione)</label><div class="row"><input type="range" id="cprop" min="500" max="12000" step="250" value="3000"><span class="val" id="cprop-o"></span></div></div>
-      <div class="field"><label>🏢 Affitto annuale</label><div class="row"><input type="range" id="affitto" min="3000" max="30000" step="500" value="10000"><span class="val" id="affitto-o"></span></div></div>
+    <div class="tabs">
+      <button class="tab" id="tab-libera" onclick="setScen('libera')">🏠 Casa libera</button>
+      <button class="tab" id="tab-mutuo" onclick="setScen('mutuo')">🏦 Con mutuo</button>
+      <button class="tab" id="tab-affitto" onclick="setScen('affitto')">🏢 In affitto</button>
     </div>
-    <label class="ck-row"><input type="checkbox" id="mt" onchange="toggleM()"> Ho un mutuo attivo al momento del FIRE</label>
-    <div id="mf" style="display:none">
-      <div class="g2" style="margin-bottom:9px">
-        <div class="field"><label>Rata mensile mutuo</label><div class="row"><input type="range" id="mr" min="100" max="3000" step="50" value="800"><span class="val" id="mr-o"></span></div></div>
-        <div class="field"><label>Anni residui mutuo al FIRE</label><div class="row"><input type="range" id="ma" min="1" max="30" step="1" value="10"><span class="val" id="ma-o"></span></div></div>
+
+    <!-- Casa libera -->
+    <div id="scen-libera">
+      <div class="scenario-badge">La casa è tua e il mutuo è estinto. Paghi solo IMU e manutenzione.</div>
+      <div class="g2">
+        <div class="field">
+          <label>Costi annuali proprietà (IMU + manutenzione)</label>
+          <div class="row"><input type="range" id="cprop" min="0" max="15000" step="250" value="3000"><span class="val" id="cprop-o"></span></div>
+        </div>
       </div>
-      <div id="mi" style="font-size:11px;color:var(--blue);background:var(--blue-bg);border-radius:6px;padding:7px 10px;line-height:1.6"></div>
+    </div>
+
+    <!-- Con mutuo -->
+    <div id="scen-mutuo" style="display:none">
+      <div class="scenario-badge">Inserisci i dati del tuo estratto conto mutuo <strong>aggiornati ad oggi</strong>. La rata mensile viene calcolata automaticamente.</div>
+      <div class="g3" style="margin-bottom:12px">
+        <div class="field">
+          <label>Debito residuo</label>
+          <div class="row"><input type="range" id="mdebito" min="10000" max="600000" step="5000" value="150000"><span class="val" id="mdebito-o"></span></div>
+        </div>
+        <div class="field">
+          <label>Rate rimanenti</label>
+          <div class="row"><input type="range" id="mrate" min="12" max="360" step="6" value="180"><span class="val" id="mrate-o"></span></div>
+          <div class="hint" id="mrate-hint"></div>
+        </div>
+        <div class="field">
+          <label>Tasso annuo mutuo</label>
+          <div class="row"><input type="range" id="mtasso" min="0.5" max="8" step="0.1" value="3.0"><span class="val" id="mtasso-o"></span></div>
+        </div>
+      </div>
+      <div class="g2" style="margin-bottom:12px">
+        <div class="field">
+          <label>Costi annuali proprietà (IMU + manutenzione)</label>
+          <div class="row"><input type="range" id="cprop2" min="0" max="15000" step="250" value="3000"><span class="val" id="cprop2-o"></span></div>
+        </div>
+      </div>
+      <div id="mutuo-info" style="font-size:11px;color:var(--blue);background:var(--blue-bg);border-radius:6px;padding:8px 12px;line-height:1.8"></div>
+    </div>
+
+    <!-- Affitto -->
+    <div id="scen-affitto" style="display:none">
+      <div class="scenario-badge">Vivi in affitto ora e continuerai a farlo in FIRE. L'affitto è incluso nelle tue spese permanenti.</div>
+      <div class="g2">
+        <div class="field">
+          <label>Affitto annuale attuale</label>
+          <div class="row"><input type="range" id="affitto" min="0" max="30000" step="500" value="10000"><span class="val" id="affitto-o"></span></div>
+          <div class="hint">Inserisci 0 se l'affitto è già incluso nel risparmio netto sopra</div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
+<!-- AVANZATE -->
 <div class="sec">
-  <button class="adv-btn" onclick="toggleAdv()" id="adv-btn">▸ Impostazioni avanzate (tasso di prelievo, tipo portafoglio)</button>
+  <button class="adv-btn" onclick="toggleAdv()" id="adv-btn">▸ Impostazioni avanzate — tasso di prelievo e tipo portafoglio</button>
   <div class="panel adv-body" id="adv-body">
     <div class="g2" style="margin-bottom:12px">
-      <div class="field"><label>Tasso di prelievo (SWR)</label><div class="row"><input type="range" id="swr" min="2.0" max="6.0" step="0.1" value="3.5"><span class="val sm" id="swr-o"></span></div><div style="font-size:11px;color:var(--text3);margin-top:2px">Moltiplicatore: <span id="mo" style="font-weight:600">28.6</span>×</div></div>
-      <div class="field"><label>Orizzonte decumulo (anni)</label><div class="row"><input type="range" id="horizon" min="15" max="55" step="5" value="40"><span class="val sm" id="horizon-o"></span></div></div>
+      <div class="field">
+        <label>Tasso di prelievo (SWR)</label>
+        <div class="row"><input type="range" id="swr" min="2.0" max="6.0" step="0.1" value="3.5"><span class="val sm" id="swr-o"></span></div>
+        <div class="hint">Moltiplicatore FIRE: <span id="mo" style="font-weight:600">28.6</span>×</div>
+      </div>
+      <div class="field">
+        <label>Orizzonte decumulo</label>
+        <div class="row"><input type="range" id="horizon" min="15" max="55" step="5" value="40"><span class="val sm" id="horizon-o"></span></div>
+      </div>
     </div>
     <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px">
-      <div><div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:5px">Tipo portafoglio</div><div class="btns"><button class="sbtn" id="bg" onclick="setPort('globale')">Globale</button><button class="sbtn" id="bm" onclick="setPort('misto')">Misto EU</button><button class="sbtn" id="be" onclick="setPort('eu')">EU-heavy</button></div></div>
-      <div><div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:5px">Prelievo</div><div class="btns"><button class="sbtn" id="bf" onclick="setDyn(false)">Fisso</button><button class="sbtn" id="bd" onclick="setDyn(true)">Dinamico</button></div></div>
+      <div>
+        <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:5px">Tipo portafoglio</div>
+        <div class="btns">
+          <button class="sbtn" id="bg" onclick="setPort('globale')">Globale</button>
+          <button class="sbtn" id="bm" onclick="setPort('misto')">Misto EU</button>
+          <button class="sbtn" id="be" onclick="setPort('eu')">EU-heavy</button>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:5px">Prelievo</div>
+        <div class="btns">
+          <button class="sbtn" id="bf" onclick="setDyn(false)">Fisso</button>
+          <button class="sbtn" id="bd" onclick="setDyn(true)">Dinamico</button>
+        </div>
+      </div>
     </div>
     <div class="swr-safe" id="sb"><span id="st2"></span></div>
-    <div style="overflow-x:auto"><table class="swr-tbl"><thead><tr><th>Portafoglio</th><th>20-25a</th><th>30-35a</th><th>40-45a</th><th>50+a</th></tr></thead><tbody id="rtb"></tbody></table></div>
-    <p style="font-size:10px;color:var(--text3);margin-top:6px">Prelievo dinamico: -10% se portafoglio &lt;80% valore iniziale, +10% se &gt;120%. Aggiunge ~+0.4% al tasso sicuro storico.</p>
+    <div style="overflow-x:auto">
+      <table class="swr-tbl">
+        <thead><tr><th>Portafoglio</th><th>20-25a</th><th>30-35a</th><th>40-45a</th><th>50+a</th></tr></thead>
+        <tbody id="rtb"></tbody>
+      </table>
+    </div>
+    <p style="font-size:10px;color:var(--text3);margin-top:6px">Prelievo dinamico: −10% se portafoglio &lt;80% valore iniziale, +10% se &gt;120%. Aggiunge ~+0.4% al tasso sicuro storico.</p>
   </div>
 </div>
 
+<!-- RISULTATI -->
 <div class="sec-t">Anni all'indipendenza finanziaria</div>
 <div class="results" id="results"></div>
 
+<!-- CHART -->
 <div style="margin-top:1.5rem">
   <div class="sec-t">Proiezione portafoglio</div>
   <div class="legend" id="leg"></div>
-  <div style="position:relative;width:100%;height:250px"><canvas id="fc" role="img" aria-label="Proiezione portafoglio FIRE"></canvas></div>
+  <div style="position:relative;width:100%;height:250px">
+    <canvas id="fc" role="img" aria-label="Proiezione portafoglio FIRE"></canvas>
+  </div>
 </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
-const SK='fire_v3';
-const SL=['pat','risp','rend','eta','lean','normal','fat','cprop','affitto','swr','horizon','mr','ma'];
+const SK='fire_v4';
+const SL=['pat','risp','rend','eta','lean','normal','fat','cprop','cprop2','affitto','swr','horizon','mdebito','mrate','mtasso'];
 const fmtE=v=>{const n=Math.round(v);if(n>=1e6)return'€'+(n/1e6).toFixed(n%1e5===0?1:2).replace('.',',')+' M';if(n>=10000)return'€'+Math.round(n/1000)+'k';return'€'+n.toLocaleString('it-IT');};
 const fmtF=v=>'€'+Math.round(v).toLocaleString('it-IT');
-const safeD={globale:{l:'Globale',r:[4.5,3.8,3.5,3.2]},misto:{l:'Misto EU',r:[4.0,3.5,3.1,2.9]},eu:{l:'EU-heavy',r:[3.5,3.3,2.9,2.7]}};
-let pt='misto',dyn=false,advOpen=false;
 
-function toggleAdv(){advOpen=!advOpen;document.getElementById('adv-body').classList.toggle('open',advOpen);document.getElementById('adv-btn').textContent=(advOpen?'▾ ':'▸ ')+'Impostazioni avanzate (tasso di prelievo, tipo portafoglio)';}
-function toggleM(){const on=document.getElementById('mt').checked;document.getElementById('mf').style.display=on?'block':'none';upd();}
+const safeD={
+  globale:{l:'Globale',r:[4.5,3.8,3.5,3.2]},
+  misto:{l:'Misto EU',r:[4.0,3.5,3.1,2.9]},
+  eu:{l:'EU-heavy',r:[3.5,3.3,2.9,2.7]}
+};
 
-function setPort(t){pt=t;['globale','misto','eu'].forEach(k=>{const b=document.getElementById('b'+k[0]);b.classList.toggle('act',k===t);});upd();}
-function setDyn(v){dyn=v;document.getElementById('bf').classList.toggle('act',!v);document.getElementById('bd').classList.toggle('act',v);upd();}
+let pt='misto', dyn=false, advOpen=false, scen='libera';
+
+function setScen(s){
+  scen=s;
+  ['libera','mutuo','affitto'].forEach(k=>{
+    document.getElementById('tab-'+k).classList.toggle('act',k===s);
+    document.getElementById('scen-'+k).style.display=k===s?'block':'none';
+  });
+  upd();
+}
+
+function toggleAdv(){
+  advOpen=!advOpen;
+  document.getElementById('adv-body').classList.toggle('open',advOpen);
+  document.getElementById('adv-btn').textContent=(advOpen?'▾ ':'▸ ')+'Impostazioni avanzate — tasso di prelievo e tipo portafoglio';
+}
+
+function setPort(t){
+  pt=t;
+  ['globale','misto','eu'].forEach(k=>{document.getElementById('b'+k[0]).classList.toggle('act',k===t);});
+  upd();
+}
+
+function setDyn(v){
+  dyn=v;
+  document.getElementById('bf').classList.toggle('act',!v);
+  document.getElementById('bd').classList.toggle('act',v);
+  upd();
+}
+
 function hCol(h){if(h<=25)return 0;if(h<=35)return 1;if(h<=45)return 2;return 3;}
-function pv(ann,r,n){if(n<=0)return 0;if(r===0)return ann*n;return ann*(1-Math.pow(1+r,-n))/r;}
-function yToFire(pat,risp,r,target){if(target<=0)return 0;let v=pat;for(let y=0;y<=65;y++){if(v>=target)return y;v=v*(1+r)+risp;}return null;}
+
+// Present value of annuity
+function pv(ann,r,n){
+  if(n<=0)return 0;
+  if(r===0)return ann*n;
+  return ann*(1-Math.pow(1+r,-n))/r;
+}
+
+// Calcola il FIRE number per uno scenario a un dato anno Y dall'oggi
+// Scenario: libera, mutuo, affitto
+function fireNumber(baseSpesa, cprop, affitto, mr_ann, ma_oggi, mult, rend, anniAccumulo){
+  if(scen==='affitto'){
+    // In affitto: spesa permanente = base + affitto
+    return (baseSpesa + affitto) * mult;
+  }
+  if(scen==='libera'){
+    // Casa libera: spesa permanente = base + cprop
+    return (baseSpesa + cprop) * mult;
+  }
+  if(scen==='mutuo'){
+    // Al momento del FIRE (dopo anniAccumulo anni da oggi):
+    // anni di mutuo rimasti = max(0, ma_oggi - anniAccumulo)
+    const anniMutuoAlFire = Math.max(0, ma_oggi - anniAccumulo);
+    // Spesa permanente post-mutuo = base + cprop
+    const fnBase = (baseSpesa + cprop) * mult;
+    // Buffer per coprire le rate residue al momento del FIRE
+    const pvMutuo = pv(mr_ann, rend, anniMutuoAlFire);
+    return fnBase + pvMutuo;
+  }
+  return 0;
+}
+
+// Trova l'anno FIRE iterando anno per anno (il FIRE number cambia con gli anni per scenario mutuo)
+function yToFire(pat, risp, rend, baseSpesa, cprop, affitto, mr_ann, ma_oggi, mult){
+  let v=pat;
+  for(let y=0;y<=65;y++){
+    const fn=fireNumber(baseSpesa, cprop, affitto, mr_ann, ma_oggi, mult, rend, y);
+    if(v>=fn) return {anni:y, fnAtFire:fn, mutuoResiduo:Math.max(0, ma_oggi-y)};
+    v=v*(1+rend)+risp;
+  }
+  return null;
+}
+
 function portData(pat,risp,r,y){const d=[];let v=pat;for(let i=0;i<=y;i++){d.push(Math.round(v));v=v*(1+r)+risp;}return d;}
 
 function buildSafe(swr,hc){
   const safe=dyn?safeD[pt].r[hc]+0.4:safeD[pt].r[hc];
   const box=document.getElementById('sb'),txt=document.getElementById('st2');
   const h=document.getElementById('horizon').value;
-  if(swr<=safe){box.style.background='var(--green-bg)';txt.style.color='var(--green)';txt.innerHTML='<strong>✓ Sicuro</strong> — '+swr.toFixed(1)+'% entro il limite storico di '+safe.toFixed(1)+'% ('+safeD[pt].l+', '+h+'a'+(dyn?', dinamico':'')+').';}
+  if(swr<=safe){box.style.background='var(--green-bg)';txt.style.color='var(--green)';txt.innerHTML='<strong>✓ Sicuro</strong> — '+swr.toFixed(1)+'% nei limiti storici per '+safeD[pt].l+' su '+h+' anni'+(dyn?' (dinamico)':'')+'. Riferimento: '+safe.toFixed(1)+'%.';}
   else if(swr<=safe+0.5){box.style.background='var(--amber-bg)';txt.style.color='var(--amber)';txt.innerHTML='<strong>⚠ Ottimistico</strong> — '+swr.toFixed(1)+'% supera il riferimento di '+safe.toFixed(1)+'%. Considera flessibilità di spesa.';}
   else{box.style.background='var(--red-bg)';txt.style.color='var(--red)';txt.innerHTML='<strong>✗ Rischioso</strong> — '+swr.toFixed(1)+'% supera significativamente il '+safe.toFixed(1)+'% storico. Rischio di esaurire il capitale.';}
 }
@@ -213,21 +393,58 @@ function buildRefTable(swr,hc){
 const isDark=window.matchMedia('(prefers-color-scheme:dark)').matches;
 const tc=isDark?'#888':'#888',gc=isDark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.06)';
 let chart=null;
-const SCS=[{id:'lean',l:'Lean',cls:'lean',e:'🌿',c:['#1a7a50','#6ab890']},{id:'normal',l:'Normal',cls:'normal',e:'☀️',c:['#9a5808','#d09840']},{id:'fat',l:'Fat',cls:'fat',e:'🔥',c:['#802010','#c05848']}];
+
+const SCS=[
+  {id:'lean',l:'Lean',cls:'lean',e:'🌿',c:['#1a7a50','#1a7a50']},
+  {id:'normal',l:'Normal',cls:'normal',e:'☀️',c:['#9a5808','#9a5808']},
+  {id:'fat',l:'Fat',cls:'fat',e:'🔥',c:['#802010','#802010']}
+];
+
+function scenLabel(){
+  if(scen==='libera') return '🏠 Casa libera';
+  if(scen==='mutuo') return '🏦 Con mutuo';
+  return '🏢 In affitto';
+}
 
 function renderCards(res,eta){
   const ct=document.getElementById('results');ct.innerHTML='';
   SCS.forEach(sc=>{
     const r=res[sc.id],card=document.createElement('div');
     card.className='rcard '+sc.cls;
-    const aStr=a=>a===null?'<span style="color:var(--text3)">oltre 65a</span>':a===0?'<span>già raggiunto!</span>':a+' anni';
-    const eStr=a=>a&&a>0?'→ età '+(eta+a):'';
-    const noteCC=r.hm&&r.pv>0?'<div class="rn">+ '+fmtE(r.pv)+' buffer mutuo ('+r.ma+'a)</div>':'';
+    let anniTxt,etaTxt='',noteTxt='';
+    if(!r){
+      anniTxt='<span style="color:var(--text3)">oltre 65 anni</span>';
+    } else if(r.anni===0){
+      anniTxt='<span>Già raggiunto!</span>';
+    } else {
+      anniTxt=r.anni+' anni';
+      etaTxt='→ età '+(eta+r.anni);
+    }
+    if(r && scen==='mutuo'){
+      if(r.rateResidueAlFire>0){
+        noteTxt='<div class="rn">Al FIRE: <strong>'+r.rateResidueAlFire+' rate</strong> residue ('+r.mutuoResiduo+'a) · buffer '+fmtE(r.fnAtFire - r.fnBase)+'</div>';
+      } else {
+        noteTxt='<div class="rn">Mutuo estinto prima del FIRE 🎉</div>';
+      }
+    }
+    const spesaLabel = scen==='affitto'
+      ? fmtF(r?r.spesaTot:0)+'/a (incl. affitto)'
+      : scen==='mutuo'
+        ? fmtF(r?r.spesaBase:0)+'/a + costi casa + mutuo'
+        : fmtF(r?r.spesaTot:0)+'/a (incl. IMU/man.)';
+
     card.innerHTML=
-      '<div class="rh"><div class="rl">'+sc.e+' '+sc.l+' FIRE</div><div class="rs">Rendita: '+fmtF(r.base)+'/a</div></div>'+
-      '<div class="rb">'+
-        '<div class="rr"><div class="rrl">🏠 Con casa di proprietà</div><div class="rfn">FIRE number: '+fmtE(r.fnCC)+'</div><div class="rsp">Spese: '+fmtF(r.tCC)+'/a'+(r.hm?' + mutuo':'')+' · IMU/man. '+fmtF(r.cprop)+'/a</div>'+noteCC+'<div class="ra">'+aStr(r.aCC)+'</div><div class="re">'+eStr(r.aCC)+'</div></div>'+
-        '<div class="rr"><div class="rrl">🏢 In affitto</div><div class="rfn">FIRE number: '+fmtE(r.fnSC)+'</div><div class="rsp">Spese: '+fmtF(r.tSC)+'/a · affitto '+fmtF(r.affitto)+'/a</div><div class="ra">'+aStr(r.aSC)+'</div><div class="re">'+eStr(r.aSC)+'</div></div>'+
+      '<div class="rh">'+
+        '<div class="rl">'+sc.e+' '+sc.l+' FIRE</div>'+
+        '<div class="rs">'+fmtF(r?r.spesaOperativa:0)+'/a operative</div>'+
+      '</div>'+
+      '<div class="rr">'+
+        '<div class="rrl">'+scenLabel()+'</div>'+
+        '<div class="rfn">'+(r?'FIRE number: '+fmtE(r.fnAtFire):'—')+'</div>'+
+        '<div class="rsp">'+spesaLabel+'</div>'+
+        noteTxt+
+        '<div class="ra">'+anniTxt+'</div>'+
+        '<div class="re">'+etaTxt+'</div>'+
       '</div>';
     ct.appendChild(card);
   });
@@ -236,9 +453,9 @@ function renderCards(res,eta){
 function renderLegend(){
   const leg=document.getElementById('leg');
   leg.innerHTML='<div class="li"><span class="ld" style="background:'+(isDark?'#ccc':'#444')+'"></span>Portafoglio</div>';
+  const colors={lean:'#1a7a50',normal:'#9a5808',fat:'#802010'};
   SCS.forEach(sc=>{
-    leg.innerHTML+='<div class="li"><span class="ld" style="background:'+sc.c[0]+'"></span>'+sc.e+' '+sc.l+' casa</div>';
-    leg.innerHTML+='<div class="li"><span class="ld" style="background:'+sc.c[1]+';border-top:1px dashed '+sc.c[1]+'"></span>'+sc.e+' '+sc.l+' affitto</div>';
+    leg.innerHTML+='<div class="li"><span class="ld" style="background:'+colors[sc.id]+'"></span>'+sc.e+' '+sc.l+'</div>';
   });
 }
 
@@ -251,13 +468,21 @@ function upd(){
   const normal=+document.getElementById('normal').value;
   const fat=+document.getElementById('fat').value;
   const cprop=+document.getElementById('cprop').value;
+  const cprop2=+document.getElementById('cprop2').value;
   const affitto=+document.getElementById('affitto').value;
   const swr=+document.getElementById('swr').value;
   const horizon=+document.getElementById('horizon').value;
-  const hm=document.getElementById('mt').checked;
-  const mr=hm?+document.getElementById('mr').value:0;
-  const ma=hm?+document.getElementById('ma').value:0;
+  // Nuovi input mutuo
+  const mdebito=+document.getElementById('mdebito').value;
+  const mrate=+document.getElementById('mrate').value;
+  const mtasso=+document.getElementById('mtasso').value/100;
+  // Calcola rata mensile dalla formula standard mutuo
+  const rm=mtasso/12; // tasso mensile
+  const rataMensile=rm>0 ? mdebito*(rm*Math.pow(1+rm,mrate))/(Math.pow(1+rm,mrate)-1) : mdebito/mrate;
+  const mr_ann=rataMensile*12;
+  const ma=mrate/12; // anni residui da oggi
 
+  // Labels
   document.getElementById('pat-o').textContent=fmtF(pat);
   document.getElementById('risp-o').textContent=fmtF(risp);
   document.getElementById('rend-o').textContent=(+document.getElementById('rend').value).toFixed(1)+'%';
@@ -266,45 +491,88 @@ function upd(){
   document.getElementById('normal-o').textContent=fmtF(normal);
   document.getElementById('fat-o').textContent=fmtF(fat);
   document.getElementById('cprop-o').textContent=fmtF(cprop);
+  document.getElementById('cprop2-o').textContent=fmtF(cprop2);
   document.getElementById('affitto-o').textContent=fmtF(affitto);
   document.getElementById('swr-o').textContent=swr.toFixed(1)+'%';
   document.getElementById('mo').textContent=(100/swr).toFixed(1);
   document.getElementById('horizon-o').textContent=horizon+' anni';
-  if(hm){document.getElementById('mr-o').textContent=fmtF(mr);document.getElementById('ma-o').textContent=ma+' anni';}
+  document.getElementById('mdebito-o').textContent=fmtF(mdebito);
+  document.getElementById('mrate-o').textContent=mrate+' rate';
+  document.getElementById('mrate-hint').textContent=Math.round(mrate/12*10)/10+' anni';
+  document.getElementById('mtasso-o').textContent=mtasso.toFixed(1)+'%';
 
-  const rann=mr*12;
-  const pvM=hm&&ma>0?pv(rann,rend,ma):0;
-  if(hm&&ma>0){document.getElementById('mi').innerHTML='Rata annuale: <strong>'+fmtE(rann)+'</strong> &nbsp;·&nbsp; Buffer portafoglio (PV): <strong>'+fmtE(pvM)+'</strong> &nbsp;·&nbsp; Mutuo estinto: età <strong>'+(eta+ma)+'</strong><br>Dopo estinzione le spese casa scendono di <strong>'+fmtE(rann)+'/anno</strong>.';}
+  // Mutuo info box
+  if(scen==='mutuo'){
+    const anniRes=Math.round(ma*10)/10;
+    const quotaInteressi=mdebito*mtasso;
+    const quotaCapitale=mr_ann-quotaInteressi;
+    document.getElementById('mutuo-info').innerHTML=
+      '<strong>Rata calcolata: '+fmtF(Math.round(rataMensile))+'/mese</strong> ('+fmtE(mr_ann)+'/anno)'+
+      ' &nbsp;·&nbsp; Anni residui: <strong>'+anniRes+'</strong>'+
+      '<br>Quota interessi annua approx.: <strong>'+fmtE(Math.max(0,quotaInteressi))+'</strong>'+
+      ' &nbsp;·&nbsp; Quota capitale approx.: <strong>'+fmtE(Math.max(0,quotaCapitale))+'</strong>'+
+      '<br><span style="opacity:.8">Il calcolatore stima quante rate resteranno al FIRE e aggiunge il buffer necessario al FIRE number.</span>';
+  }
 
   const mult=100/swr,hc=hCol(horizon);
   buildSafe(swr,hc);buildRefTable(swr,hc);
 
-  const spese={lean,normal,fat};
+  // Determina parametri abitativi per scenario attivo
+  const cp=scen==='mutuo'?cprop2:cprop;
+
   const res={};
+  const fireTargets={};
   ['lean','normal','fat'].forEach(id=>{
-    const base=spese[id],tCC=base+cprop,tSC=base+affitto;
-    const fnCC=tCC*mult+pvM,fnSC=tSC*mult;
-    res[id]={base,tCC,tSC,fnCC,fnSC,cprop,affitto,aCC:yToFire(pat,risp,rend,fnCC),aSC:yToFire(pat,risp,rend,fnSC),hm,pv:pvM,ma};
+    const base={lean,normal,fat}[id];
+    const r=yToFire(pat,risp,rend,base,cp,affitto,mr_ann,ma,mult);
+    if(r){
+      let spesaTot,spesaBase;
+      if(scen==='affitto'){spesaTot=base+affitto;spesaBase=base;}
+      else if(scen==='libera'){spesaTot=base+cp;spesaBase=base;}
+      else{spesaTot=base+cp;spesaBase=base;}
+      const fnBase=(scen==='affitto')?(base+affitto)*mult:(base+cp)*mult;
+      const rateResidueAlFire=Math.max(0,mrate-r.anni*12);
+      const anniResidui=Math.round(rateResidueAlFire/12*10)/10;
+      res[id]={anni:r.anni,fnAtFire:r.fnAtFire,fnBase,mutuoResiduo:anniResidui,rateResidueAlFire:Math.round(rateResidueAlFire),spesaTot,spesaBase,spesaOperativa:base};
+      fireTargets[id]=r.fnAtFire;
+    } else {
+      res[id]=null;
+      fireTargets[id]=(scen==='affitto')?(base+affitto)*mult:(base+cp)*mult;
+    }
   });
 
-  renderCards(res,eta);
-  renderLegend();
+  renderCards(res,eta);renderLegend();
 
+  // Chart — mostra linee FIRE come target fissi (usiamo il FIRE number al momento ottimale)
   const maxY=65,labels=Array.from({length:maxY+1},(_,i)=>eta+i);
   const pd=portData(pat,risp,rend,maxY);
-  const hl=(val,col,dash)=>({label:'_',data:Array(maxY+1).fill(Math.round(val)),borderColor:col,borderWidth:1.5,borderDash:dash||[],pointRadius:0,tension:0,fill:false});
+  const colors={lean:'#1a7a50',normal:'#9a5808',fat:'#802010'};
+
+  // Per il grafico con mutuo, costruiamo la curva del FIRE number nel tempo
+  const buildFireCurve=(base,cp)=>{
+    if(scen!=='mutuo') return Array(maxY+1).fill(Math.round(fireNumber(base,cp,affitto,mr_ann,ma,mult,rend,0)));
+    return Array.from({length:maxY+1},(_,y)=>Math.round(fireNumber(base,cp,affitto,mr_ann,ma,mult,rend,y)));
+  };
+
   const ds=[
     {label:'Portafoglio',data:pd,borderColor:isDark?'#ccc':'#444',borderWidth:2.5,pointRadius:0,tension:0.3,fill:false},
-    hl(res.lean.fnCC,SCS[0].c[0],[]),hl(res.lean.fnSC,SCS[0].c[1],[5,4]),
-    hl(res.normal.fnCC,SCS[1].c[0],[]),hl(res.normal.fnSC,SCS[1].c[1],[5,4]),
-    hl(res.fat.fnCC,SCS[2].c[0],[]),hl(res.fat.fnSC,SCS[2].c[1],[5,4]),
+    {label:'_',data:buildFireCurve(lean,cp),borderColor:colors.lean,borderWidth:1.5,borderDash:[],pointRadius:0,tension:0,fill:false},
+    {label:'_',data:buildFireCurve(normal,cp),borderColor:colors.normal,borderWidth:1.5,borderDash:[],pointRadius:0,tension:0,fill:false},
+    {label:'_',data:buildFireCurve(fat,cp),borderColor:colors.fat,borderWidth:1.5,borderDash:[],pointRadius:0,tension:0,fill:false},
   ];
+
   if(chart){chart.data.labels=labels;chart.data.datasets=ds;chart.update('none');}
-  else chart=new Chart(document.getElementById('fc'),{type:'line',data:{labels,datasets:ds},options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{callbacks:{title:ctx=>'Età: '+ctx[0].label,label:ctx=>ctx.datasetIndex===0?'Portafoglio: '+fmtE(ctx.raw):null,filter:i=>i.datasetIndex===0}}},scales:{x:{ticks:{maxTicksLimit:12,font:{size:11},color:tc},grid:{color:gc}},y:{ticks:{font:{size:11},color:tc,callback:v=>fmtE(v)},grid:{color:gc}}}}});
+  else chart=new Chart(document.getElementById('fc'),{
+    type:'line',data:{labels,datasets:ds},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:false},tooltip:{callbacks:{title:ctx=>'Età: '+ctx[0].label,label:ctx=>ctx.datasetIndex===0?'Portafoglio: '+fmtE(ctx.raw):null,filter:i=>i.datasetIndex===0}}},
+      scales:{x:{ticks:{maxTicksLimit:12,font:{size:11},color:tc},grid:{color:gc}},y:{ticks:{font:{size:11},color:tc,callback:v=>fmtE(v)},grid:{color:gc}}}}
+  });
 }
 
-function getS(){const s={};SL.forEach(id=>{const el=document.getElementById(id);if(el)s[id]=el.value;});s.pt=pt;s.dyn=dyn;s.hm=document.getElementById('mt').checked;return s;}
-function applyS(s){SL.forEach(id=>{const el=document.getElementById(id);if(el&&s[id]!==undefined)el.value=s[id];});if(s.hm){document.getElementById('mt').checked=true;document.getElementById('mf').style.display='block';}setPort(s.pt||'misto');setDyn(s.dyn||false);upd();}
+// Persistence
+function getS(){const s={};SL.forEach(id=>{const el=document.getElementById(id);if(el)s[id]=el.value;});s.pt=pt;s.dyn=dyn;s.scen=scen;return s;}
+function applyS(s){SL.forEach(id=>{const el=document.getElementById(id);if(el&&s[id]!==undefined)el.value=s[id];});setScen(s.scen||'libera');setPort(s.pt||'misto');setDyn(s.dyn||false);upd();}
 function saveS(){const s=getS();s.at=new Date().toISOString();localStorage.setItem(SK,JSON.stringify(s));const d=new Date();document.getElementById('ss').textContent='Salvato: '+d.toLocaleDateString('it-IT')+' '+d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});}
 function resetS(){if(confirm('Ripristinare i valori di default?')){localStorage.removeItem(SK);location.reload();}}
 function exportJ(){const s=getS();s.at=new Date().toISOString();const b=new Blob([JSON.stringify(s,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='fire_'+new Date().toISOString().slice(0,10)+'.json';a.click();}
@@ -313,7 +581,7 @@ function loadS(){const raw=localStorage.getItem(SK);if(raw){try{const s=JSON.par
 
 SL.forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('input',upd);});
 setPort('misto');setDyn(false);
-if(!loadS())upd();
+if(!loadS())setScen('libera');
 </script>
 </body>
 </html>
