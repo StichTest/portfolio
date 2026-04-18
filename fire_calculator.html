@@ -133,6 +133,31 @@
   </div>
 
   <div class="section">
+    <div class="box" style="border-left: 3px solid #4A90D9">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div class="section-title" style="margin:0">Mutuo residuo <span style="font-weight:400;color:var(--text3)">(opzionale — solo scenario con casa)</span></div>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer">
+          <input type="checkbox" id="mutuo-toggle" onchange="toggleMutuo()" style="cursor:pointer"> Ho un mutuo attivo
+        </label>
+      </div>
+      <div id="mutuo-fields" style="display:none">
+        <div class="grid2" style="margin-bottom:10px">
+          <div class="field">
+            <label>Rata mensile mutuo</label>
+            <div class="row"><input type="range" id="mutuo_rata" min="100" max="3000" step="50" value="800"><span class="val" id="mutuo_rata-out">€800</span></div>
+          </div>
+          <div class="field">
+            <label>Anni residui al FIRE</label>
+            <div class="row"><input type="range" id="mutuo_anni" min="1" max="30" step="1" value="10"><span class="val" id="mutuo_anni-out">10 anni</span></div>
+          </div>
+        </div>
+        <div id="mutuo-info" style="background:var(--bg2);border-radius:var(--radius);padding:8px 12px;font-size:11px;color:var(--text2);line-height:1.6"></div>
+        <p style="font-size:10px;color:var(--text3);margin-top:6px">Il FIRE number "con casa" include il valore attuale (PV) delle rate residue — cioè il capitale aggiuntivo da tenere in portafoglio per coprire le rate durante la fase di mutuo, senza intaccare la quota destinata al prelievo permanente.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
     <div class="section-title">Spese operative annuali in FIRE <span style="font-weight:400">(esclusi affitto/costi casa)</span></div>
     <div class="grid3">
       <div class="field">
@@ -207,6 +232,7 @@
       <div class="sub">con casa · spese tot. <span id="lean-cc-sp"></span></div>
       <div class="fn" id="lean-cc-fn">—</div>
       <div class="anni" id="lean-cc-anni">—</div>
+      <div id="lean-cc-mutuo" style="font-size:10px;color:#4A90D9;margin-top:2px"></div>
       <hr class="divider">
       <div class="sub">in affitto · spese tot. <span id="lean-sc-sp"></span></div>
       <div class="fn" id="lean-sc-fn">—</div>
@@ -217,6 +243,7 @@
       <div class="sub">con casa · spese tot. <span id="normal-cc-sp"></span></div>
       <div class="fn" id="normal-cc-fn">—</div>
       <div class="anni" id="normal-cc-anni">—</div>
+      <div id="normal-cc-mutuo" style="font-size:10px;color:#4A90D9;margin-top:2px"></div>
       <hr class="divider">
       <div class="sub">in affitto · spese tot. <span id="normal-sc-sp"></span></div>
       <div class="fn" id="normal-sc-fn">—</div>
@@ -227,6 +254,7 @@
       <div class="sub">con casa · spese tot. <span id="fat-cc-sp"></span></div>
       <div class="fn" id="fat-cc-fn">—</div>
       <div class="anni" id="fat-cc-anni">—</div>
+      <div id="fat-cc-mutuo" style="font-size:10px;color:#4A90D9;margin-top:2px"></div>
       <hr class="divider">
       <div class="sub">in affitto · spese tot. <span id="fat-sc-sp"></span></div>
       <div class="fn" id="fat-sc-fn">—</div>
@@ -251,7 +279,7 @@
 
 <script>
 const STORAGE_KEY = 'fire_calc_v2';
-const SLIDERS = ['pat','risp','rend','eta','affitto','cprop','lean','normal','fat','swr','horizon'];
+const SLIDERS = ['pat','risp','rend','eta','affitto','cprop','lean','normal','fat','swr','horizon','mutuo_rata','mutuo_anni'];
 
 const fmtE = v => {
   const n = Math.round(v);
@@ -357,6 +385,18 @@ const tickCol = isDark ? '#aaa' : '#777';
 const gridCol = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
 let fireChart = null;
 
+function toggleMutuo() {
+  const on = document.getElementById('mutuo-toggle').checked;
+  document.getElementById('mutuo-fields').style.display = on ? 'block' : 'none';
+  update();
+}
+
+function pvAnnuity(rata_annuale, r, n) {
+  // Present value of annuity: capitale necessario oggi per pagare rata_annuale per n anni al tasso r
+  if (r === 0) return rata_annuale * n;
+  return rata_annuale * (1 - Math.pow(1 + r, -n)) / r;
+}
+
 function update() {
   const pat = +document.getElementById('pat').value;
   const risp = +document.getElementById('risp').value;
@@ -369,6 +409,9 @@ function update() {
   const fat = +document.getElementById('fat').value;
   const swr = +document.getElementById('swr').value;
   const horizon = +document.getElementById('horizon').value;
+  const hasMutuo = document.getElementById('mutuo-toggle').checked;
+  const mutuo_rata = hasMutuo ? +document.getElementById('mutuo_rata').value : 0;
+  const mutuo_anni = hasMutuo ? +document.getElementById('mutuo_anni').value : 0;
 
   document.getElementById('pat-out').textContent = fmtFull(pat);
   document.getElementById('risp-out').textContent = fmtFull(risp);
@@ -382,6 +425,24 @@ function update() {
   document.getElementById('swr-out').textContent = swr.toFixed(1) + '%';
   document.getElementById('mult-out').textContent = (100/swr).toFixed(1);
   document.getElementById('horizon-out').textContent = horizon + ' anni';
+  if (hasMutuo) {
+    document.getElementById('mutuo_rata-out').textContent = fmtFull(mutuo_rata);
+    document.getElementById('mutuo_anni-out').textContent = mutuo_anni + ' anni';
+  }
+
+  // Mortgage PV calculation
+  const rata_annuale = mutuo_rata * 12;
+  const pvMutuo = hasMutuo && mutuo_anni > 0 ? pvAnnuity(rata_annuale, rend, mutuo_anni) : 0;
+  const debitoResiduo = rata_annuale * mutuo_anni; // simplified remaining debt
+
+  if (hasMutuo && mutuo_anni > 0) {
+    const infoEl = document.getElementById('mutuo-info');
+    infoEl.innerHTML =
+      'Rata annuale: <strong>' + fmtE(rata_annuale) + '</strong> &nbsp;·&nbsp; ' +
+      'Capitale aggiuntivo necessario (PV rate residue): <strong>' + fmtE(pvMutuo) + '</strong> &nbsp;·&nbsp; ' +
+      'Fine mutuo: età <strong>' + (eta + mutuo_anni) + '</strong><br>' +
+      '<span style="color:var(--text3)">Il PV si aggiunge al FIRE number "con casa" di ogni scenario. Dopo l\'estinzione le spese calano di ' + fmtE(rata_annuale) + '/anno.</span>';
+  }
 
   const mult = 100 / swr;
   const hCol = getHorizonCol(horizon);
@@ -389,16 +450,25 @@ function update() {
   updateSafetyBox(swr, hCol);
 
   [['lean',lean],['normal',normal],['fat',fat]].forEach(([id, base]) => {
-    const totCC = base + cprop, totSC = base + affitto;
-    const fnCC = totCC * mult, fnSC = totSC * mult;
+    const totCC = base + cprop;
+    const totSC = base + affitto;
+    // Con casa: base FIRE number + PV delle rate mutuo residue
+    const fnCC = totCC * mult + pvMutuo;
+    const fnSC = totSC * mult;
     const aCC = yearsToFire(pat, risp, rend, fnCC);
     const aSC = yearsToFire(pat, risp, rend, fnSC);
-    document.getElementById(id+'-cc-sp').textContent = fmtE(totCC)+'/a';
+    document.getElementById(id+'-cc-sp').textContent = fmtE(totCC)+'/a' + (hasMutuo ? ' + mutuo' : '');
     document.getElementById(id+'-sc-sp').textContent = fmtE(totSC)+'/a';
     document.getElementById(id+'-cc-fn').textContent = fmtE(fnCC);
     document.getElementById(id+'-sc-fn').textContent = fmtE(fnSC);
     document.getElementById(id+'-cc-anni').textContent = aCC !== null ? aCC+' anni · età '+(eta+aCC) : '> 65 anni';
     document.getElementById(id+'-sc-anni').textContent = aSC !== null ? aSC+' anni · età '+(eta+aSC) : '> 65 anni';
+    const mutuoEl = document.getElementById(id+'-cc-mutuo');
+    if (hasMutuo && pvMutuo > 0) {
+      mutuoEl.textContent = 'di cui ' + fmtE(pvMutuo) + ' buffer mutuo (' + mutuo_anni + 'a) + ' + fmtE(totCC * mult) + ' rendita';
+    } else {
+      mutuoEl.textContent = '';
+    }
   });
 
   const maxY = 65;
@@ -407,9 +477,9 @@ function update() {
   const hline = (val, col, dash) => ({ label:'_', data:Array(maxY+1).fill(Math.round(val)), borderColor:col, borderWidth:1.5, borderDash:dash||[], pointRadius:0, tension:0, fill:false });
   const datasets = [
     { label:'Portafoglio', data:portData, borderColor: isDark?'#ccc':'#444', borderWidth:2.5, pointRadius:0, tension:0.2, fill:false },
-    hline((lean+cprop)*mult,'#1D9E75',[]), hline((lean+affitto)*mult,'#5DCAA5',[5,4]),
-    hline((normal+cprop)*mult,'#BA7517',[]), hline((normal+affitto)*mult,'#FAC775',[5,4]),
-    hline((fat+cprop)*mult,'#993C1D',[]), hline((fat+affitto)*mult,'#F0997B',[5,4]),
+    hline((lean+cprop)*mult+pvMutuo,'#1D9E75',[]), hline((lean+affitto)*mult,'#5DCAA5',[5,4]),
+    hline((normal+cprop)*mult+pvMutuo,'#BA7517',[]), hline((normal+affitto)*mult,'#FAC775',[5,4]),
+    hline((fat+cprop)*mult+pvMutuo,'#993C1D',[]), hline((fat+affitto)*mult,'#F0997B',[5,4]),
   ];
 
   if (fireChart) {
@@ -502,7 +572,10 @@ function loadSaved() {
   return false;
 }
 
-SLIDERS.forEach(id => document.getElementById(id).addEventListener('input', update));
+SLIDERS.forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('input', update);
+});
 setPort('misto');
 setDyn(false);
 if (!loadSaved()) update();
