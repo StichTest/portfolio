@@ -3,582 +3,317 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Calcolatore FIRE — Personale</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<title>Indipendenza Finanziaria — Calcolatore FIRE</title>
 <style>
-  :root {
-    --bg: #ffffff; --bg2: #f5f5f3; --bg3: #eeede9;
-    --text: #1a1a1a; --text2: #555550; --text3: #999990;
-    --border: rgba(0,0,0,0.12); --border2: rgba(0,0,0,0.22);
-    --green: #1D9E75; --green2: #5DCAA5;
-    --amber: #BA7517; --amber2: #FAC775;
-    --red: #993C1D; --red2: #F0997B;
-    --safe-bg: #EAF3DE; --safe-col: #3B6D11;
-    --warn-bg: #FAEEDA; --warn-col: #854F0B;
-    --risk-bg: #FCEBEB; --risk-col: #A32D2D;
-    --radius: 8px; --radius-lg: 12px;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #1e1e1e; --bg2: #2a2a2a; --bg3: #333333;
-      --text: #e8e8e8; --text2: #aaaaaa; --text3: #777777;
-      --border: rgba(255,255,255,0.1); --border2: rgba(255,255,255,0.2);
-      --safe-bg: #1a3020; --safe-col: #7dd87d;
-      --warn-bg: #2d2010; --warn-col: #e8b84b;
-      --risk-bg: #2d1515; --risk-col: #e87575;
-    }
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; }
-  .container { max-width: 860px; margin: 0 auto; padding: 2rem 1.5rem 3rem; }
-  h1 { font-size: 20px; font-weight: 500; margin-bottom: 0.25rem; }
-  .subtitle { font-size: 12px; color: var(--text3); margin-bottom: 1.75rem; }
-  .section { margin-bottom: 1.25rem; }
-  .section-title { font-size: 12px; font-weight: 500; color: var(--text2); margin-bottom: 8px; }
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 24px; }
-  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px 20px; }
-  @media (max-width: 600px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
-  .field label { font-size: 12px; color: var(--text2); display: block; margin-bottom: 3px; }
-  .field .row { display: flex; align-items: center; gap: 8px; }
-  .field input[type=range] { flex: 1; accent-color: var(--text); }
-  .field .val { font-size: 13px; font-weight: 500; min-width: 68px; text-align: right; color: var(--text); }
-  .field .val.sm { min-width: 50px; }
-  .field .hint { font-size: 11px; color: var(--text3); margin-top: 2px; }
-  .box { background: var(--bg2); border-radius: var(--radius); padding: 12px 14px; }
-  .card { border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 12px 14px; }
-  .card-top { border-top: 2px solid; }
-  .card .sub { font-size: 10px; color: var(--text3); margin: 0 0 1px; }
-  .card .fn { font-size: 17px; font-weight: 500; color: var(--text); margin: 0; }
-  .card .anni { font-size: 11px; color: var(--text2); margin: 2px 0 0; }
-  .card .divider { border: none; border-top: 0.5px solid var(--border); margin: 10px 0; }
-  .card-label { font-size: 11px; font-weight: 500; letter-spacing: .04em; margin: 0 0 10px; }
-  .swr-box { border: 0.5px solid var(--border2); border-radius: var(--radius-lg); padding: 14px 16px; }
-  .swr-box .title { font-size: 13px; font-weight: 500; margin-bottom: 12px; }
-  .btn-group { display: flex; gap: 4px; flex-wrap: wrap; }
-  .btn { background: transparent; border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 5px 11px; font-size: 11px; cursor: pointer; color: var(--text2); transition: all .15s; }
-  .btn:hover { background: var(--bg3); }
-  .btn.active { background: var(--text); color: var(--bg); border-color: var(--text); }
-  .safety-box { border-radius: var(--radius); padding: 9px 12px; font-size: 12px; line-height: 1.5; }
-  .ref-table { width: 100%; border-collapse: collapse; font-size: 11px; }
-  .ref-table th { text-align: left; padding: 5px 8px; font-weight: 500; color: var(--text2); border-bottom: 0.5px solid var(--border); }
-  .ref-table th:not(:first-child) { text-align: center; }
-  .ref-table td { padding: 5px 8px; color: var(--text2); }
-  .ref-table td:not(:first-child) { text-align: center; }
-  .ref-table tr.selected td:first-child { font-weight: 500; color: var(--text); }
-  .ref-table tr.selected { background: var(--bg2); }
-  .legend { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 8px; font-size: 11px; color: var(--text2); }
-  .legend-item { display: flex; align-items: center; gap: 4px; }
-  .legend-dot { width: 14px; height: 2px; display: inline-block; }
-  .save-bar { display: flex; align-items: center; justify-content: space-between; background: var(--bg2); border-radius: var(--radius); padding: 8px 12px; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 8px; }
-  .save-bar .status { font-size: 11px; color: var(--text3); }
-  .save-bar .btns { display: flex; gap: 6px; }
-  .save-btn { background: transparent; border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 4px 10px; font-size: 11px; cursor: pointer; color: var(--text2); }
-  .save-btn:hover { background: var(--bg3); }
-  .note { font-size: 10px; color: var(--text3); margin-top: 6px; }
-  .two-col { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 14px; }
-  .col-half { flex: 1; min-width: 200px; }
+:root {
+  --bg:#fafaf8;--bg2:#f0efeb;--bg3:#e5e4df;
+  --text:#1a1a18;--text2:#5a5a55;--text3:#9a9a94;
+  --border:rgba(0,0,0,0.1);--border2:rgba(0,0,0,0.18);
+  --green:#1a7a50;--green-bg:#eaf5f0;--green-lt:#b8e8d0;
+  --amber:#9a5808;--amber-bg:#fdf3e3;--amber-lt:#f0d090;
+  --red:#802010;--red-bg:#fdecea;--red-lt:#f0b0a8;
+  --blue:#2060a8;--blue-bg:#eaf0fa;
+  --r:9px;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#18181a;--bg2:#232328;--bg3:#2e2e34;
+  --text:#e4e4e0;--text2:#aaaaaa;--text3:#666660;
+  --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.16);
+  --green-bg:#0c2018;--green-lt:#1a4030;
+  --amber-bg:#201408;--amber-lt:#3c2c08;
+  --red-bg:#1e0a08;--red-lt:#3a1410;
+  --blue-bg:#08182a;
+}}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;}
+.wrap{max-width:780px;margin:0 auto;padding:1.75rem 1.25rem 4rem;}
+h1{font-size:21px;font-weight:600;letter-spacing:-.3px;}
+.sub{font-size:12px;color:var(--text3);margin-top:3px;margin-bottom:1.75rem;}
+.savebar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;background:var(--bg2);border-radius:var(--r);padding:7px 12px;margin-bottom:1.5rem;}
+.savebar .st{font-size:11px;color:var(--text3);}
+.btns{display:flex;gap:5px;}
+.sbtn{background:transparent;border:.5px solid var(--border2);border-radius:6px;padding:3px 9px;font-size:11px;cursor:pointer;color:var(--text2);}
+.sbtn:hover,.sbtn.act{background:var(--text);color:var(--bg);border-color:var(--text);}
+.sec{margin-bottom:1.25rem;}
+.sec-t{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:9px;}
+.panel{background:var(--bg2);border-radius:var(--r);padding:14px 16px;}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px 28px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px 18px;}
+@media(max-width:540px){.g2,.g3{grid-template-columns:1fr;}}
+.field label{font-size:11px;color:var(--text2);display:block;margin-bottom:4px;font-weight:500;}
+.field .row{display:flex;align-items:center;gap:8px;}
+.field input[type=range]{flex:1;accent-color:var(--text);cursor:pointer;}
+.field .val{font-size:13px;font-weight:600;min-width:72px;text-align:right;color:var(--text);font-variant-numeric:tabular-nums;}
+.field .val.sm{min-width:52px;}
+.ck-row{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);cursor:pointer;margin-bottom:10px;}
+.ck-row input{cursor:pointer;accent-color:var(--blue);}
+.adv-btn{font-size:11px;color:var(--text3);cursor:pointer;border:none;background:none;padding:0;margin-bottom:10px;text-decoration:underline dotted;}
+.adv-body{display:none;}
+.adv-body.open{display:block;}
+/* Results */
+.results{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:1.5rem;}
+@media(max-width:540px){.results{grid-template-columns:1fr;}}
+.rcard{border-radius:10px;border:.5px solid var(--border);overflow:hidden;}
+.rcard .rh{padding:10px 14px 9px;}
+.rcard .rl{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:1px;}
+.rcard .rs{font-size:11px;color:var(--text2);}
+.rcard .rb{}
+.rcard .rr{padding:10px 14px;border-bottom:.5px solid var(--border);}
+.rcard .rr:last-child{border-bottom:none;}
+.rcard .rrl{font-size:10px;color:var(--text3);margin-bottom:3px;}
+.rcard .rfn{font-size:13px;font-weight:600;color:var(--text);margin-bottom:1px;font-variant-numeric:tabular-nums;}
+.rcard .rsp{font-size:10px;color:var(--text3);margin-bottom:3px;}
+.rcard .ra{font-size:15px;font-weight:700;}
+.rcard .re{font-size:10px;color:var(--text3);}
+.rcard .rn{font-size:10px;color:var(--blue);margin-top:2px;}
+.lean .rh{background:var(--green-bg);} .lean .rl{color:var(--green);} .lean .ra{color:var(--green);}
+.normal .rh{background:var(--amber-bg);} .normal .rl{color:var(--amber);} .normal .ra{color:var(--amber);}
+.fat .rh{background:var(--red-bg);} .fat .rl{color:var(--red);} .fat .ra{color:var(--red);}
+/* SWR */
+.swr-safe{border-radius:6px;padding:7px 10px;font-size:11px;margin-bottom:8px;}
+.swr-tbl{width:100%;border-collapse:collapse;font-size:11px;}
+.swr-tbl th{text-align:left;padding:4px 7px;font-weight:500;color:var(--text3);border-bottom:.5px solid var(--border);}
+.swr-tbl th:not(:first-child){text-align:center;}
+.swr-tbl td{padding:4px 7px;color:var(--text2);}
+.swr-tbl td:not(:first-child){text-align:center;border-radius:3px;}
+.swr-tbl tr.sel td:first-child{font-weight:700;color:var(--text);}
+/* Chart */
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:7px;}
+.li{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2);}
+.ld{width:14px;height:2px;display:inline-block;flex-shrink:0;}
 </style>
 </head>
 <body>
-<div class="container">
+<div class="wrap">
+<h1>Indipendenza Finanziaria</h1>
+<p class="sub">Scopri in quanti anni raggiungi il FIRE nei diversi scenari di spesa e abitazione. I rendimenti sono reali (già corretti per inflazione).</p>
 
-  <h1>Calcolatore FIRE</h1>
-  <p class="subtitle">Tutti i rendimenti sono reali (corretti per inflazione). FIRE number = spese annuali ÷ tasso di prelievo. I dati sono salvati localmente nel browser.</p>
-
-  <div class="save-bar">
-    <span class="status" id="save-status">Nessuna impostazione salvata</span>
-    <div class="btns">
-      <button class="save-btn" onclick="saveSettings()">Salva impostazioni</button>
-      <button class="save-btn" onclick="resetSettings()">Ripristina default</button>
-      <button class="save-btn" onclick="exportJSON()">Esporta JSON</button>
-      <label class="save-btn" style="cursor:pointer">Importa JSON<input type="file" accept=".json" onchange="importJSON(event)" style="display:none"></label>
-    </div>
+<div class="savebar">
+  <span class="st" id="ss">Nessun dato salvato</span>
+  <div class="btns">
+    <button class="sbtn" onclick="saveS()">💾 Salva</button>
+    <button class="sbtn" onclick="exportJ()">↓ Esporta</button>
+    <label class="sbtn" style="cursor:pointer">↑ Importa<input type="file" accept=".json" onchange="importJ(event)" style="display:none"></label>
+    <button class="sbtn" onclick="resetS()">↺ Reset</button>
   </div>
-
-  <div class="section">
-    <div class="grid2">
-      <div class="field">
-        <label>Patrimonio investito attuale</label>
-        <div class="row"><input type="range" id="pat" min="0" max="600000" step="5000" value="60000"><span class="val" id="pat-out">€60.000</span></div>
-      </div>
-      <div class="field">
-        <label>Risparmio/investimento annuale</label>
-        <div class="row"><input type="range" id="risp" min="1000" max="60000" step="500" value="15000"><span class="val" id="risp-out">€15.000</span></div>
-      </div>
-      <div class="field">
-        <label>Rendimento reale annuo atteso</label>
-        <div class="row"><input type="range" id="rend" min="1" max="10" step="0.5" value="5"><span class="val" id="rend-out">5.0%</span></div>
-      </div>
-      <div class="field">
-        <label>Età attuale</label>
-        <div class="row"><input type="range" id="eta" min="20" max="60" step="1" value="35"><span class="val" id="eta-out">35 anni</span></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="box">
-      <div class="section-title">Parametri abitazione</div>
-      <div class="grid2">
-        <div class="field">
-          <label>Affitto annuale (scenario senza casa)</label>
-          <div class="row"><input type="range" id="affitto" min="3000" max="24000" step="500" value="10000"><span class="val" id="affitto-out">€10.000</span></div>
-        </div>
-        <div class="field">
-          <label>Costi proprietà/anno (IMU + manutenzione)</label>
-          <div class="row"><input type="range" id="cprop" min="500" max="10000" step="250" value="3000"><span class="val" id="cprop-out">€3.000</span></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="box" style="border-left: 3px solid #4A90D9">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-        <div class="section-title" style="margin:0">Mutuo residuo <span style="font-weight:400;color:var(--text3)">(opzionale — solo scenario con casa)</span></div>
-        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer">
-          <input type="checkbox" id="mutuo-toggle" onchange="toggleMutuo()" style="cursor:pointer"> Ho un mutuo attivo
-        </label>
-      </div>
-      <div id="mutuo-fields" style="display:none">
-        <div class="grid2" style="margin-bottom:10px">
-          <div class="field">
-            <label>Rata mensile mutuo</label>
-            <div class="row"><input type="range" id="mutuo_rata" min="100" max="3000" step="50" value="800"><span class="val" id="mutuo_rata-out">€800</span></div>
-          </div>
-          <div class="field">
-            <label>Anni residui al FIRE</label>
-            <div class="row"><input type="range" id="mutuo_anni" min="1" max="30" step="1" value="10"><span class="val" id="mutuo_anni-out">10 anni</span></div>
-          </div>
-        </div>
-        <div id="mutuo-info" style="background:var(--bg2);border-radius:var(--radius);padding:8px 12px;font-size:11px;color:var(--text2);line-height:1.6"></div>
-        <p style="font-size:10px;color:var(--text3);margin-top:6px">Il FIRE number "con casa" include il valore attuale (PV) delle rate residue — cioè il capitale aggiuntivo da tenere in portafoglio per coprire le rate durante la fase di mutuo, senza intaccare la quota destinata al prelievo permanente.</p>
-      </div>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Spese operative annuali in FIRE <span style="font-weight:400">(esclusi affitto/costi casa)</span></div>
-    <div class="grid3">
-      <div class="field">
-        <label style="color:#1D9E75">Lean FIRE</label>
-        <div class="row"><input type="range" id="lean" min="5000" max="30000" step="500" value="13000"><span class="val sm" id="lean-out">€13.000</span></div>
-      </div>
-      <div class="field">
-        <label style="color:#BA7517">Normal FIRE</label>
-        <div class="row"><input type="range" id="normal" min="12000" max="60000" step="1000" value="25000"><span class="val sm" id="normal-out">€25.000</span></div>
-      </div>
-      <div class="field">
-        <label style="color:#993C1D">Fat FIRE</label>
-        <div class="row"><input type="range" id="fat" min="30000" max="120000" step="2000" value="50000"><span class="val sm" id="fat-out">€50.000</span></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="section swr-box">
-    <div class="title">Tasso di prelievo e orizzonte</div>
-    <div class="grid2" style="margin-bottom:14px">
-      <div class="field">
-        <label>Tasso di prelievo annuale (SWR)</label>
-        <div class="row"><input type="range" id="swr" min="2.0" max="6.0" step="0.1" value="3.5"><span class="val sm" id="swr-out">3.5%</span></div>
-        <div class="hint">Moltiplicatore FIRE: <span id="mult-out" style="font-weight:500">28.6</span>x</div>
-      </div>
-      <div class="field">
-        <label>Orizzonte decumulo</label>
-        <div class="row"><input type="range" id="horizon" min="15" max="55" step="5" value="40"><span class="val sm" id="horizon-out">40 anni</span></div>
-      </div>
-    </div>
-
-    <div class="two-col">
-      <div class="col-half">
-        <div class="section-title" style="margin-bottom:5px">Tipo portafoglio</div>
-        <div class="btn-group">
-          <button class="btn" id="btn-globale" onclick="setPort('globale')">Globale</button>
-          <button class="btn" id="btn-misto" onclick="setPort('misto')">Misto</button>
-          <button class="btn" id="btn-eu" onclick="setPort('eu')">EU-heavy</button>
-        </div>
-      </div>
-      <div class="col-half">
-        <div class="section-title" style="margin-bottom:5px">Strategia di prelievo</div>
-        <div class="btn-group">
-          <button class="btn" id="btn-fisso" onclick="setDyn(false)">Fisso</button>
-          <button class="btn" id="btn-dyn" onclick="setDyn(true)">Dinamico (guardrails)</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="safety-box" id="safety-box" style="margin:14px 0">
-      <span id="safety-text"></span>
-    </div>
-
-    <div class="section-title">Tassi di prelievo sicuri storici (Pfau, Kitces, ERN Blog)</div>
-    <div style="overflow-x:auto">
-      <table class="ref-table">
-        <thead>
-          <tr>
-            <th>Portafoglio</th>
-            <th>20-25a</th><th>30-35a</th><th>40-45a</th><th>50+a</th>
-          </tr>
-        </thead>
-        <tbody id="ref-tbody"></tbody>
-      </table>
-    </div>
-    <p class="note">Prelievo dinamico (guardrails Guyton-Klinger): taglia del 10% se portafoglio scende sotto l'80% del valore iniziale; aumenta del 10% se supera il 120%. Aggiunge ~+0.4% al tasso sicuro massimo.</p>
-  </div>
-
-  <div class="grid3" style="margin-bottom:1.25rem">
-    <div class="card card-top" style="border-top-color:#1D9E75">
-      <div class="card-label" style="color:#1D9E75">LEAN FIRE</div>
-      <div class="sub">con casa · spese tot. <span id="lean-cc-sp"></span></div>
-      <div class="fn" id="lean-cc-fn">—</div>
-      <div class="anni" id="lean-cc-anni">—</div>
-      <div id="lean-cc-mutuo" style="font-size:10px;color:#4A90D9;margin-top:2px"></div>
-      <hr class="divider">
-      <div class="sub">in affitto · spese tot. <span id="lean-sc-sp"></span></div>
-      <div class="fn" id="lean-sc-fn">—</div>
-      <div class="anni" id="lean-sc-anni">—</div>
-    </div>
-    <div class="card card-top" style="border-top-color:#BA7517">
-      <div class="card-label" style="color:#BA7517">NORMAL FIRE</div>
-      <div class="sub">con casa · spese tot. <span id="normal-cc-sp"></span></div>
-      <div class="fn" id="normal-cc-fn">—</div>
-      <div class="anni" id="normal-cc-anni">—</div>
-      <div id="normal-cc-mutuo" style="font-size:10px;color:#4A90D9;margin-top:2px"></div>
-      <hr class="divider">
-      <div class="sub">in affitto · spese tot. <span id="normal-sc-sp"></span></div>
-      <div class="fn" id="normal-sc-fn">—</div>
-      <div class="anni" id="normal-sc-anni">—</div>
-    </div>
-    <div class="card card-top" style="border-top-color:#993C1D">
-      <div class="card-label" style="color:#993C1D">FAT FIRE</div>
-      <div class="sub">con casa · spese tot. <span id="fat-cc-sp"></span></div>
-      <div class="fn" id="fat-cc-fn">—</div>
-      <div class="anni" id="fat-cc-anni">—</div>
-      <div id="fat-cc-mutuo" style="font-size:10px;color:#4A90D9;margin-top:2px"></div>
-      <hr class="divider">
-      <div class="sub">in affitto · spese tot. <span id="fat-sc-sp"></span></div>
-      <div class="fn" id="fat-sc-fn">—</div>
-      <div class="anni" id="fat-sc-anni">—</div>
-    </div>
-  </div>
-
-  <div class="legend">
-    <span class="legend-item"><span class="legend-dot" style="background:#444"></span>Portafoglio</span>
-    <span class="legend-item"><span class="legend-dot" style="background:#1D9E75"></span>Lean casa</span>
-    <span class="legend-item"><span class="legend-dot" style="background:#5DCAA5;border-top:1px dashed #5DCAA5"></span>Lean affitto</span>
-    <span class="legend-item"><span class="legend-dot" style="background:#BA7517"></span>Normal casa</span>
-    <span class="legend-item"><span class="legend-dot" style="background:#FAC775;border-top:1px dashed #FAC775"></span>Normal affitto</span>
-    <span class="legend-item"><span class="legend-dot" style="background:#993C1D"></span>Fat casa</span>
-    <span class="legend-item"><span class="legend-dot" style="background:#F0997B;border-top:1px dashed #F0997B"></span>Fat affitto</span>
-  </div>
-  <div style="position:relative;width:100%;height:300px">
-    <canvas id="fireChart" role="img" aria-label="Proiezione crescita portafoglio verso target FIRE">Grafico proiezione portafoglio FIRE.</canvas>
-  </div>
-
 </div>
 
+<div class="sec">
+  <div class="sec-t">Situazione attuale</div>
+  <div class="panel">
+    <div class="g2">
+      <div class="field"><label>Patrimonio investito attuale</label><div class="row"><input type="range" id="pat" min="0" max="800000" step="5000" value="60000"><span class="val" id="pat-o"></span></div></div>
+      <div class="field"><label>Risparmio annuale investito</label><div class="row"><input type="range" id="risp" min="1000" max="80000" step="500" value="15000"><span class="val" id="risp-o"></span></div></div>
+      <div class="field"><label>Rendimento reale annuo atteso</label><div class="row"><input type="range" id="rend" min="1" max="10" step="0.5" value="5"><span class="val" id="rend-o"></span></div></div>
+      <div class="field"><label>Età attuale</label><div class="row"><input type="range" id="eta" min="20" max="60" step="1" value="35"><span class="val" id="eta-o"></span></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="sec">
+  <div class="sec-t">Spese annuali in FIRE <span style="font-weight:400;text-transform:none;letter-spacing:0">(esclusa voce abitazione)</span></div>
+  <div class="panel">
+    <div class="g3">
+      <div class="field"><label style="color:var(--green)">🌿 Lean</label><div class="row"><input type="range" id="lean" min="5000" max="35000" step="500" value="13000"><span class="val sm" id="lean-o"></span></div></div>
+      <div class="field"><label style="color:var(--amber)">☀️ Normal</label><div class="row"><input type="range" id="normal" min="10000" max="70000" step="1000" value="25000"><span class="val sm" id="normal-o"></span></div></div>
+      <div class="field"><label style="color:var(--red)">🔥 Fat</label><div class="row"><input type="range" id="fat" min="25000" max="150000" step="2000" value="50000"><span class="val sm" id="fat-o"></span></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="sec">
+  <div class="sec-t">Scenario abitativo</div>
+  <div class="panel">
+    <div class="g2" style="margin-bottom:14px">
+      <div class="field"><label>🏠 Costi proprietà/anno (IMU + manutenzione)</label><div class="row"><input type="range" id="cprop" min="500" max="12000" step="250" value="3000"><span class="val" id="cprop-o"></span></div></div>
+      <div class="field"><label>🏢 Affitto annuale</label><div class="row"><input type="range" id="affitto" min="3000" max="30000" step="500" value="10000"><span class="val" id="affitto-o"></span></div></div>
+    </div>
+    <label class="ck-row"><input type="checkbox" id="mt" onchange="toggleM()"> Ho un mutuo attivo al momento del FIRE</label>
+    <div id="mf" style="display:none">
+      <div class="g2" style="margin-bottom:9px">
+        <div class="field"><label>Rata mensile mutuo</label><div class="row"><input type="range" id="mr" min="100" max="3000" step="50" value="800"><span class="val" id="mr-o"></span></div></div>
+        <div class="field"><label>Anni residui mutuo al FIRE</label><div class="row"><input type="range" id="ma" min="1" max="30" step="1" value="10"><span class="val" id="ma-o"></span></div></div>
+      </div>
+      <div id="mi" style="font-size:11px;color:var(--blue);background:var(--blue-bg);border-radius:6px;padding:7px 10px;line-height:1.6"></div>
+    </div>
+  </div>
+</div>
+
+<div class="sec">
+  <button class="adv-btn" onclick="toggleAdv()" id="adv-btn">▸ Impostazioni avanzate (tasso di prelievo, tipo portafoglio)</button>
+  <div class="panel adv-body" id="adv-body">
+    <div class="g2" style="margin-bottom:12px">
+      <div class="field"><label>Tasso di prelievo (SWR)</label><div class="row"><input type="range" id="swr" min="2.0" max="6.0" step="0.1" value="3.5"><span class="val sm" id="swr-o"></span></div><div style="font-size:11px;color:var(--text3);margin-top:2px">Moltiplicatore: <span id="mo" style="font-weight:600">28.6</span>×</div></div>
+      <div class="field"><label>Orizzonte decumulo (anni)</label><div class="row"><input type="range" id="horizon" min="15" max="55" step="5" value="40"><span class="val sm" id="horizon-o"></span></div></div>
+    </div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px">
+      <div><div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:5px">Tipo portafoglio</div><div class="btns"><button class="sbtn" id="bg" onclick="setPort('globale')">Globale</button><button class="sbtn" id="bm" onclick="setPort('misto')">Misto EU</button><button class="sbtn" id="be" onclick="setPort('eu')">EU-heavy</button></div></div>
+      <div><div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:5px">Prelievo</div><div class="btns"><button class="sbtn" id="bf" onclick="setDyn(false)">Fisso</button><button class="sbtn" id="bd" onclick="setDyn(true)">Dinamico</button></div></div>
+    </div>
+    <div class="swr-safe" id="sb"><span id="st2"></span></div>
+    <div style="overflow-x:auto"><table class="swr-tbl"><thead><tr><th>Portafoglio</th><th>20-25a</th><th>30-35a</th><th>40-45a</th><th>50+a</th></tr></thead><tbody id="rtb"></tbody></table></div>
+    <p style="font-size:10px;color:var(--text3);margin-top:6px">Prelievo dinamico: -10% se portafoglio &lt;80% valore iniziale, +10% se &gt;120%. Aggiunge ~+0.4% al tasso sicuro storico.</p>
+  </div>
+</div>
+
+<div class="sec-t">Anni all'indipendenza finanziaria</div>
+<div class="results" id="results"></div>
+
+<div style="margin-top:1.5rem">
+  <div class="sec-t">Proiezione portafoglio</div>
+  <div class="legend" id="leg"></div>
+  <div style="position:relative;width:100%;height:250px"><canvas id="fc" role="img" aria-label="Proiezione portafoglio FIRE"></canvas></div>
+</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
-const STORAGE_KEY = 'fire_calc_v2';
-const SLIDERS = ['pat','risp','rend','eta','affitto','cprop','lean','normal','fat','swr','horizon','mutuo_rata','mutuo_anni'];
+const SK='fire_v3';
+const SL=['pat','risp','rend','eta','lean','normal','fat','cprop','affitto','swr','horizon','mr','ma'];
+const fmtE=v=>{const n=Math.round(v);if(n>=1e6)return'€'+(n/1e6).toFixed(n%1e5===0?1:2).replace('.',',')+' M';if(n>=10000)return'€'+Math.round(n/1000)+'k';return'€'+n.toLocaleString('it-IT');};
+const fmtF=v=>'€'+Math.round(v).toLocaleString('it-IT');
+const safeD={globale:{l:'Globale',r:[4.5,3.8,3.5,3.2]},misto:{l:'Misto EU',r:[4.0,3.5,3.1,2.9]},eu:{l:'EU-heavy',r:[3.5,3.3,2.9,2.7]}};
+let pt='misto',dyn=false,advOpen=false;
 
-const fmtE = v => {
-  const n = Math.round(v);
-  if (n >= 1000000) return '€' + (n/1000000).toFixed(2).replace('.',',').replace(/,?0+$/,'') + 'M';
-  if (n >= 10000) return '€' + Math.round(n/1000) + 'k';
-  return '€' + n.toLocaleString('it-IT');
-};
-const fmtFull = v => '€' + Math.round(v).toLocaleString('it-IT');
+function toggleAdv(){advOpen=!advOpen;document.getElementById('adv-body').classList.toggle('open',advOpen);document.getElementById('adv-btn').textContent=(advOpen?'▾ ':'▸ ')+'Impostazioni avanzate (tasso di prelievo, tipo portafoglio)';}
+function toggleM(){const on=document.getElementById('mt').checked;document.getElementById('mf').style.display=on?'block':'none';upd();}
 
-const safeData = {
-  globale: { label: 'Globale (MSCI World)', rates: [4.5, 3.8, 3.5, 3.2] },
-  misto:   { label: 'Misto (50% EU)',        rates: [4.0, 3.5, 3.1, 2.9] },
-  eu:      { label: 'EU-heavy (>60% EU)',     rates: [3.5, 3.3, 2.9, 2.7] }
-};
+function setPort(t){pt=t;['globale','misto','eu'].forEach(k=>{const b=document.getElementById('b'+k[0]);b.classList.toggle('act',k===t);});upd();}
+function setDyn(v){dyn=v;document.getElementById('bf').classList.toggle('act',!v);document.getElementById('bd').classList.toggle('act',v);upd();}
+function hCol(h){if(h<=25)return 0;if(h<=35)return 1;if(h<=45)return 2;return 3;}
+function pv(ann,r,n){if(n<=0)return 0;if(r===0)return ann*n;return ann*(1-Math.pow(1+r,-n))/r;}
+function yToFire(pat,risp,r,target){if(target<=0)return 0;let v=pat;for(let y=0;y<=65;y++){if(v>=target)return y;v=v*(1+r)+risp;}return null;}
+function portData(pat,risp,r,y){const d=[];let v=pat;for(let i=0;i<=y;i++){d.push(Math.round(v));v=v*(1+r)+risp;}return d;}
 
-let portType = 'misto';
-let dynMode = false;
-
-function setPort(t) {
-  portType = t;
-  ['globale','misto','eu'].forEach(k => {
-    document.getElementById('btn-' + k).classList.toggle('active', k === t);
-  });
-  update();
+function buildSafe(swr,hc){
+  const safe=dyn?safeD[pt].r[hc]+0.4:safeD[pt].r[hc];
+  const box=document.getElementById('sb'),txt=document.getElementById('st2');
+  const h=document.getElementById('horizon').value;
+  if(swr<=safe){box.style.background='var(--green-bg)';txt.style.color='var(--green)';txt.innerHTML='<strong>✓ Sicuro</strong> — '+swr.toFixed(1)+'% entro il limite storico di '+safe.toFixed(1)+'% ('+safeD[pt].l+', '+h+'a'+(dyn?', dinamico':'')+').';}
+  else if(swr<=safe+0.5){box.style.background='var(--amber-bg)';txt.style.color='var(--amber)';txt.innerHTML='<strong>⚠ Ottimistico</strong> — '+swr.toFixed(1)+'% supera il riferimento di '+safe.toFixed(1)+'%. Considera flessibilità di spesa.';}
+  else{box.style.background='var(--red-bg)';txt.style.color='var(--red)';txt.innerHTML='<strong>✗ Rischioso</strong> — '+swr.toFixed(1)+'% supera significativamente il '+safe.toFixed(1)+'% storico. Rischio di esaurire il capitale.';}
 }
 
-function setDyn(v) {
-  dynMode = v;
-  document.getElementById('btn-fisso').classList.toggle('active', !v);
-  document.getElementById('btn-dyn').classList.toggle('active', v);
-  update();
-}
-
-function getHorizonCol(h) {
-  if (h <= 25) return 0;
-  if (h <= 35) return 1;
-  if (h <= 45) return 2;
-  return 3;
-}
-
-function yearsToFire(pat, risp, r, target) {
-  let val = pat;
-  for (let y = 0; y <= 65; y++) {
-    if (val >= target) return y;
-    val = val * (1 + r) + risp;
-  }
-  return null;
-}
-
-function buildPortData(pat, risp, r, years) {
-  const d = []; let val = pat;
-  for (let y = 0; y <= years; y++) { d.push(Math.round(val)); val = val*(1+r)+risp; }
-  return d;
-}
-
-function buildRefTable(selectedSwr, hCol) {
-  const tbody = document.getElementById('ref-tbody');
-  tbody.innerHTML = '';
-  ['globale','misto','eu'].forEach(k => {
-    const d = safeData[k];
-    const isSelected = k === portType;
-    const tr = document.createElement('tr');
-    if (isSelected) tr.classList.add('selected');
-    let cells = '<td>' + d.label + '</td>';
-    d.rates.forEach((rate, i) => {
-      const eff = dynMode ? rate + 0.4 : rate;
-      const isHCol = i === hCol && isSelected;
-      let bg = '', col = '';
-      if (isHCol) {
-        if (selectedSwr <= eff) { bg = 'var(--safe-bg)'; col = 'var(--safe-col)'; }
-        else if (selectedSwr <= eff + 0.5) { bg = 'var(--warn-bg)'; col = 'var(--warn-col)'; }
-        else { bg = 'var(--risk-bg)'; col = 'var(--risk-col)'; }
-      }
-      cells += '<td style="background:' + bg + ';color:' + (col||'') + ';font-weight:' + (isHCol?'500':'400') + ';border-radius:4px">' + eff.toFixed(1) + '%' + (dynMode && isHCol ? '<sup style="font-size:9px"> dyn</sup>' : '') + '</td>';
+function buildRefTable(swr,hc){
+  const tb=document.getElementById('rtb');tb.innerHTML='';
+  Object.entries(safeD).forEach(([k,d])=>{
+    const isSel=k===pt,tr=document.createElement('tr');
+    if(isSel)tr.classList.add('sel');
+    let cells='<td>'+d.l+'</td>';
+    d.r.forEach((rate,i)=>{
+      const eff=dyn?rate+0.4:rate,isH=i===hc&&isSel;
+      let bg='',col='var(--text2)';
+      if(isH){if(swr<=eff){bg='var(--green-lt)';col='var(--green)';}else if(swr<=eff+0.5){bg='var(--amber-lt)';col='var(--amber)';}else{bg='var(--red-lt)';col='var(--red)';}}
+      cells+='<td style="background:'+bg+';color:'+col+';font-weight:'+(isH?'700':'400')+'">'+eff.toFixed(1)+'%</td>';
     });
-    tr.innerHTML = cells;
-    tbody.appendChild(tr);
+    tr.innerHTML=cells;tb.appendChild(tr);
   });
 }
 
-function updateSafetyBox(swr, hCol) {
-  const rates = safeData[portType].rates;
-  const safeRate = dynMode ? rates[hCol] + 0.4 : rates[hCol];
-  const box = document.getElementById('safety-box');
-  const txt = document.getElementById('safety-text');
-  const portLabel = safeData[portType].label;
-  const h = document.getElementById('horizon').value;
-  const dynLabel = dynMode ? ' con prelievo dinamico' : '';
-  if (swr <= safeRate) {
-    box.style.background = 'var(--safe-bg)'; txt.style.color = 'var(--safe-col)';
-    txt.innerHTML = '<strong>Tasso sicuro</strong> — ' + swr.toFixed(1) + '% è nei limiti storici per ' + portLabel + ' su ' + h + ' anni' + dynLabel + '. Riferimento: ' + safeRate.toFixed(1) + '%.';
-  } else if (swr <= safeRate + 0.5) {
-    box.style.background = 'var(--warn-bg)'; txt.style.color = 'var(--warn-col)';
-    txt.innerHTML = '<strong>Tasso ottimistico</strong> — ' + swr.toFixed(1) + '% supera leggermente il ' + safeRate.toFixed(1) + '% storico per ' + portLabel + dynLabel + '. Considera flessibilità di spesa nei primi anni.';
-  } else {
-    box.style.background = 'var(--risk-bg)'; txt.style.color = 'var(--risk-col)';
-    txt.innerHTML = '<strong>Tasso rischioso</strong> — ' + swr.toFixed(1) + '% è significativamente sopra il ' + safeRate.toFixed(1) + '% sicuro per ' + portLabel + dynLabel + '. Rischio concreto di esaurire il capitale prima del termine.';
-  }
+const isDark=window.matchMedia('(prefers-color-scheme:dark)').matches;
+const tc=isDark?'#888':'#888',gc=isDark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.06)';
+let chart=null;
+const SCS=[{id:'lean',l:'Lean',cls:'lean',e:'🌿',c:['#1a7a50','#6ab890']},{id:'normal',l:'Normal',cls:'normal',e:'☀️',c:['#9a5808','#d09840']},{id:'fat',l:'Fat',cls:'fat',e:'🔥',c:['#802010','#c05848']}];
+
+function renderCards(res,eta){
+  const ct=document.getElementById('results');ct.innerHTML='';
+  SCS.forEach(sc=>{
+    const r=res[sc.id],card=document.createElement('div');
+    card.className='rcard '+sc.cls;
+    const aStr=a=>a===null?'<span style="color:var(--text3)">oltre 65a</span>':a===0?'<span>già raggiunto!</span>':a+' anni';
+    const eStr=a=>a&&a>0?'→ età '+(eta+a):'';
+    const noteCC=r.hm&&r.pv>0?'<div class="rn">+ '+fmtE(r.pv)+' buffer mutuo ('+r.ma+'a)</div>':'';
+    card.innerHTML=
+      '<div class="rh"><div class="rl">'+sc.e+' '+sc.l+' FIRE</div><div class="rs">Rendita: '+fmtF(r.base)+'/a</div></div>'+
+      '<div class="rb">'+
+        '<div class="rr"><div class="rrl">🏠 Con casa di proprietà</div><div class="rfn">FIRE number: '+fmtE(r.fnCC)+'</div><div class="rsp">Spese: '+fmtF(r.tCC)+'/a'+(r.hm?' + mutuo':'')+' · IMU/man. '+fmtF(r.cprop)+'/a</div>'+noteCC+'<div class="ra">'+aStr(r.aCC)+'</div><div class="re">'+eStr(r.aCC)+'</div></div>'+
+        '<div class="rr"><div class="rrl">🏢 In affitto</div><div class="rfn">FIRE number: '+fmtE(r.fnSC)+'</div><div class="rsp">Spese: '+fmtF(r.tSC)+'/a · affitto '+fmtF(r.affitto)+'/a</div><div class="ra">'+aStr(r.aSC)+'</div><div class="re">'+eStr(r.aSC)+'</div></div>'+
+      '</div>';
+    ct.appendChild(card);
+  });
 }
 
-const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-const tickCol = isDark ? '#aaa' : '#777';
-const gridCol = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
-let fireChart = null;
-
-function toggleMutuo() {
-  const on = document.getElementById('mutuo-toggle').checked;
-  document.getElementById('mutuo-fields').style.display = on ? 'block' : 'none';
-  update();
+function renderLegend(){
+  const leg=document.getElementById('leg');
+  leg.innerHTML='<div class="li"><span class="ld" style="background:'+(isDark?'#ccc':'#444')+'"></span>Portafoglio</div>';
+  SCS.forEach(sc=>{
+    leg.innerHTML+='<div class="li"><span class="ld" style="background:'+sc.c[0]+'"></span>'+sc.e+' '+sc.l+' casa</div>';
+    leg.innerHTML+='<div class="li"><span class="ld" style="background:'+sc.c[1]+';border-top:1px dashed '+sc.c[1]+'"></span>'+sc.e+' '+sc.l+' affitto</div>';
+  });
 }
 
-function pvAnnuity(rata_annuale, r, n) {
-  // Present value of annuity: capitale necessario oggi per pagare rata_annuale per n anni al tasso r
-  if (r === 0) return rata_annuale * n;
-  return rata_annuale * (1 - Math.pow(1 + r, -n)) / r;
-}
+function upd(){
+  const pat=+document.getElementById('pat').value;
+  const risp=+document.getElementById('risp').value;
+  const rend=+document.getElementById('rend').value/100;
+  const eta=+document.getElementById('eta').value;
+  const lean=+document.getElementById('lean').value;
+  const normal=+document.getElementById('normal').value;
+  const fat=+document.getElementById('fat').value;
+  const cprop=+document.getElementById('cprop').value;
+  const affitto=+document.getElementById('affitto').value;
+  const swr=+document.getElementById('swr').value;
+  const horizon=+document.getElementById('horizon').value;
+  const hm=document.getElementById('mt').checked;
+  const mr=hm?+document.getElementById('mr').value:0;
+  const ma=hm?+document.getElementById('ma').value:0;
 
-function update() {
-  const pat = +document.getElementById('pat').value;
-  const risp = +document.getElementById('risp').value;
-  const rend = +document.getElementById('rend').value / 100;
-  const eta = +document.getElementById('eta').value;
-  const affitto = +document.getElementById('affitto').value;
-  const cprop = +document.getElementById('cprop').value;
-  const lean = +document.getElementById('lean').value;
-  const normal = +document.getElementById('normal').value;
-  const fat = +document.getElementById('fat').value;
-  const swr = +document.getElementById('swr').value;
-  const horizon = +document.getElementById('horizon').value;
-  const hasMutuo = document.getElementById('mutuo-toggle').checked;
-  const mutuo_rata = hasMutuo ? +document.getElementById('mutuo_rata').value : 0;
-  const mutuo_anni = hasMutuo ? +document.getElementById('mutuo_anni').value : 0;
+  document.getElementById('pat-o').textContent=fmtF(pat);
+  document.getElementById('risp-o').textContent=fmtF(risp);
+  document.getElementById('rend-o').textContent=(+document.getElementById('rend').value).toFixed(1)+'%';
+  document.getElementById('eta-o').textContent=eta+' anni';
+  document.getElementById('lean-o').textContent=fmtF(lean);
+  document.getElementById('normal-o').textContent=fmtF(normal);
+  document.getElementById('fat-o').textContent=fmtF(fat);
+  document.getElementById('cprop-o').textContent=fmtF(cprop);
+  document.getElementById('affitto-o').textContent=fmtF(affitto);
+  document.getElementById('swr-o').textContent=swr.toFixed(1)+'%';
+  document.getElementById('mo').textContent=(100/swr).toFixed(1);
+  document.getElementById('horizon-o').textContent=horizon+' anni';
+  if(hm){document.getElementById('mr-o').textContent=fmtF(mr);document.getElementById('ma-o').textContent=ma+' anni';}
 
-  document.getElementById('pat-out').textContent = fmtFull(pat);
-  document.getElementById('risp-out').textContent = fmtFull(risp);
-  document.getElementById('rend-out').textContent = parseFloat(document.getElementById('rend').value).toFixed(1) + '%';
-  document.getElementById('eta-out').textContent = eta + ' anni';
-  document.getElementById('affitto-out').textContent = fmtFull(affitto);
-  document.getElementById('cprop-out').textContent = fmtFull(cprop);
-  document.getElementById('lean-out').textContent = fmtFull(lean);
-  document.getElementById('normal-out').textContent = fmtFull(normal);
-  document.getElementById('fat-out').textContent = fmtFull(fat);
-  document.getElementById('swr-out').textContent = swr.toFixed(1) + '%';
-  document.getElementById('mult-out').textContent = (100/swr).toFixed(1);
-  document.getElementById('horizon-out').textContent = horizon + ' anni';
-  if (hasMutuo) {
-    document.getElementById('mutuo_rata-out').textContent = fmtFull(mutuo_rata);
-    document.getElementById('mutuo_anni-out').textContent = mutuo_anni + ' anni';
-  }
+  const rann=mr*12;
+  const pvM=hm&&ma>0?pv(rann,rend,ma):0;
+  if(hm&&ma>0){document.getElementById('mi').innerHTML='Rata annuale: <strong>'+fmtE(rann)+'</strong> &nbsp;·&nbsp; Buffer portafoglio (PV): <strong>'+fmtE(pvM)+'</strong> &nbsp;·&nbsp; Mutuo estinto: età <strong>'+(eta+ma)+'</strong><br>Dopo estinzione le spese casa scendono di <strong>'+fmtE(rann)+'/anno</strong>.';}
 
-  // Mortgage PV calculation
-  const rata_annuale = mutuo_rata * 12;
-  const pvMutuo = hasMutuo && mutuo_anni > 0 ? pvAnnuity(rata_annuale, rend, mutuo_anni) : 0;
-  const debitoResiduo = rata_annuale * mutuo_anni; // simplified remaining debt
+  const mult=100/swr,hc=hCol(horizon);
+  buildSafe(swr,hc);buildRefTable(swr,hc);
 
-  if (hasMutuo && mutuo_anni > 0) {
-    const infoEl = document.getElementById('mutuo-info');
-    infoEl.innerHTML =
-      'Rata annuale: <strong>' + fmtE(rata_annuale) + '</strong> &nbsp;·&nbsp; ' +
-      'Capitale aggiuntivo necessario (PV rate residue): <strong>' + fmtE(pvMutuo) + '</strong> &nbsp;·&nbsp; ' +
-      'Fine mutuo: età <strong>' + (eta + mutuo_anni) + '</strong><br>' +
-      '<span style="color:var(--text3)">Il PV si aggiunge al FIRE number "con casa" di ogni scenario. Dopo l\'estinzione le spese calano di ' + fmtE(rata_annuale) + '/anno.</span>';
-  }
-
-  const mult = 100 / swr;
-  const hCol = getHorizonCol(horizon);
-  buildRefTable(swr, hCol);
-  updateSafetyBox(swr, hCol);
-
-  [['lean',lean],['normal',normal],['fat',fat]].forEach(([id, base]) => {
-    const totCC = base + cprop;
-    const totSC = base + affitto;
-    // Con casa: base FIRE number + PV delle rate mutuo residue
-    const fnCC = totCC * mult + pvMutuo;
-    const fnSC = totSC * mult;
-    const aCC = yearsToFire(pat, risp, rend, fnCC);
-    const aSC = yearsToFire(pat, risp, rend, fnSC);
-    document.getElementById(id+'-cc-sp').textContent = fmtE(totCC)+'/a' + (hasMutuo ? ' + mutuo' : '');
-    document.getElementById(id+'-sc-sp').textContent = fmtE(totSC)+'/a';
-    document.getElementById(id+'-cc-fn').textContent = fmtE(fnCC);
-    document.getElementById(id+'-sc-fn').textContent = fmtE(fnSC);
-    document.getElementById(id+'-cc-anni').textContent = aCC !== null ? aCC+' anni · età '+(eta+aCC) : '> 65 anni';
-    document.getElementById(id+'-sc-anni').textContent = aSC !== null ? aSC+' anni · età '+(eta+aSC) : '> 65 anni';
-    const mutuoEl = document.getElementById(id+'-cc-mutuo');
-    if (hasMutuo && pvMutuo > 0) {
-      mutuoEl.textContent = 'di cui ' + fmtE(pvMutuo) + ' buffer mutuo (' + mutuo_anni + 'a) + ' + fmtE(totCC * mult) + ' rendita';
-    } else {
-      mutuoEl.textContent = '';
-    }
+  const spese={lean,normal,fat};
+  const res={};
+  ['lean','normal','fat'].forEach(id=>{
+    const base=spese[id],tCC=base+cprop,tSC=base+affitto;
+    const fnCC=tCC*mult+pvM,fnSC=tSC*mult;
+    res[id]={base,tCC,tSC,fnCC,fnSC,cprop,affitto,aCC:yToFire(pat,risp,rend,fnCC),aSC:yToFire(pat,risp,rend,fnSC),hm,pv:pvM,ma};
   });
 
-  const maxY = 65;
-  const labels = Array.from({length:maxY+1},(_,i)=>eta+i);
-  const portData = buildPortData(pat, risp, rend, maxY);
-  const hline = (val, col, dash) => ({ label:'_', data:Array(maxY+1).fill(Math.round(val)), borderColor:col, borderWidth:1.5, borderDash:dash||[], pointRadius:0, tension:0, fill:false });
-  const datasets = [
-    { label:'Portafoglio', data:portData, borderColor: isDark?'#ccc':'#444', borderWidth:2.5, pointRadius:0, tension:0.2, fill:false },
-    hline((lean+cprop)*mult+pvMutuo,'#1D9E75',[]), hline((lean+affitto)*mult,'#5DCAA5',[5,4]),
-    hline((normal+cprop)*mult+pvMutuo,'#BA7517',[]), hline((normal+affitto)*mult,'#FAC775',[5,4]),
-    hline((fat+cprop)*mult+pvMutuo,'#993C1D',[]), hline((fat+affitto)*mult,'#F0997B',[5,4]),
+  renderCards(res,eta);
+  renderLegend();
+
+  const maxY=65,labels=Array.from({length:maxY+1},(_,i)=>eta+i);
+  const pd=portData(pat,risp,rend,maxY);
+  const hl=(val,col,dash)=>({label:'_',data:Array(maxY+1).fill(Math.round(val)),borderColor:col,borderWidth:1.5,borderDash:dash||[],pointRadius:0,tension:0,fill:false});
+  const ds=[
+    {label:'Portafoglio',data:pd,borderColor:isDark?'#ccc':'#444',borderWidth:2.5,pointRadius:0,tension:0.3,fill:false},
+    hl(res.lean.fnCC,SCS[0].c[0],[]),hl(res.lean.fnSC,SCS[0].c[1],[5,4]),
+    hl(res.normal.fnCC,SCS[1].c[0],[]),hl(res.normal.fnSC,SCS[1].c[1],[5,4]),
+    hl(res.fat.fnCC,SCS[2].c[0],[]),hl(res.fat.fnSC,SCS[2].c[1],[5,4]),
   ];
-
-  if (fireChart) {
-    fireChart.data.labels = labels; fireChart.data.datasets = datasets; fireChart.update('none');
-  } else {
-    fireChart = new Chart(document.getElementById('fireChart'), {
-      type:'line', data:{ labels, datasets },
-      options:{
-        responsive:true, maintainAspectRatio:false, animation:false,
-        interaction:{ mode:'index', intersect:false },
-        plugins:{
-          legend:{ display:false },
-          tooltip:{ callbacks:{ title:ctx=>'Età: '+ctx[0].label, label:ctx=>ctx.datasetIndex===0?'Portafoglio: '+fmtE(ctx.raw):null, filter:item=>item.datasetIndex===0 } }
-        },
-        scales:{
-          x:{ ticks:{ maxTicksLimit:12, font:{size:11}, color:tickCol }, grid:{ color:gridCol } },
-          y:{ ticks:{ font:{size:11}, color:tickCol, callback:v=>fmtE(v) }, grid:{ color:gridCol } }
-        }
-      }
-    });
-  }
+  if(chart){chart.data.labels=labels;chart.data.datasets=ds;chart.update('none');}
+  else chart=new Chart(document.getElementById('fc'),{type:'line',data:{labels,datasets:ds},options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{callbacks:{title:ctx=>'Età: '+ctx[0].label,label:ctx=>ctx.datasetIndex===0?'Portafoglio: '+fmtE(ctx.raw):null,filter:i=>i.datasetIndex===0}}},scales:{x:{ticks:{maxTicksLimit:12,font:{size:11},color:tc},grid:{color:gc}},y:{ticks:{font:{size:11},color:tc,callback:v=>fmtE(v)},grid:{color:gc}}}}});
 }
 
-function getSettings() {
-  const s = {};
-  SLIDERS.forEach(id => s[id] = document.getElementById(id).value);
-  s.portType = portType; s.dynMode = dynMode;
-  return s;
-}
+function getS(){const s={};SL.forEach(id=>{const el=document.getElementById(id);if(el)s[id]=el.value;});s.pt=pt;s.dyn=dyn;s.hm=document.getElementById('mt').checked;return s;}
+function applyS(s){SL.forEach(id=>{const el=document.getElementById(id);if(el&&s[id]!==undefined)el.value=s[id];});if(s.hm){document.getElementById('mt').checked=true;document.getElementById('mf').style.display='block';}setPort(s.pt||'misto');setDyn(s.dyn||false);upd();}
+function saveS(){const s=getS();s.at=new Date().toISOString();localStorage.setItem(SK,JSON.stringify(s));const d=new Date();document.getElementById('ss').textContent='Salvato: '+d.toLocaleDateString('it-IT')+' '+d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});}
+function resetS(){if(confirm('Ripristinare i valori di default?')){localStorage.removeItem(SK);location.reload();}}
+function exportJ(){const s=getS();s.at=new Date().toISOString();const b=new Blob([JSON.stringify(s,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='fire_'+new Date().toISOString().slice(0,10)+'.json';a.click();}
+function importJ(ev){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{try{applyS(JSON.parse(e.target.result));document.getElementById('ss').textContent='Importato da file';}catch{alert('File JSON non valido.');}};r.readAsText(f);}
+function loadS(){const raw=localStorage.getItem(SK);if(raw){try{const s=JSON.parse(raw);applyS(s);const d=s.at?new Date(s.at):null;document.getElementById('ss').textContent=d?'Caricato: '+d.toLocaleDateString('it-IT')+' '+d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}):'Caricato';return true;}catch{}}return false;}
 
-function applySettings(s) {
-  SLIDERS.forEach(id => { if (s[id] !== undefined) document.getElementById(id).value = s[id]; });
-  setPort(s.portType || 'misto');
-  setDyn(s.dynMode || false);
-  update();
-}
-
-function saveSettings() {
-  const s = getSettings();
-  s.savedAt = new Date().toISOString();
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
-  const d = new Date();
-  document.getElementById('save-status').textContent = 'Salvato il ' + d.toLocaleDateString('it-IT') + ' alle ' + d.toLocaleTimeString('it-IT', {hour:'2-digit',minute:'2-digit'});
-}
-
-function resetSettings() {
-  if (confirm('Ripristinare i valori di default?')) {
-    localStorage.removeItem(STORAGE_KEY);
-    location.reload();
-  }
-}
-
-function exportJSON() {
-  const s = getSettings();
-  s.exportedAt = new Date().toISOString();
-  const blob = new Blob([JSON.stringify(s, null, 2)], {type:'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'fire_settings_' + new Date().toISOString().slice(0,10) + '.json';
-  a.click();
-}
-
-function importJSON(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      const s = JSON.parse(e.target.result);
-      applySettings(s);
-      document.getElementById('save-status').textContent = 'Impostazioni importate da file';
-    } catch { alert('File JSON non valido.'); }
-  };
-  reader.readAsText(file);
-}
-
-function loadSaved() {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (raw) {
-    try {
-      const s = JSON.parse(raw);
-      applySettings(s);
-      const d = s.savedAt ? new Date(s.savedAt) : null;
-      document.getElementById('save-status').textContent = d
-        ? 'Caricato da: ' + d.toLocaleDateString('it-IT') + ' ' + d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})
-        : 'Impostazioni caricate';
-      return true;
-    } catch {}
-  }
-  return false;
-}
-
-SLIDERS.forEach(id => {
-  const el = document.getElementById(id);
-  if (el) el.addEventListener('input', update);
-});
-setPort('misto');
-setDyn(false);
-if (!loadSaved()) update();
+SL.forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('input',upd);});
+setPort('misto');setDyn(false);
+if(!loadS())upd();
 </script>
 </body>
 </html>
