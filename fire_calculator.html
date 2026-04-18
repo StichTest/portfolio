@@ -475,7 +475,8 @@ function upd(){
   // Nuovi input mutuo
   const mdebito=+document.getElementById('mdebito').value;
   const mrate=+document.getElementById('mrate').value;
-  const mtasso=+document.getElementById('mtasso').value/100;
+  const mtassoRaw=+document.getElementById('mtasso').value;
+  const mtasso=mtassoRaw/100;
   // Calcola rata mensile dalla formula standard mutuo
   const rm=mtasso/12; // tasso mensile
   const rataMensile=rm>0 ? mdebito*(rm*Math.pow(1+rm,mrate))/(Math.pow(1+rm,mrate)-1) : mdebito/mrate;
@@ -499,7 +500,7 @@ function upd(){
   document.getElementById('mdebito-o').textContent=fmtF(mdebito);
   document.getElementById('mrate-o').textContent=mrate+' rate';
   document.getElementById('mrate-hint').textContent=Math.round(mrate/12*10)/10+' anni';
-  document.getElementById('mtasso-o').textContent=mtasso.toFixed(1)+'%';
+  document.getElementById('mtasso-o').textContent=mtassoRaw.toFixed(1)+'%';
 
   // Mutuo info box
   if(scen==='mutuo'){
