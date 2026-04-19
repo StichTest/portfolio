@@ -340,25 +340,36 @@ function hCol(h){return h<=25?0:h<=35?1:h<=45?2:3;}
 function pvAnn(ann,r,n){if(n<=0)return 0;if(r===0)return ann*n;return ann*(1-Math.pow(1+r,-n))/r;}
 function rataMensile(debito,tassoAnn,nRate){const rm=tassoAnn/12;return rm>0?debito*(rm*Math.pow(1+rm,nRate))/(Math.pow(1+rm,nRate)-1):debito/nRate;}
 
-// yToFire: calcola il FIRE number anno per anno (varia col mutuo)
-function fireNum(base,cprop,affitto,mr_ann,ma_oggi,mult,rend,y){
-  if(scen==='affitto') return (base+affitto)*mult;
-  if(scen==='libera')  return (base+cprop)*mult;
-  // mutuo: anni residui al momento del FIRE = max(0, ma_oggi - y)
-  const anniRes=Math.max(0,ma_oggi-y);
-  return (base+cprop)*mult + pvAnn(mr_ann,rend,anniRes);
+// Tassazione plusvalenze IT: 26% sulla quota di guadagno rispetto al costo di carico
+// costBasis = versamenti cumulati (pat iniziale + versamenti annuali)
+function taxFactor(v,costBasis){
+  if(v<=0||costBasis>=v) return 1;
+  const plusv=Math.max(0,(v-costBasis)/v);
+  return 1-0.26*plusv; // es: 60% plusvalenza -> factor 0.844 -> prelievo lordo +18.5%
+}
+// FIRE number lordo (include tasse sulla plusvalenza al momento del prelievo)
+function fireNum(base,cprop,affitto,mr_ann,ma_oggi,mult,rend,y,v,costBasis){
+  const spesaNetta=scen==='affitto'?base+affitto:base+cprop;
+  const tf=taxFactor(v,costBasis);
+  const spesaLorda=tf>0?spesaNetta/tf:spesaNetta;
+  let fn=spesaLorda*mult;
+  if(scen==='mutuo'){const anniRes=Math.max(0,ma_oggi-y);fn+=pvAnn(mr_ann,rend,anniRes);}
+  return{fn,spesaNetta,spesaLorda,tf};
 }
 function yToFire(pat,risp,rend,base,cprop,affitto,mr_ann,ma_oggi,mult){
-  let v=pat;
+  let v=pat, costBasis=pat; // patrimonio attuale: costo = valore corrente (plusvalenze pregresse non note)
   for(let y=0;y<=65;y++){
-    const fn=fireNum(base,cprop,affitto,mr_ann,ma_oggi,mult,rend,y);
+    const {fn,spesaNetta,spesaLorda,tf}=fireNum(base,cprop,affitto,mr_ann,ma_oggi,mult,rend,y,v,costBasis);
     if(v>=fn){
       const anniMutuoRes=Math.max(0,ma_oggi-y);
       const rateRes=Math.round(anniMutuoRes*12);
       const bufferMutuo=pvAnn(mr_ann,rend,anniMutuoRes);
-      return{anni:y,fn,fnBase:(base+(scen==='affitto'?affitto:cprop))*mult,anniMutuoRes,rateRes,bufferMutuo};
+      const plusvPct=v>0?Math.max(0,(v-costBasis)/v):0;
+      return{anni:y,fn,fnBase:spesaNetta*mult,anniMutuoRes,rateRes,bufferMutuo,
+             spesaNetta,spesaLorda,tf,plusvPct,portafoglioAlFire:v,costBasisAlFire:costBasis};
     }
     v=v*(1+rend)+risp;
+    costBasis+=risp;
   }
   return null;
 }
@@ -411,6 +422,13 @@ function renderCards(res,eta){
     if(r&&scen==='mutuo'){
       if(r.rateRes>0) note_html='<div class="rn">Al FIRE: '+r.rateRes+' rate residue ('+Math.round(r.anniMutuoRes*10)/10+'a) · buffer '+fmtE(r.bufferMutuo)+'</div>';
       else note_html='<div class="rn">Mutuo estinto prima del FIRE 🎉</div>';
+    }
+    // Tax note
+    if(r&&r.plusvPct>0.01){
+      const taxAmt=Math.round((r.spesaLorda-r.spesaNetta)*100)/100;
+      note_html+='<div class="rn" style="background:var(--amber-bg);color:var(--amber)">'+
+        '🇮🇹 Plusv. al FIRE: '+(r.plusvPct*100).toFixed(0)+'% · prelievo lordo '+fmtE(r.spesaLorda)+'/a'+
+        ' (tasse: ~'+fmtE(taxAmt)+'/a)</div>';
     }
     const spesaStr=scen==='affitto'
       ?fmtF(r?r.spesaBase:0)+'/a op. + '+fmtF(+document.getElementById('affitto').value)+'/a affitto'
@@ -517,7 +535,15 @@ function upd(){
   const labels=Array.from({length:maxY+1},(_,i)=>eta+i);
   const pd=portData(pat,risp,rend,maxY);
   const colors={lean:'#1a7a50',normal:'#9a5808',fat:'#802010'};
-  const buildCurve=(base)=>Array.from({length:maxY+1},(_,y)=>Math.round(fireNum(base,cprop,affitto,mr_ann,ma_oggi,mult,rend,y)));
+  // For chart: compute portfolio and costBasis curve, extract fn
+  const buildCurve=(base)=>{
+    let v=pat,cb=pat;
+    return Array.from({length:maxY+1},(_,y)=>{
+      const {fn}=fireNum(base,cprop,affitto,mr_ann,ma_oggi,mult,rend,y,v,cb);
+      v=v*(1+rend)+risp; cb+=risp;
+      return Math.round(fn);
+    });
+  };
   const ds=[
     {label:'Portafoglio',data:pd,borderColor:isDark?'#ccc':'#444',borderWidth:2.5,pointRadius:0,tension:0.3,fill:false},
     {label:'_',data:buildCurve(lean),  borderColor:colors.lean,  borderWidth:1.5,borderDash:[],pointRadius:0,tension:0,fill:false},
