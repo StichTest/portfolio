@@ -231,6 +231,77 @@ h1{font-size:21px;font-weight:600;letter-spacing:-.3px;}
   </div>
 </div>
 
+<!-- CALCOLATORE PENSIONE FORFETTARIO -->
+<div class="sec">
+  <button class="adv-btn" id="forf-btn" onclick="toggleForf()">▸ Calcola pensione P.IVA regime forfettario (Gestione Separata INPS)</button>
+  <div class="panel adv-body" id="forf-body">
+    <div class="scen-badge" style="margin-bottom:14px">
+      Calcolo contributivo puro (sistema vigente per chi ha iniziato dopo il 1996). Il montante si rivaluta annualmente al tasso di crescita del PIL quinquennale. La pensione viene calcolata al momento del pensionamento applicando il coefficiente di trasformazione per età.
+    </div>
+    <div class="g3" style="margin-bottom:14px">
+      <div class="field">
+        <label>Ricavi annui lordi</label>
+        <div class="row"><input type="range" id="forf-ricavi" min="5000" max="100000" step="1000" value="30000"><span class="val sm" id="forf-ricavi-o"></span></div>
+        <div class="hint">Entro il limite regime forfettario (€85.000)</div>
+      </div>
+      <div class="field">
+        <label>Categoria ATECO</label>
+        <div class="row" style="flex-direction:column;align-items:flex-start;gap:4px">
+          <select id="forf-ateco" onchange="calcForf()" style="width:100%;padding:5px 8px;border-radius:6px;border:.5px solid var(--border2);background:var(--bg2);color:var(--text);font-size:12px;cursor:pointer">
+            <option value="78">78% — Professionisti, sanità, istruzione, finanza</option>
+            <option value="86">86% — Manifattura, artigiani, industria</option>
+            <option value="62">62% — Costruzioni, immobiliare</option>
+            <option value="54">54% — Intermediari del commercio</option>
+            <option value="40">40% — Commercio al dettaglio / ingrosso</option>
+            <option value="67">67% — Commercio ambulante non alimentare</option>
+            <option value="40b">40% — Commercio ambulante alimentare</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Età pensionamento target</label>
+        <div class="row"><input type="range" id="forf-eta-pens" min="60" max="75" step="1" value="67"><span class="val sm" id="forf-eta-pens-o"></span></div>
+        <div class="hint">Pensione di vecchiaia ordinaria: 67 anni</div>
+      </div>
+    </div>
+    <div class="g3" style="margin-bottom:14px">
+      <div class="field">
+        <label>Anni già contribuiti (Gest. Sep.)</label>
+        <div class="row"><input type="range" id="forf-anni-pass" min="0" max="30" step="1" value="0"><span class="val sm" id="forf-anni-pass-o"></span></div>
+        <div class="hint">Anni in cui hai già versato alla GS</div>
+      </div>
+      <div class="field">
+        <label>Montante già accumulato (stima)</label>
+        <div class="row"><input type="range" id="forf-montante-pass" min="0" max="200000" step="2000" value="0"><span class="val sm" id="forf-montante-pass-o"></span></div>
+        <div class="hint">Da cassetto previdenziale INPS (0 se non sai)</div>
+      </div>
+      <div class="field">
+        <label>Tasso rivalutazione montante</label>
+        <div class="row"><input type="range" id="forf-rival" min="0.5" max="4" step="0.1" value="1.5"><span class="val sm" id="forf-rival-o"></span></div>
+        <div class="hint">PIL quinquennale stimato (1.5% conservativo)</div>
+      </div>
+    </div>
+
+    <!-- Risultato calcolo forfettario -->
+    <div id="forf-result" style="border-radius:var(--r);border:.5px solid var(--border2);overflow:hidden;margin-bottom:12px">
+      <div style="padding:10px 14px;background:var(--bg3)">
+        <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Proiezione pensione</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px">
+          <div><div style="font-size:10px;color:var(--text3)">Reddito imponibile</div><div style="font-size:14px;font-weight:600" id="forf-imponibile">—</div></div>
+          <div><div style="font-size:10px;color:var(--text3)">Contributo annuo</div><div style="font-size:14px;font-weight:600" id="forf-contributo">—</div></div>
+          <div><div style="font-size:10px;color:var(--text3)">Montante al pensionamento</div><div style="font-size:14px;font-weight:600" id="forf-montante-tot">—</div></div>
+          <div><div style="font-size:10px;color:var(--text3)">Pensione lorda/anno</div><div style="font-size:16px;font-weight:700;color:var(--green)" id="forf-pensione">—</div></div>
+        </div>
+      </div>
+      <div id="forf-detail" style="padding:8px 14px;font-size:11px;color:var(--text2);line-height:1.8;border-top:.5px solid var(--border)"></div>
+    </div>
+
+    <button onclick="importForfToInps()" style="background:var(--green);color:#fff;border:none;border-radius:var(--r);padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;width:100%">
+      → Usa questo calcolo nel piano FIRE (popola automaticamente i campi pensione)
+    </button>
+  </div>
+</div>
+
 <!-- PARAMETRI COMUNI -->
 <div class="sec">
   <div class="sec-t">Parametri comuni</div>
@@ -352,7 +423,8 @@ const SL=[
   'pat-mutuo','risp-mutuo','mdebito','mrate','mtasso','cprop-mutuo',
   'pat-affitto','risp-affitto','affitto',
   'lean','normal','fat','rend','eta','ter','swr','horizon',
-  'inps-ann','inps-eta','inps-aliq'
+  'inps-ann','inps-eta','inps-aliq',
+  'forf-ricavi','forf-eta-pens','forf-anni-pass','forf-montante-pass','forf-rival'
 ];
 
 function setScen(s){
@@ -368,6 +440,97 @@ function toggleInps(){const on=document.getElementById('inps-toggle').checked;do
 function setPort(t){pt=t;['globale','misto','eu'].forEach(k=>document.getElementById('b'+k[0]).classList.toggle('act',k===t));upd();}
 function setDyn(v){dyn=v;document.getElementById('bf').classList.toggle('act',!v);document.getElementById('bd').classList.toggle('act',v);upd();}
 function hCol(h){return h<=25?0:h<=35?1:h<=45?2:3;}
+
+// ─── PENSIONE FORFETTARIO ─────────────────────────────────────────────────
+let forfOpen=false;
+function toggleForf(){forfOpen=!forfOpen;document.getElementById('forf-body').classList.toggle('open',forfOpen);document.getElementById('forf-btn').textContent=(forfOpen?'▾ ':'▸ ')+'Calcola pensione P.IVA regime forfettario (Gestione Separata INPS)';}
+
+// Coefficienti di trasformazione 2025 (età → %)
+const CT={57:3.672,58:3.795,59:3.919,60:4.046,61:4.158,62:4.270,63:4.415,64:4.565,65:4.720,66:4.880,67:5.015,68:5.160,69:5.294,70:5.453,71:5.534};
+
+function calcForf(){
+  const ricavi=+document.getElementById('forf-ricavi').value;
+  const atecoVal=document.getElementById('forf-ateco').value;
+  const coeff=parseInt(atecoVal)/100;
+  const etaPens=+document.getElementById('forf-eta-pens').value;
+  const etaAtt=+document.getElementById('eta').value;
+  const anniPass=+document.getElementById('forf-anni-pass').value;
+  const montantePass=+document.getElementById('forf-montante-pass').value;
+  const rival=+document.getElementById('forf-rival').value/100;
+
+  // Labels
+  document.getElementById('forf-ricavi-o').textContent=fmtF(ricavi);
+  document.getElementById('forf-eta-pens-o').textContent=etaPens+' anni';
+  document.getElementById('forf-anni-pass-o').textContent=anniPass+'a';
+  document.getElementById('forf-montante-pass-o').textContent=fmtF(montantePass);
+  document.getElementById('forf-rival-o').textContent=(+document.getElementById('forf-rival').value).toFixed(1)+'%';
+
+  // Calcolo
+  const imponibile=ricavi*coeff;
+  const contributoAnn=imponibile*0.2607; // aliquota GS INPS 2024
+  const anniRimanenti=Math.max(0,etaPens-etaAtt);
+
+  // Montante al pensionamento:
+  // Parte pregressa rivalutata fino a pensione
+  const montantePregresso=montantePass*Math.pow(1+rival,anniRimanenti);
+  // Accumulo futura contributivo: versamento annuo all'inizio di ogni anno
+  let montanteFuturo=0;
+  for(let i=0;i<anniRimanenti;i++){
+    montanteFuturo=(montanteFuturo+contributoAnn)*Math.pow(1+rival,1);
+  }
+  const montanteTot=montantePregresso+montanteFuturo;
+
+  // Coefficiente di trasformazione: clamp tra 57 e 71
+  const etaCT=Math.max(57,Math.min(71,etaPens));
+  const ctPct=CT[etaCT]||5.015;
+  const pensioneLorda=montanteTot*(ctPct/100);
+  const pensioneNetta12=pensioneLorda/12;
+
+  // Contribuzione minima: verifica se supera la soglia minima (importo assegno sociale ~€6.500/a)
+  const anniTotali=anniPass+anniRimanenti;
+  const sogliaMinimaAnni=20;
+  const warnings=[];
+  if(anniTotali<sogliaMinimaAnni) warnings.push('⚠ Anni contributivi totali ('+anniTotali+') inferiori ai 20 richiesti per la pensione di vecchiaia ordinaria.');
+  if(pensioneLorda<6500) warnings.push('⚠ Pensione stimata sotto la soglia minima INPS (~€6.500/a): potrebbe essere integrata al minimo.');
+
+  document.getElementById('forf-imponibile').textContent=fmtE(imponibile)+'/a';
+  document.getElementById('forf-contributo').textContent=fmtE(contributoAnn)+'/a';
+  document.getElementById('forf-montante-tot').textContent=fmtE(montanteTot);
+  document.getElementById('forf-pensione').textContent=fmtE(pensioneLorda)+'/a';
+
+  const dettaglio=document.getElementById('forf-detail');
+  dettaglio.innerHTML=
+    'Coefficiente redditività: <strong>'+((coeff)*100).toFixed(0)+'%</strong>'+
+    ' &nbsp;·&nbsp; Aliquota GS INPS: <strong>26.07%</strong>'+
+    ' &nbsp;·&nbsp; Anni futuri di contribuzione: <strong>'+anniRimanenti+'</strong>'+
+    ' &nbsp;·&nbsp; Anni totali: <strong>'+anniTotali+'</strong><br>'+
+    'Montante pregresso rivalutato: <strong>'+fmtE(montantePregresso)+'</strong>'+
+    ' &nbsp;·&nbsp; Montante accumulato futuro: <strong>'+fmtE(montanteFuturo)+'</strong><br>'+
+    'Coefficiente di trasformazione età '+etaPens+': <strong>'+ctPct.toFixed(3)+'%</strong>'+
+    ' &nbsp;·&nbsp; Pensione lorda mensile: <strong>'+fmtE(Math.round(pensioneNetta12))+'</strong>'+
+    (warnings.length?'<br><span style="color:var(--amber)">'+warnings.join(' ')+'</span>':'');
+
+  // Save for import
+  document.getElementById('forf-btn').dataset.pensioneLorda=Math.round(pensioneLorda);
+  document.getElementById('forf-btn').dataset.etaPens=etaPens;
+}
+
+function importForfToInps(){
+  const pensioneLorda=+document.getElementById('forf-btn').dataset.pensioneLorda||0;
+  const etaPens=+document.getElementById('forf-btn').dataset.etaPens||67;
+  if(!pensioneLorda){alert('Calcola prima la pensione usando i parametri sopra.');return;}
+  // Attiva checkbox INPS
+  document.getElementById('inps-toggle').checked=true;
+  document.getElementById('inps-fields').style.display='block';
+  // Imposta valori
+  document.getElementById('inps-ann').value=Math.min(40000,Math.max(0,pensioneLorda));
+  document.getElementById('inps-eta').value=Math.min(75,Math.max(60,etaPens));
+  // Aliquota IRPEF lasciata invariata (l'utente la conosce meglio)
+  upd();
+  // Scroll to risultati
+  document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});
+}
+// ─────────────────────────────────────────────────────────────────────────────
 function pvAnn(ann,r,n){if(n<=0)return 0;if(r===0)return ann*n;return ann*(1-Math.pow(1+r,-n))/r;}
 function rataMensile(debito,tassoAnn,nRate){const rm=tassoAnn/12;return rm>0?debito*(rm*Math.pow(1+rm,nRate))/(Math.pow(1+rm,nRate)-1):debito/nRate;}
 
@@ -665,14 +828,18 @@ function getS(){
   const s={scen,pt,dyn};
   SL.forEach(id=>{const el=document.getElementById(id);if(el)s[id]=el.value;});
   s.hasInps=document.getElementById('inps-toggle').checked;
+  const sel=document.getElementById('forf-ateco');
+  if(sel) s.forfAteco=sel.value;
   return s;
 }
 function applyS(s){
   SL.forEach(id=>{const el=document.getElementById(id);if(el&&s[id]!==undefined)el.value=s[id];});
   if(s.hasInps){document.getElementById('inps-toggle').checked=true;document.getElementById('inps-fields').style.display='block';}
+  if(s.forfAteco){const sel=document.getElementById('forf-ateco');if(sel)sel.value=s.forfAteco;}
   setPort(s.pt||'misto');
   setDyn(s.dyn||false);
   setScen(s.scen||'libera');
+  calcForf();
 }
 function saveS(){const s=getS();s.at=new Date().toISOString();localStorage.setItem(SK,JSON.stringify(s));const d=new Date();document.getElementById('ss').textContent='Salvato: '+d.toLocaleDateString('it-IT')+' '+d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});}
 function resetS(){if(confirm('Ripristinare i valori di default?')){localStorage.removeItem(SK);location.reload();}}
@@ -681,8 +848,15 @@ function importJ(ev){const f=ev.target.files[0];if(!f)return;const r=new FileRea
 function loadS(){const raw=localStorage.getItem(SK);if(raw){try{const s=JSON.parse(raw);applyS(s);const d=s.at?new Date(s.at):null;document.getElementById('ss').textContent=d?'Caricato: '+d.toLocaleDateString('it-IT')+' '+d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}):'Caricato';return true;}catch{}}return false;}
 
 SL.forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('input',upd);});
+// Forfettario sliders trigger calcForf (not upd)
+['forf-ricavi','forf-eta-pens','forf-anni-pass','forf-montante-pass','forf-rival'].forEach(id=>{
+  const el=document.getElementById(id);
+  if(el) el.addEventListener('input',calcForf);
+});
+document.getElementById('eta').addEventListener('input',calcForf); // età cambia gli anni al pensionamento
 setPort('misto');setDyn(false);
 if(!loadS())setScen('libera');
+calcForf();
 </script>
 </body>
 </html>
