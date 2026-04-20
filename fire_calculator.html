@@ -235,15 +235,43 @@ h1{font-size:21px;font-weight:600;letter-spacing:-.3px;}
 <div class="sec">
   <div class="sec-t">Parametri comuni</div>
   <div class="panel">
-    <div class="g2">
+    <div class="g2" style="margin-bottom:14px">
       <div class="field">
-        <label>Rendimento reale annuo atteso</label>
+        <label>Rendimento reale annuo atteso (lordo)</label>
         <div class="row"><input type="range" id="rend" min="1" max="10" step="0.5" value="5"><span class="val" id="rend-o"></span></div>
+        <div class="hint" id="rend-netto-hint"></div>
       </div>
       <div class="field">
         <label>Età attuale</label>
         <div class="row"><input type="range" id="eta" min="20" max="60" step="1" value="35"><span class="val" id="eta-o"></span></div>
       </div>
+      <div class="field">
+        <label>TER medio portafoglio</label>
+        <div class="row"><input type="range" id="ter" min="0" max="0.8" step="0.05" value="0.2"><span class="val" id="ter-o"></span></div>
+        <div class="hint">Include TER ETF + bollo 0.2% (sempre dovuto in Italia)</div>
+      </div>
+    </div>
+    <div id="ter-info" style="font-size:11px;color:var(--text3);background:var(--bg3);border-radius:6px;padding:7px 10px;margin-bottom:14px;line-height:1.6"></div>
+    <hr class="inner-divider">
+    <label class="ck-row"><input type="checkbox" id="inps-toggle" onchange="toggleInps()"> Ho contributi INPS — voglio includere la pensione futura</label>
+    <div id="inps-fields" style="display:none">
+      <div class="g3">
+        <div class="field">
+          <label>Pensione annua lorda stimata</label>
+          <div class="row"><input type="range" id="inps-ann" min="0" max="40000" step="500" value="8000"><span class="val sm" id="inps-ann-o"></span></div>
+          <div class="hint">Usa la stima su <a href="https://www.inps.it/it/it/strumenti/la-mia-pensione-futura.html" target="_blank" style="color:var(--blue)">inps.it</a></div>
+        </div>
+        <div class="field">
+          <label>Età di inizio pensione</label>
+          <div class="row"><input type="range" id="inps-eta" min="60" max="75" step="1" value="67"><span class="val sm" id="inps-eta-o"></span></div>
+        </div>
+        <div class="field">
+          <label>Aliquota pensione (irpef est.)</label>
+          <div class="row"><input type="range" id="inps-aliq" min="15" max="43" step="1" value="23"><span class="val sm" id="inps-aliq-o"></span></div>
+          <div class="hint">IRPEF marginale stimata in FIRE</div>
+        </div>
+      </div>
+      <div id="inps-info" style="font-size:11px;color:var(--green);background:var(--green-bg);border-radius:6px;padding:7px 10px;margin-top:10px;line-height:1.7"></div>
     </div>
   </div>
 </div>
@@ -316,13 +344,15 @@ const safeD={
   eu:{l:'EU-heavy',r:[3.5,3.3,2.9,2.7]}
 };
 let pt='misto',dyn=false,advOpen=false,scen='libera';
+let pensNetta=0,inpsEta=999,rendNetto=0.05; // module-level, updated in upd()
 
 // All slider IDs (including per-scenario ones)
 const SL=[
   'pat-libera','risp-libera','cprop-libera',
   'pat-mutuo','risp-mutuo','mdebito','mrate','mtasso','cprop-mutuo',
   'pat-affitto','risp-affitto','affitto',
-  'lean','normal','fat','rend','eta','swr','horizon'
+  'lean','normal','fat','rend','eta','ter','swr','horizon',
+  'inps-ann','inps-eta','inps-aliq'
 ];
 
 function setScen(s){
@@ -334,6 +364,7 @@ function setScen(s){
   upd();
 }
 function toggleAdv(){advOpen=!advOpen;document.getElementById('adv-body').classList.toggle('open',advOpen);document.getElementById('adv-btn').textContent=(advOpen?'▾ ':'▸ ')+'Impostazioni avanzate — tasso di prelievo e tipo portafoglio';}
+function toggleInps(){const on=document.getElementById('inps-toggle').checked;document.getElementById('inps-fields').style.display=on?'block':'none';upd();}
 function setPort(t){pt=t;['globale','misto','eu'].forEach(k=>document.getElementById('b'+k[0]).classList.toggle('act',k===t));upd();}
 function setDyn(v){dyn=v;document.getElementById('bf').classList.toggle('act',!v);document.getElementById('bd').classList.toggle('act',v);upd();}
 function hCol(h){return h<=25?0:h<=35?1:h<=45?2:3;}
@@ -341,34 +372,58 @@ function pvAnn(ann,r,n){if(n<=0)return 0;if(r===0)return ann*n;return ann*(1-Mat
 function rataMensile(debito,tassoAnn,nRate){const rm=tassoAnn/12;return rm>0?debito*(rm*Math.pow(1+rm,nRate))/(Math.pow(1+rm,nRate)-1):debito/nRate;}
 
 // Tassazione plusvalenze IT: 26% sulla quota di guadagno rispetto al costo di carico
-// costBasis = versamenti cumulati (pat iniziale + versamenti annuali)
 function taxFactor(v,costBasis){
   if(v<=0||costBasis>=v) return 1;
   const plusv=Math.max(0,(v-costBasis)/v);
-  return 1-0.26*plusv; // es: 60% plusvalenza -> factor 0.844 -> prelievo lordo +18.5%
+  return 1-0.26*plusv;
 }
-// FIRE number lordo (include tasse sulla plusvalenza al momento del prelievo)
-function fireNum(base,cprop,affitto,mr_ann,ma_oggi,mult,rend,y,v,costBasis){
-  const spesaNetta=scen==='affitto'?base+affitto:base+cprop;
-  const tf=taxFactor(v,costBasis);
+
+// FIRE number a due fasi: pre-pensione (spesa piena) + post-pensione (spesa ridotta)
+// rendNetto = rend - TER - bollo (già al netto dei costi ricorrenti)
+function calcFireNum(spesaNetta,pensNetta,etaAlFire,inpsEta,mult,rendNetto,tf){
   const spesaLorda=tf>0?spesaNetta/tf:spesaNetta;
-  let fn=spesaLorda*mult;
-  if(scen==='mutuo'){const anniRes=Math.max(0,ma_oggi-y);fn+=pvAnn(mr_ann,rend,anniRes);}
-  return{fn,spesaNetta,spesaLorda,tf};
+  const anniAPrensione=Math.max(0,inpsEta-etaAlFire);
+  const hasInps=pensNetta>0&&inpsEta>0;
+  let fn;
+  if(!hasInps){
+    // Nessuna pensione: SWR standard
+    fn=spesaLorda*mult;
+  } else if(anniAPrensione===0){
+    // Pensione già attiva al FIRE
+    const spesaRidottaNetta=Math.max(0,spesaNetta-pensNetta);
+    const spesaRidottaLorda=tf>0?spesaRidottaNetta/tf:spesaRidottaNetta;
+    fn=spesaRidottaLorda*mult;
+  } else {
+    // Due fasi: bridge pre-pensione + rendita post-pensione scontata al FIRE
+    const pvPrePensione=pvAnn(spesaLorda,rendNetto,anniAPrensione);
+    const spesaRidottaNetta=Math.max(0,spesaNetta-pensNetta);
+    const spesaRidottaLorda=tf>0?spesaRidottaNetta/tf:spesaRidottaNetta;
+    const fnPostPensione=spesaRidottaLorda*mult;
+    const pvPost=fnPostPensione/Math.pow(1+rendNetto,anniAPrensione);
+    fn=pvPrePensione+pvPost;
+  }
+  return{fn,spesaLorda,spesaNetta,tf,anniAPrensione};
 }
-function yToFire(pat,risp,rend,base,cprop,affitto,mr_ann,ma_oggi,mult){
-  let v=pat, costBasis=pat; // patrimonio attuale: costo = valore corrente (plusvalenze pregresse non note)
+
+function yToFire(pat,risp,rendNetto,base,cprop,affitto,mr_ann,ma_oggi,mult,eta,inpsEta,pensNetta){
+  let v=pat, costBasis=pat;
   for(let y=0;y<=65;y++){
-    const {fn,spesaNetta,spesaLorda,tf}=fireNum(base,cprop,affitto,mr_ann,ma_oggi,mult,rend,y,v,costBasis);
-    if(v>=fn){
+    const etaAlFire=eta+y;
+    const tf=taxFactor(v,costBasis);
+    const spesaNetta=scen==='affitto'?base+affitto:base+cprop;
+    const {fn,spesaLorda,anniAPrensione}=calcFireNum(spesaNetta,pensNetta,etaAlFire,inpsEta,mult,rendNetto,tf);
+    // Aggiungi buffer mutuo
+    let fnTot=fn;
+    if(scen==='mutuo'){const anniRes=Math.max(0,ma_oggi-y);fnTot+=pvAnn(mr_ann,rendNetto,anniRes);}
+    if(v>=fnTot){
       const anniMutuoRes=Math.max(0,ma_oggi-y);
       const rateRes=Math.round(anniMutuoRes*12);
-      const bufferMutuo=pvAnn(mr_ann,rend,anniMutuoRes);
+      const bufferMutuo=pvAnn(mr_ann,rendNetto,anniMutuoRes);
       const plusvPct=v>0?Math.max(0,(v-costBasis)/v):0;
-      return{anni:y,fn,fnBase:spesaNetta*mult,anniMutuoRes,rateRes,bufferMutuo,
-             spesaNetta,spesaLorda,tf,plusvPct,portafoglioAlFire:v,costBasisAlFire:costBasis};
+      return{anni:y,fn:fnTot,fnBase:spesaNetta*mult,anniMutuoRes,rateRes,bufferMutuo,
+             spesaNetta,spesaLorda,tf,plusvPct,anniAPrensione,etaAlFire};
     }
-    v=v*(1+rend)+risp;
+    v=v*(1+rendNetto)+risp;
     costBasis+=risp;
   }
   return null;
@@ -425,10 +480,17 @@ function renderCards(res,eta){
     }
     // Tax note
     if(r&&r.plusvPct>0.01){
-      const taxAmt=Math.round((r.spesaLorda-r.spesaNetta)*100)/100;
+      const taxAmt=r.spesaLorda-r.spesaNetta;
       note_html+='<div class="rn" style="background:var(--amber-bg);color:var(--amber)">'+
-        '🇮🇹 Plusv. al FIRE: '+(r.plusvPct*100).toFixed(0)+'% · prelievo lordo '+fmtE(r.spesaLorda)+'/a'+
-        ' (tasse: ~'+fmtE(taxAmt)+'/a)</div>';
+        '🇮🇹 Plusv. al FIRE: '+(r.plusvPct*100).toFixed(0)+'% · lordo '+fmtE(r.spesaLorda)+'/a · tasse ~'+fmtE(taxAmt)+'/a</div>';
+    }
+    // Pension note
+    if(r&&r.anniAPrensione>0&&pensNetta>0){
+      note_html+='<div class="rn" style="background:var(--green-bg);color:var(--green)">'+
+        '🏛 Bridge pensione: '+r.anniAPrensione+'a a spesa piena → poi –'+fmtE(pensNetta)+'/a da INPS</div>';
+    } else if(r&&r.anniAPrensione===0&&pensNetta>0){
+      note_html+='<div class="rn" style="background:var(--green-bg);color:var(--green)">'+
+        '🏛 Pensione già attiva al FIRE: spesa netta ridotta di '+fmtE(pensNetta)+'/a</div>';
     }
     const spesaStr=scen==='affitto'
       ?fmtF(r?r.spesaBase:0)+'/a op. + '+fmtF(+document.getElementById('affitto').value)+'/a affitto'
@@ -484,6 +546,15 @@ function upd(){
   const eta   =+document.getElementById('eta').value;
   const swr   =+document.getElementById('swr').value;
   const horizon=+document.getElementById('horizon').value;
+  // TER e bollo
+  const terRaw=+document.getElementById('ter').value;
+  rendNetto=Math.max(0.001, rend - terRaw/100);
+  // INPS
+  const hasInps=document.getElementById('inps-toggle').checked;
+  const inpsAnn=hasInps?+document.getElementById('inps-ann').value:0;
+  inpsEta=hasInps?+document.getElementById('inps-eta').value:999;
+  const inpsAliq=hasInps?+document.getElementById('inps-aliq').value/100:0;
+  pensNetta=inpsAnn*(1-inpsAliq);
 
   // Update all labels
   ['libera','mutuo','affitto'].forEach(s=>{
@@ -502,10 +573,26 @@ function upd(){
   document.getElementById('normal-o').textContent=fmtF(normal);
   document.getElementById('fat-o').textContent=fmtF(fat);
   document.getElementById('rend-o').textContent=(+document.getElementById('rend').value).toFixed(1)+'%';
+  document.getElementById('rend-netto-hint').textContent='Rendimento netto effettivo: '+(rendNetto*100).toFixed(2)+'% (dopo TER+bollo)';
   document.getElementById('eta-o').textContent=eta+' anni';
+  document.getElementById('ter-o').textContent=terRaw.toFixed(2)+'%';
+  document.getElementById('ter-info').innerHTML=
+    'TER ETF: ~'+(terRaw-0.2).toFixed(2)+'% &nbsp;+&nbsp; Bollo/IVAFE: 0.20% &nbsp;→&nbsp; '+
+    'Costo totale annuo: <strong>'+terRaw.toFixed(2)+'%</strong> &nbsp;·&nbsp; '+
+    'Su €100k di portafoglio: <strong>'+fmtE(1000*terRaw)+'</strong>/anno &nbsp;·&nbsp; '+
+    'Rendimento netto: <strong>'+(rendNetto*100).toFixed(2)+'%</strong>';
   document.getElementById('swr-o').textContent=swr.toFixed(1)+'%';
   document.getElementById('mo').textContent=(100/swr).toFixed(1);
   document.getElementById('horizon-o').textContent=horizon+' anni';
+  if(hasInps){
+    document.getElementById('inps-ann-o').textContent=fmtF(inpsAnn);
+    document.getElementById('inps-eta-o').textContent=inpsEta+' anni';
+    document.getElementById('inps-aliq-o').textContent=(inpsAliq*100).toFixed(0)+'%';
+    document.getElementById('inps-info').innerHTML=
+      'Pensione lorda: <strong>'+fmtE(inpsAnn)+'/a</strong> &nbsp;·&nbsp; IRPEF stimata: '+((inpsAliq)*100).toFixed(0)+'%'+
+      ' &nbsp;→&nbsp; Pensione netta: <strong>'+fmtE(pensNetta)+'/a</strong> ('+fmtE(pensNetta/12)+'/mese)<br>'+
+      '<span style="opacity:.8">Riduce il prelievo dal portafoglio dopo i '+inpsEta+' anni → abbassa il FIRE number (vedi calcolo a due fasi).</span>';
+  }
 
   // Mutuo info
   if(scen==='mutuo'){
@@ -520,10 +607,10 @@ function upd(){
   const mult=100/swr,hc=hCol(horizon);
   buildSafe(swr,hc);buildRefTable(swr,hc);
 
-  // Compute results
+  // Compute results (using rendNetto for actual accumulation and fire calc)
   const res={};
   [['lean',lean],['normal',normal],['fat',fat]].forEach(([id,base])=>{
-    const r=yToFire(pat,risp,rend,base,cprop,affitto,mr_ann,ma_oggi,mult);
+    const r=yToFire(pat,risp,rendNetto,base,cprop,affitto,mr_ann,ma_oggi,mult,eta,inpsEta,pensNetta);
     res[id]=r?{...r,spesaBase:base,spesaOperativa:base}:null;
   });
 
@@ -533,15 +620,20 @@ function upd(){
   // Chart
   const maxY=65;
   const labels=Array.from({length:maxY+1},(_,i)=>eta+i);
-  const pd=portData(pat,risp,rend,maxY);
+  const pd=portData(pat,risp,rendNetto,maxY);
   const colors={lean:'#1a7a50',normal:'#9a5808',fat:'#802010'};
-  // For chart: compute portfolio and costBasis curve, extract fn
+  // Chart curve: fire number trajectory using rendNetto
   const buildCurve=(base)=>{
     let v=pat,cb=pat;
     return Array.from({length:maxY+1},(_,y)=>{
-      const {fn}=fireNum(base,cprop,affitto,mr_ann,ma_oggi,mult,rend,y,v,cb);
-      v=v*(1+rend)+risp; cb+=risp;
-      return Math.round(fn);
+      const etaY=eta+y;
+      const tf=taxFactor(v,cb);
+      const spesaNetta=scen==='affitto'?base+affitto:base+cprop;
+      const {fn}=calcFireNum(spesaNetta,pensNetta,etaY,inpsEta,mult,rendNetto,tf);
+      let fnTot=fn;
+      if(scen==='mutuo'){const anniRes=Math.max(0,ma_oggi-y);fnTot+=pvAnn(mr_ann,rendNetto,anniRes);}
+      v=v*(1+rendNetto)+risp; cb+=risp;
+      return Math.round(fnTot);
     });
   };
   const ds=[
@@ -572,10 +664,12 @@ function upd(){
 function getS(){
   const s={scen,pt,dyn};
   SL.forEach(id=>{const el=document.getElementById(id);if(el)s[id]=el.value;});
+  s.hasInps=document.getElementById('inps-toggle').checked;
   return s;
 }
 function applyS(s){
   SL.forEach(id=>{const el=document.getElementById(id);if(el&&s[id]!==undefined)el.value=s[id];});
+  if(s.hasInps){document.getElementById('inps-toggle').checked=true;document.getElementById('inps-fields').style.display='block';}
   setPort(s.pt||'misto');
   setDyn(s.dyn||false);
   setScen(s.scen||'libera');
