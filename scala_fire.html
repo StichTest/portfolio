@@ -251,12 +251,12 @@
       <summary><span>Come funziona questa app — clicca per capire la strategia</span></summary>
       <div class="explainer-body">
         <strong>La scala obbligazionaria è la tua rete di sicurezza durante il FIRE.</strong><br><br>
-        L'idea è semplice: invece di vendere ETF azionari (VWCE) ogni anno per vivere — rischiando di farlo durante un crollo di mercato — compri in anticipo una serie di obbligazioni, una per ogni anno. Ogni anno incassi il bond in scadenza e non tocchi l'azionario.
+        L'idea è semplice: invece di vendere ETF azionari ogni anno per vivere — rischiando di farlo durante un crollo di mercato — compri in anticipo una serie di obbligazioni, una per ogni anno. Ogni anno incassi il bond in scadenza e non tocchi l'azionario.
         <br><br>
         <strong>I tuoi soldi sono divisi in due parti:</strong>
         <ul>
           <li><strong>Scala (bond):</strong> copre i primi 5–10 anni. Sicura, prevedibile.</li>
-          <li><strong>VWCE (azionario):</strong> cresce nel lungo periodo. Lo tocchi solo dopo che la scala è esaurita — o se è cresciuto molto (Guardrail).</li>
+          <li><strong>Azionario (es. VWCE):</strong> cresce nel lungo periodo. Lo tocchi solo dopo che la scala è esaurita — o se è cresciuto molto (Guardrail).</li>
         </ul>
         <br>
         <strong>Il flusso operativo anno per anno:</strong>
@@ -328,12 +328,12 @@
         </div>
 
         <div class="field">
-          <div class="field-label">📈 Valore VWCE al giorno del FIRE (€)</div>
+          <div class="field-label">📈 Valore portafoglio azionario al giorno del FIRE (€)</div>
           <input type="number" id="vwceInitial" value="385000" oninput="recalc()">
           <details>
             <summary><span>Cosa inserire qui</span></summary>
             <div class="info-box">
-              Il valore totale del tuo ETF azionario (VWCE o equivalente) nel momento in cui inizi il FIRE. Questo è il "motore" del tuo patrimonio a lungo termine — non lo tocchi nei primi anni. <strong>Nota:</strong> questo valore è usato per calcolare il tasso di prelievo (SWR) e decidere se il portafoglio regge nel lungo periodo.
+              Il valore totale del tuo portafoglio azionario nel momento in cui inizi il FIRE. Questo è il "motore" del tuo patrimonio a lungo termine — non lo tocchi nei primi anni. <strong>Nota:</strong> questo valore è usato per calcolare il tasso di prelievo (SWR) e decidere se il portafoglio regge nel lungo periodo.
             </div>
           </details>
         </div>
@@ -362,7 +362,7 @@
           <details>
             <summary><span>A cosa serve?</span></summary>
             <div class="info-box">
-              La pensione INPS che prevedi di ricevere. Quando arriva, riduce quanto devi prelevare da VWCE: se spendi €30.000/anno e ricevi €7.200/anno di pensione, prelevi solo €22.800. Questo <strong>abbassa il tasso di prelievo effettivo</strong> e migliora molto la sostenibilità del piano.
+              La pensione INPS che prevedi di ricevere. Quando arriva, riduce quanto devi prelevare dall'azionario: se spendi €30.000/anno e ricevi €7.200/anno di pensione, prelevi solo €22.800. Questo <strong>abbassa il tasso di prelievo effettivo</strong> e migliora molto la sostenibilità del piano.
             </div>
           </details>
         </div>
@@ -473,7 +473,7 @@
 
     <div class="view-header">
       <h2>Guardrail — controllo annuale del portafoglio</h2>
-      <p>Da fare ogni gennaio. Inserisci il valore attuale di VWCE e la tua spesa annua: l'app ti dice cosa fare.</p>
+      <p>Da fare ogni gennaio. Inserisci il valore attuale del tuo portafoglio azionario e la tua spesa annua: l'app ti dice cosa fare.</p>
       <span class="action-badge">📅 Ogni gennaio: 2 minuti di controllo</span>
     </div>
 
@@ -483,25 +483,25 @@
       <details style="margin-bottom:14px">
         <summary><span>Cos'è il "guardrail" e come funziona</span></summary>
         <div class="info-box">
-          Il <strong>tasso di prelievo</strong> è il rapporto tra quanto spendi e quanto vale il tuo VWCE. Funziona come un semaforo:
+          Il <strong>tasso di prelievo</strong> è il rapporto tra quanto spendi e quanto vale il tuo portafoglio azionario. Funziona come un semaforo:
           <ul>
-            <li>🟢 <strong>Sotto il 2.5%:</strong> VWCE è cresciuto molto. Puoi permetterti di spendere di più.</li>
+            <li>🟢 <strong>Sotto il 2.5%:</strong> L'azionario è cresciuto molto. Puoi permetterti di spendere di più.</li>
             <li>⚪ <strong>2.5%–5.0%:</strong> zona sicura. Vai avanti normalmente, adegua solo per inflazione.</li>
-            <li>🔴 <strong>Sopra il 5.0%:</strong> VWCE è sceso. Taglia le spese del 10% quest'anno.</li>
+            <li>🔴 <strong>Sopra il 5.0%:</strong> L'azionario è sceso. Taglia le spese del 10% quest'anno.</li>
           </ul>
-          <span class="info-formula">Tasso = spesa annua ÷ valore attuale VWCE × 100</span>
+          <span class="info-formula">Tasso = spesa annua ÷ valore attuale azionario × 100</span>
           <strong>Perché usarlo?</strong> Senza guardrail, rischi di spendere troppo durante un crollo di mercato. Con il guardrail, ti adatti automaticamente — senza decisioni emotive.
         </div>
       </details>
 
       <div class="field-group" style="margin-bottom:16px">
         <div class="field">
-          <div class="field-label">📈 Valore attuale VWCE (€)</div>
+          <div class="field-label">📈 Valore attuale portafoglio azionario (€)</div>
           <input type="number" id="vwceCurrent" value="385000" oninput="calcGuardrail()">
           <details>
             <summary><span>Dove trovo questo valore</span></summary>
             <div class="info-box">
-              Accedi a Fineco o al tuo broker, apri il portafoglio e guarda il valore di mercato attuale di VWCE. Prendi il valore di un giorno qualsiasi all'inizio di gennaio — non serve essere precisi al centesimo.
+              Accedi a Fineco o al tuo broker e guarda il valore di mercato attuale del portafoglio azionario. Prendi il valore di un giorno qualsiasi all'inizio di gennaio — non serve essere precisi al centesimo.
             </div>
           </details>
         </div>
@@ -541,11 +541,11 @@
         <div class="info-box">
           All'anno 5 o 6 di FIRE, hai consumato metà della scala. È il momento di decidere: <strong>allungarla comprando altri 1–2 anni di bond?</strong>
           <br><br>
-          La risposta dipende da quanto vale VWCE rispetto al suo valore iniziale, aggiustato per l'inflazione nel frattempo:
+          La risposta dipende da quanto vale l'azionario rispetto al suo valore iniziale, aggiustato per l'inflazione nel frattempo:
           <ul>
-            <li>🟢 <strong>Scenario A — VWCE sopra il target reale:</strong> mercato andato bene. Vendi una piccola quota di VWCE (6–7%) e compra 2 anni di bond aggiuntivi. Ottimo momento per farlo.</li>
-            <li>🟡 <strong>Scenario B — VWCE tra -20% e 0% dal target:</strong> mercato incerto. Non fare nulla. Aspetta l'anno prossimo.</li>
-            <li>🔴 <strong>Scenario C — VWCE sotto il -20% dal target:</strong> crash severo. Non vendere. Vivi con la scala rimanente. Riduci le spese.</li>
+            <li>🟢 <strong>Scenario A — azionario sopra il target reale:</strong> mercato andato bene. Vendi una piccola quota dell'azionario (6–7%) e compra 2 anni di bond aggiuntivi. Ottimo momento per farlo.</li>
+            <li>🟡 <strong>Scenario B — azionario tra -20% e 0% dal target:</strong> mercato incerto. Non fare nulla. Aspetta l'anno prossimo.</li>
+            <li>🔴 <strong>Scenario C — azionario sotto il -20% dal target:</strong> crash severo. Non vendere. Vivi con la scala rimanente. Riduci le spese.</li>
           </ul>
           <strong>Il bello di questa regola:</strong> è meccanica, non lascia spazio all'emotività.
         </div>
@@ -553,11 +553,11 @@
 
       <div class="field-group" style="margin-bottom:16px">
         <div class="field">
-          <div class="field-label">VWCE iniziale al FIRE (€)</div>
+          <div class="field-label">Azionario iniziale al FIRE (€)</div>
           <input type="number" id="vwceFireExt" value="385000" oninput="calcExtension()">
         </div>
         <div class="field">
-          <div class="field-label">VWCE oggi (€)</div>
+          <div class="field-label">Azionario oggi (€)</div>
           <input type="number" id="vwceTodayExt" value="385000" oninput="calcExtension()">
         </div>
         <div class="field">
@@ -598,7 +598,7 @@
         <div class="check-num">1</div>
         <div class="check-body">
           <div class="check-title">Incassa il bond in scadenza</div>
-          <div class="check-desc">Verifica che il rimborso del bond dell'anno corrente sia accreditato sul conto. Trasferisci sul conto corrente. <strong>Non toccare VWCE</strong> per i primi <strong id="cl-years">7</strong> anni — qualunque cosa succeda al mercato.</div>
+          <div class="check-desc">Verifica che il rimborso del bond dell'anno corrente sia accreditato sul conto. Trasferisci sul conto corrente. <strong>Non toccare l'azionario</strong> per i primi <strong id="cl-years">7</strong> anni — qualunque cosa succeda al mercato.</div>
           <details style="margin-top:6px">
             <summary><span>Dove trovo il bond da incassare</span></summary>
             <div class="info-box">
@@ -612,8 +612,8 @@
         <div class="check-num">2</div>
         <div class="check-body">
           <div class="check-title">Vai alla tab Guardrail → calcola il tasso</div>
-          <div class="check-desc">Inserisci il valore attuale di VWCE e la spesa prevista per quest'anno. L'app ti dice immediatamente se stai bene o se devi fare aggiustamenti.</div>
-          <div class="check-formula">Tasso = spesa annua ÷ valore VWCE attuale × 100</div>
+          <div class="check-desc">Inserisci il valore attuale dell'azionario e la spesa prevista per quest'anno. L'app ti dice immediatamente se stai bene o se devi fare aggiustamenti.</div>
+          <div class="check-formula">Tasso = spesa annua ÷ valore azionario attuale × 100</div>
         </div>
       </div>
 
@@ -622,14 +622,14 @@
         <div class="check-body">
           <div class="check-title">Applica il guardrail (se necessario)</div>
           <div class="check-desc">
-            🟢 <strong>Tasso &lt; 2.5%</strong> — VWCE è cresciuto molto: aumenta le spese del +10%<br>
+            🟢 <strong>Tasso &lt; 2.5%</strong> — azionario cresciuto molto: aumenta le spese del +10%<br>
             ⚪ <strong>Tasso 2.5–5.0%</strong> — zona sicura: mantieni, adegua solo per inflazione ISTAT<br>
-            🔴 <strong>Tasso &gt; 5.0%</strong> — VWCE è sceso: taglia spese del -10%, niente aumento inflazione
+            🔴 <strong>Tasso &gt; 5.0%</strong> — azionario sceso: taglia spese del -10%, niente aumento inflazione
           </div>
           <details style="margin-top:6px">
             <summary><span>Come applicare il taglio delle spese</span></summary>
             <div class="info-box">
-              Il taglio del 10% non deve essere drammatico: rimanda viaggi non essenziali, riduci la spesa discrezionale, posticipa acquisti grandi. L'obiettivo è proteggere il patrimonio durante il calo di mercato — che quasi certamente si riprenderà nei prossimi anni. Il guardrail ti evita di svendere VWCE nel momento peggiore.
+              Il taglio del 10% non deve essere drammatico: rimanda viaggi non essenziali, riduci la spesa discrezionale, posticipa acquisti grandi. L'obiettivo è proteggere il patrimonio durante il calo di mercato — che quasi certamente si riprenderà nei prossimi anni. Il guardrail ti evita di svendere azionario nel momento peggiore.
             </div>
           </details>
         </div>
@@ -643,7 +643,7 @@
           <details style="margin-top:6px">
             <summary><span>Cosa succede dopo l'anno 7?</span></summary>
             <div class="info-box">
-              Se hai esteso la scala agli anni 8–9–10, continui a incassare bond. Quando la scala finisce, inizi a vivere di VWCE — a quel punto il portafoglio ha avuto 7–10 anni per crescere e il tasso di prelievo dovrebbe essere sceso significativamente. Dal <strong id="cl-pension-year-note">2051</strong> in poi, la pensione riduce ulteriormente i prelievi da VWCE.
+              Se hai esteso la scala agli anni 8–9–10, continui a incassare bond. Quando la scala finisce, inizi a vivere dell'azionario — a quel punto il portafoglio ha avuto 7–10 anni per crescere e il tasso di prelievo dovrebbe essere sceso significativamente. Dal <strong id="cl-pension-year-note">2051</strong> in poi, la pensione riduce ulteriormente i prelievi dall'azionario.
             </div>
           </details>
         </div>
@@ -660,20 +660,20 @@
       <div class="pension-note" id="cl-pension"></div>
     </div>
 
-    <div class="section-sep"><span>Proiezione VWCE a fine scala</span></div>
+    <div class="section-sep"><span>Proiezione azionario a fine scala</span></div>
 
     <div class="card">
-      <div class="card-title">Scenari di rendimento VWCE — dopo <span id="cl-years-end">7</span> anni</div>
+      <div class="card-title">Scenari di rendimento azionario — dopo <span id="cl-years-end">7</span> anni</div>
       <details style="margin-bottom:12px">
         <summary><span>Come leggere questi scenari</span></summary>
         <div class="info-box">
-          Mostra quanto potrebbe valere VWCE quando finisce la scala (e devi iniziare a prelevare da esso). Il <strong>SWR</strong> (Safe Withdrawal Rate) indica quanto percentuale del VWCE finale dovresti prelevare annualmente — sotto il 4% è considerato sostenibile a lungo termine.
+          Mostra quanto potrebbe valere l'azionario quando finisce la scala (e devi iniziare a prelevare da esso). Il <strong>SWR</strong> (Safe Withdrawal Rate) indica la percentuale che dovresti prelevare annualmente — sotto il 4% è considerato sostenibile a lungo termine.
           <ul>
-            <li><strong>Scenario base (7% reale):</strong> mercato storico medio. VWCE più che raddoppia.</li>
+            <li><strong>Scenario base (7% reale):</strong> mercato storico medio. L'azionario più che raddoppia.</li>
             <li><strong>Moderato (3% reale):</strong> crescita lenta. Comunque positivo.</li>
             <li><strong>Severo (-45% anno 1):</strong> crash pesante nel primo anno, poi lenta ripresa. Il caso peggiore plausibile.</li>
           </ul>
-          In tutti gli scenari, la pensione INPS riduce il prelievo necessario da VWCE.
+          In tutti gli scenari, la pensione INPS riduce il prelievo necessario dall'azionario.
         </div>
       </details>
       <div id="cl-scenarios"></div>
@@ -686,16 +686,66 @@
 const STORAGE_KEY = 'scala_fire_v1';
 
 const INSTRUMENTS = [
-  { instr: 'BTP Italia', sub: 'Inflazione coperta · tassazione 12.5%', tag: 'inflaz.', tagClass: 'tag-green', overcal: 0 },
-  { instr: 'BTP Italia', sub: 'Inflazione coperta · tassazione 12.5%', tag: 'inflaz.', tagClass: 'tag-green', overcal: 0 },
-  { instr: 'BTP Italia / BTP singolo', sub: 'Nominale + sovraccalib. +8%', tag: 'gov.', tagClass: 'tag-blue', overcal: 0.08 },
-  { instr: 'BTP 2029 + iBonds Corp', sub: 'Misto gov./corp. · sovraccalib. +10%', tag: 'misto', tagClass: 'tag-amber', overcal: 0.10 },
-  { instr: 'iBonds Corp + Xtrackers', sub: 'Corporate IG · sovraccalib. +12%', tag: 'corp. IG', tagClass: 'tag-amber', overcal: 0.12 },
-  { instr: 'iBonds Corp', sub: 'Corporate IG · sovraccalib. +14%', tag: 'corp. IG', tagClass: 'tag-amber', overcal: 0.14 },
-  { instr: 'iBonds Corp / BTP', sub: 'Corp. IG o gov. · sovraccalib. +16%', tag: 'OTC', tagClass: 'tag-amber', overcal: 0.16 },
-  { instr: 'iBonds Corp 2035', sub: 'Estensione anno 8 · sovraccalib. +18%', tag: 'ext.', tagClass: 'tag-amber', overcal: 0.18 },
-  { instr: 'iBonds Corp 2036', sub: 'Estensione anno 9 · sovraccalib. +20%', tag: 'ext.', tagClass: 'tag-amber', overcal: 0.20 },
-  { instr: 'BTP singolo / iBonds 2037', sub: 'Estensione anno 10', tag: 'ext.', tagClass: 'tag-amber', overcal: 0.22 },
+  {
+    instr: 'Titolo di Stato inflation-linked',
+    sub: 'Protetto dall\'inflazione · scadenza breve',
+    tag: 'inflaz.', tagClass: 'tag-green', overcal: 0,
+    tips: 'BTP Italia (quotato su MOT). Cedola semestrale + rivalutazione ISTAT. Acquistabile su Fineco/Borsa Italiana. Tassazione agevolata 12.5%. Ideale per i primi 2 anni: capitale garantito dallo Stato e protetto dall\'inflazione reale.'
+  },
+  {
+    instr: 'Titolo di Stato inflation-linked',
+    sub: 'Protetto dall\'inflazione · scadenza breve',
+    tag: 'inflaz.', tagClass: 'tag-green', overcal: 0,
+    tips: 'BTP Italia con scadenza nell\'anno target. Stesso meccanismo dell\'anno 1. Acquista quello con la scadenza più vicina all\'anno di utilizzo.'
+  },
+  {
+    instr: 'Titolo di Stato nominale',
+    sub: 'Governativo · sovraccalib. +8%',
+    tag: 'gov.', tagClass: 'tag-blue', overcal: 0.08,
+    tips: 'BTP nominale con scadenza nell\'anno target (es. BTP 2028–2029). Quotato su MOT, acquistabile su Fineco. Rendimento cedolare fisso. La sovraccalibrazione dell\'+8% copre l\'inflazione attesa nel periodo.'
+  },
+  {
+    instr: 'Titolo di Stato + ETF obbligazionario a scadenza',
+    sub: 'Misto gov./corporate · sovraccalib. +10%',
+    tag: 'misto', tagClass: 'tag-amber', overcal: 0.10,
+    tips: 'Combinazione consigliata: BTP nominale 2029–2030 (50%) + iShares iBonds Dec 2030 Corp UCITS ETF (50%). Gli ETF iBonds sono ETF con scadenza fissa che si comportano come un bond singolo ma sono diversificati su decine di emittenti corporate investment grade. Ticker esempio: IB30.'
+  },
+  {
+    instr: 'ETF obbligazionario corporate a scadenza fissa',
+    sub: 'Corporate Investment Grade · sovraccalib. +12%',
+    tag: 'corp. IG', tagClass: 'tag-amber', overcal: 0.12,
+    tips: 'iShares iBonds Dec 2031 Corp UCITS ETF (ticker: IB31) oppure Xtrackers II EUR Corporate Bond 2031 Maturity UCITS ETF. Entrambi investono in bond corporate EUR investment grade con scadenza 2031. Acquistabili su Borsa Italiana via Fineco. Rischio moderato, diversificazione elevata.'
+  },
+  {
+    instr: 'ETF obbligazionario corporate a scadenza fissa',
+    sub: 'Corporate Investment Grade · sovraccalib. +14%',
+    tag: 'corp. IG', tagClass: 'tag-amber', overcal: 0.14,
+    tips: 'iShares iBonds Dec 2032 Corp UCITS ETF. Stessa logica degli anni precedenti ma con scadenza 2032. Verifica la disponibilità su Fineco — gli iBonds vengono emessi periodicamente da iShares. Alternativa: BTP 2032 se l\'ETF non è ancora quotato.'
+  },
+  {
+    instr: 'ETF corporate IG o Titolo di Stato a lunga scadenza',
+    sub: 'Corporate IG o gov. · sovraccalib. +16%',
+    tag: 'corp. IG', tagClass: 'tag-amber', overcal: 0.16,
+    tips: 'Opzione 1 (preferita): iShares iBonds Dec 2034 Corp UCITS ETF — se disponibile al momento dell\'acquisto. Opzione 2: BTP nominale con scadenza 2033–2034 acquistato sul mercato secondario. A questa distanza temporale la disponibilità varia: monitora Fineco e valuta 18 mesi prima del FIRE.'
+  },
+  {
+    instr: 'ETF obbligazionario a scadenza (estensione)',
+    sub: 'Estensione anno 8 · sovraccalib. +18%',
+    tag: 'ext.', tagClass: 'tag-amber', overcal: 0.18,
+    tips: 'iShares iBonds Dec 2035 Corp UCITS ETF. Da acquistare solo se si attiva lo Scenario A all\'anno 5 o 6 (azionario sopra il target reale). Non acquistare in anticipo: la decisione dipende dalla verifica di estensione.'
+  },
+  {
+    instr: 'ETF obbligazionario a scadenza (estensione)',
+    sub: 'Estensione anno 9 · sovraccalib. +20%',
+    tag: 'ext.', tagClass: 'tag-amber', overcal: 0.20,
+    tips: 'iShares iBonds Dec 2036 Corp UCITS ETF. Stessa logica dell\'anno 8 ext. Da acquistare solo in caso di Scenario A nella verifica di estensione dell\'anno 6.'
+  },
+  {
+    instr: 'Titolo di Stato o ETF a scadenza (estensione)',
+    sub: 'Estensione anno 10',
+    tag: 'ext.', tagClass: 'tag-amber', overcal: 0.22,
+    tips: 'BTP nominale con scadenza 2037 (da acquistare sul mercato secondario) oppure iShares iBonds 2037 se disponibile. A questa distanza, il BTP governativo è spesso più liquido e prevedibile degli ETF corporate a lunga scadenza.'
+  },
 ];
 
 const STATUS_LABELS = {
@@ -874,7 +924,7 @@ function renderSetup() {
     <div class="metric">
       <div class="metric-label">Patrimonio totale</div>
       <div class="metric-value">€${fmt(patrimonio)}</div>
-      <div class="metric-sub">scala + VWCE</div>
+      <div class="metric-sub">scala + azionario</div>
     </div>
     <div class="metric">
       <div class="metric-label">Scala totale</div>
@@ -951,6 +1001,7 @@ function renderLadder() {
       <div>
         <div class="rung-instr">${ins.instr} <span class="tag ${ins.tagClass}">${ins.tag}</span></div>
         <div class="rung-sub">${ins.sub}</div>
+        <details style="margin-top:5px"><summary style="font-size:10px;color:var(--accent);cursor:pointer;list-style:none;display:inline-flex;align-items:center;gap:3px" onclick="event.stopPropagation()">▸ <span style="font-weight:500">strumenti ottimali</span></summary><div style="background:var(--bg);border:1px solid var(--border);border-left:2px solid var(--accent);border-radius:0 5px 5px 0;padding:8px 10px;margin-top:5px;font-size:11px;color:var(--text2);line-height:1.65;max-width:340px">${ins.tips}</div></details>
       </div>
       <div style="text-align:right">
         <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Importo eff. €</div>
@@ -993,7 +1044,7 @@ function calcGuardrail() {
   if (rate < 2.5) {
     cls='g-ok'; label='🟢 Zona di abbondanza'; emoji='✅';
     const new_ = Math.round(spesa*1.1);
-    action=`VWCE è cresciuto molto rispetto a quello che spendi. <strong>Aumenta le spese del 10%</strong> per quest'anno → <strong>€${fmt(new_)}/anno</strong>. Adegua normalmente per inflazione.`;
+    action=`L'azionario è cresciuto molto rispetto a quello che spendi. <strong>Aumenta le spese del 10%</strong> per quest'anno → <strong>€${fmt(new_)}/anno</strong>. Adegua normalmente per inflazione.`;
   } else if (rate <= 5.0) {
     cls='g-neutral'; label='⚪ Zona sicura'; emoji='✓';
     const adj = Math.round(spesa*1.025);
@@ -1001,7 +1052,7 @@ function calcGuardrail() {
   } else {
     cls='g-danger'; label='🔴 Zona di attenzione'; emoji='⚠';
     const new_ = Math.round(spesa*0.9);
-    action=`VWCE ha perso valore. <strong>Taglia le spese del 10%</strong> → <strong>€${fmt(new_)}/anno</strong>. Sospendi l'adeguamento all'inflazione quest'anno. Il mercato si riprenderà — la scala copre nel frattempo.`;
+    action=`L'azionario ha perso valore. <strong>Taglia le spese del 10%</strong> → <strong>€${fmt(new_)}/anno</strong>. Sospendi l'adeguamento all'inflazione quest'anno. Il mercato si riprenderà — la scala copre nel frattempo.`;
   }
 
   document.getElementById('guardrail-result').innerHTML = `
@@ -1011,7 +1062,7 @@ function calcGuardrail() {
         <span class="gr-rate ${rate<2.5?'ok':rate>5?'danger':''}">${rate.toFixed(2)}%</span>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
-        <div class="metric" style="background:rgba(0,0,0,.2)"><div class="metric-label">VWCE attuale</div><div style="font-size:14px;font-weight:600;font-family:var(--mono)">€${fmt(vwce)}</div></div>
+        <div class="metric" style="background:rgba(0,0,0,.2)"><div class="metric-label">Azionario attuale</div><div style="font-size:14px;font-weight:600;font-family:var(--mono)">€${fmt(vwce)}</div></div>
         <div class="metric" style="background:rgba(0,0,0,.2)"><div class="metric-label">Spesa annua</div><div style="font-size:14px;font-weight:600;font-family:var(--mono)">€${fmt(spesa)}</div></div>
         <div class="metric" style="background:rgba(0,0,0,.2)"><div class="metric-label">Tasso effettivo</div><div style="font-size:14px;font-weight:600;font-family:var(--mono)">${rate.toFixed(2)}%</div></div>
       </div>
@@ -1046,8 +1097,8 @@ function calcExtension() {
 
   document.getElementById('extension-result').innerHTML = `
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
-      <div class="metric"><div class="metric-label">Target reale VWCE</div><div style="font-size:13px;font-weight:600;font-family:var(--mono)">€${fmt(Math.round(realTarget))}</div><div class="metric-sub">VWCE iniziale +${Math.round(infl*100)}% inflaz.</div></div>
-      <div class="metric"><div class="metric-label">VWCE oggi</div><div style="font-size:13px;font-weight:600;font-family:var(--mono)">€${fmt(vwceToday)}</div></div>
+      <div class="metric"><div class="metric-label">Target reale azionario</div><div style="font-size:13px;font-weight:600;font-family:var(--mono)">€${fmt(Math.round(realTarget))}</div><div class="metric-sub">azionario iniziale +${Math.round(infl*100)}% inflaz.</div></div>
+      <div class="metric"><div class="metric-label">Azionario oggi</div><div style="font-size:13px;font-weight:600;font-family:var(--mono)">€${fmt(vwceToday)}</div></div>
       <div class="metric"><div class="metric-label">Scostamento reale</div><div style="font-size:13px;font-weight:600;font-family:var(--mono);color:${col}">${diff>=0?'+':''}${fmt(Math.round(diff))}</div><div class="metric-sub">${pct}% vs target reale</div></div>
     </div>
     <div class="ext-card">
@@ -1055,15 +1106,15 @@ function calcExtension() {
       <div class="ext-scenario">
         <div class="ext-dot" style="background:var(--green);opacity:${scenario==='A'?1:.25}"></div>
         <div class="ext-body">
-          <div class="ext-title" style="color:${scenario==='A'?'var(--green)':'var(--text3)'}">Scenario A — VWCE sopra il valore reale iniziale</div>
-          <div class="ext-desc">Mercato andato bene. Vendi il 6–7% di VWCE e compra 2 anni aggiuntivi di scala. La dipendenza dall'equity si sposta all'anno ${yr+2}.</div>
-          ${scenario==='A'?`<div class="ext-action">→ Vendi ~€${fmt(sellAmt)} di VWCE → acquista bond per ~€${fmt(extAmt)} (2 anni)</div>`:''}
+          <div class="ext-title" style="color:${scenario==='A'?'var(--green)':'var(--text3)'}">Scenario A — azionario sopra il valore reale iniziale</div>
+          <div class="ext-desc">Mercato andato bene. Vendi il 6–7% dell'azionario e compra 2 anni aggiuntivi di scala. La dipendenza dall'azionario si sposta all'anno ${yr+2}.</div>
+          ${scenario==='A'?`<div class="ext-action">→ Vendi ~€${fmt(sellAmt)} di azionario → acquista bond per ~€${fmt(extAmt)} (2 anni)</div>`:''}
         </div>
       </div>
       <div class="ext-scenario">
         <div class="ext-dot" style="background:var(--amber);opacity:${scenario==='B'?1:.25}"></div>
         <div class="ext-body">
-          <div class="ext-title" style="color:${scenario==='B'?'var(--amber)':'var(--text3)'}">Scenario B — VWCE tra -20% e 0% dal valore reale</div>
+          <div class="ext-title" style="color:${scenario==='B'?'var(--amber)':'var(--text3)'}">Scenario B — azionario tra -20% e 0% dal valore reale</div>
           <div class="ext-desc">Zona grigia. Non vendere azionario ora. Rimanda la verifica all'anno prossimo. Applica guardrail se tasso supera il 5%.</div>
           ${scenario==='B'?`<div class="ext-action" style="color:var(--amber);background:var(--amber-soft)">→ Nessuna vendita · rivaluta ${yr===5?'anno 6':'tra 6 mesi'}</div>`:''}
         </div>
@@ -1071,8 +1122,8 @@ function calcExtension() {
       <div class="ext-scenario">
         <div class="ext-dot" style="background:var(--red);opacity:${scenario==='C'?1:.25}"></div>
         <div class="ext-body">
-          <div class="ext-title" style="color:${scenario==='C'?'var(--red)':'var(--text3)'}">Scenario C — VWCE sotto il -20% dal valore reale</div>
-          <div class="ext-desc">Crash severo. La scala copre gli anni rimanenti. Non vendere VWCE a questi prezzi. Riduci le spese al minimo. Rivaluta ogni 6 mesi.</div>
+          <div class="ext-title" style="color:${scenario==='C'?'var(--red)':'var(--text3)'}">Scenario C — azionario sotto il -20% dal valore reale</div>
+          <div class="ext-desc">Crash severo. La scala copre gli anni rimanenti. Non vendere l'azionario a questi prezzi. Riduci le spese al minimo. Rivaluta ogni 6 mesi.</div>
           ${scenario==='C'?`<div class="ext-action" style="color:var(--red);background:var(--red-soft)">→ Spese minimo · nessuna vendita · pensione dal ${state.pensionYear}</div>`:''}
         </div>
       </div>
@@ -1093,7 +1144,7 @@ function renderChecklist() {
   const net = state.annualExp - pensionAnnual;
   const swr = (net / state.vwceInitial * 100).toFixed(1);
   document.getElementById('cl-pension').innerHTML =
-    `<strong>Dal ${state.pensionYear}:</strong> pensione €${fmt(state.pensionMonthly)}/mese (€${fmt(pensionAnnual)}/anno) → prelievo netto da VWCE scende a <strong>€${fmt(Math.round(net))}/anno</strong> → SWR effettivo <strong>${swr}%</strong>`;
+    `<strong>Dal ${state.pensionYear}:</strong> pensione €${fmt(state.pensionMonthly)}/mese (€${fmt(pensionAnnual)}/anno) → prelievo netto dall'azionario scende a <strong>€${fmt(Math.round(net))}/anno</strong> → SWR effettivo <strong>${swr}%</strong>`;
 
   const scenarios = [
     { label:'Base (7% reale)', col:'var(--green)', v:Math.round(state.vwceInitial*Math.pow(1.07,state.ladderYears)) },
@@ -1106,7 +1157,7 @@ function renderChecklist() {
       ${scenarios.map(s=>`<div class="metric">
         <div class="metric-label" style="color:${s.col}">${s.label}</div>
         <div style="font-size:14px;font-weight:600;font-family:var(--mono);margin:5px 0">€${fmt(s.v)}</div>
-        <div class="metric-sub">VWCE all'anno ${state.ladderYears+1}</div>
+        <div class="metric-sub">Azionario all'anno ${state.ladderYears+1}</div>
         <div style="font-size:12px;font-family:var(--mono);margin-top:5px;color:${+s.swr>5?'var(--amber)':'var(--green)'}">SWR ${s.swr}%</div>
       </div>`).join('')}
     </div>
