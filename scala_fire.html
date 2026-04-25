@@ -967,37 +967,115 @@ function renderSetup() {
     </div>
   `;
 
-  // SWR projected cards — shown below separately
+  // ── SWR projected cards ──────────────────────────────────────────────
+  const swrBase   = swrProj(azBase);
+  const swrMod    = swrProj(azMod);
+  const swrSev    = swrProj(azSevero);
+  const swrSevGR  = azSevero > 0 ? (spesaFine * 0.9 / azSevero * 100).toFixed(1) : '—';
+
+  // Verdict logic per scenario severo
+  const sevNum = +swrSev;
+  const sevGRNum = +swrSevGR;
+  let sevVerdict, sevVerdictColor, sevVerdictBg;
+  if (sevNum <= 5) {
+    sevVerdict = '✅ Piano solido anche nel caso peggiore.';
+    sevVerdictColor = 'var(--green)'; sevVerdictBg = 'var(--green-soft)';
+  } else if (sevGRNum <= 6.5) {
+    sevVerdict = '⚠️ Gestibile: il guardrail porta il SWR sotto il 6.5%. Taglia le spese del 10% finché il mercato non recupera.';
+    sevVerdictColor = 'var(--amber)'; sevVerdictBg = 'var(--amber-soft)';
+  } else if (sevGRNum <= 8) {
+    sevVerdict = '⚠️ Attenzione: anche con guardrail il SWR è elevato. Valuta di ridurre la scala a 5 anni o aumentare il patrimonio prima del FIRE.';
+    sevVerdictColor = 'var(--amber)'; sevVerdictBg = 'var(--amber-soft)';
+  } else {
+    sevVerdict = '🔴 Piano da rivedere: il SWR nello scenario severo è troppo alto anche con guardrail attivo. Serve più patrimonio o meno spesa.';
+    sevVerdictColor = 'var(--red)'; sevVerdictBg = 'var(--red-soft)';
+  }
+
   document.getElementById('setup-swr').innerHTML = `
-    <div style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.7">
-      SWR calcolato al momento in cui finisce la scala (anno ${ny + 1}), quando inizi a prelevare dall'azionario.
-      L'azionario ha avuto <strong>${ny} anni per crescere indisturbato</strong> — il SWR reale è molto migliore di quello apparente al giorno del FIRE.
-      ${pensionActive ? `Dal <strong>${state.pensionYear}</strong> la pensione copre €${fmt(pensionAnnual)}/anno → spesa netta €${fmt(Math.round(spesaFine))}.` : `La pensione inizia nel <strong>${state.pensionYear}</strong>, dopo la scala.`}
+    <!-- Intro box -->
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:13px 16px;margin-bottom:12px;font-size:12px;color:var(--text2);line-height:1.8">
+      <strong style="color:var(--text)">Come leggere questi numeri</strong><br>
+      Il <strong style="color:var(--text)">SWR (tasso di prelievo)</strong> misura quanto prelevi ogni anno dall'azionario rispetto al suo valore.
+      Qui è calcolato all'<strong style="color:var(--text)">anno ${ny + 1}</strong> — quando finisce la scala e inizi davvero a prelevare —
+      non al giorno del FIRE. Durante i <strong style="color:var(--text)">${ny} anni di scala</strong> l'azionario cresce indisturbato,
+      quindi il SWR reale è molto migliore di quello che vedi sottraendo la scala dal patrimonio oggi.
+      ${pensionActive
+        ? `La pensione è già attiva dall'anno ${ny+1}: la spesa effettiva scende a <strong style="color:var(--text)">€${fmt(Math.round(spesaFine))}/anno</strong>.`
+        : `La pensione inizia nel ${state.pensionYear}, <em>dopo</em> la fine della scala: la spesa rimane €${fmt(state.annualExp)}/anno.`}
     </div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-      <div class="metric" style="border-color:rgba(46,204,143,.3)">
-        <div class="metric-label" style="color:var(--green)">🟢 Scenario ottimista</div>
-        <div style="font-size:11px;color:var(--text3);margin-bottom:6px">+7% reale/anno · mercato storico medio</div>
-        <div style="font-size:15px;font-weight:600;font-family:var(--mono);margin-bottom:3px">€${fmt(azBase)}</div>
-        <div style="font-size:10px;color:var(--text2);margin-bottom:6px">azionario all'anno ${ny + 1}</div>
-        <div style="font-size:16px;font-weight:700;font-family:var(--mono)" class="${swrColor2(swrProj(azBase))}">SWR ${swrProj(azBase)}%</div>
+
+    <!-- 3 scenario cards -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
+
+      <!-- OTTIMISTA -->
+      <div class="metric" style="border-color:rgba(46,204,143,.35);padding:14px">
+        <div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:2px">🟢 Scenario ottimista</div>
+        <div style="font-size:10px;color:var(--text3);margin-bottom:10px">Azionario +7%/anno reale<br>= rendimento storico medio mondiale</div>
+        <div style="font-size:13px;font-weight:600;font-family:var(--mono);color:var(--text);margin-bottom:1px">€${fmt(azBase)}</div>
+        <div style="font-size:10px;color:var(--text2);margin-bottom:8px">azionario all'anno ${ny+1}</div>
+        <div style="font-size:22px;font-weight:700;font-family:var(--mono)" class="${swrColor2(swrBase)}">${swrBase}%</div>
+        <div style="font-size:10px;color:var(--text2);margin-top:2px">tasso di prelievo</div>
+        <div style="margin-top:8px;font-size:11px;color:var(--green);background:var(--green-soft);border-radius:5px;padding:5px 8px;line-height:1.5">
+          Soglia ok: sotto il 4% è sostenibile indefinitamente secondo la ricerca storica.
+        </div>
       </div>
-      <div class="metric" style="border-color:rgba(245,166,35,.3)">
-        <div class="metric-label" style="color:var(--amber)">🟡 Scenario moderato</div>
-        <div style="font-size:11px;color:var(--text3);margin-bottom:6px">+3% reale/anno · crescita lenta</div>
-        <div style="font-size:15px;font-weight:600;font-family:var(--mono);margin-bottom:3px">€${fmt(azMod)}</div>
-        <div style="font-size:10px;color:var(--text2);margin-bottom:6px">azionario all'anno ${ny + 1}</div>
-        <div style="font-size:16px;font-weight:700;font-family:var(--mono)" class="${swrColor2(swrProj(azMod))}">SWR ${swrProj(azMod)}%</div>
+
+      <!-- MODERATO -->
+      <div class="metric" style="border-color:rgba(245,166,35,.35);padding:14px">
+        <div style="font-size:11px;font-weight:700;color:var(--amber);margin-bottom:2px">🟡 Scenario moderato</div>
+        <div style="font-size:10px;color:var(--text3);margin-bottom:10px">Azionario +3%/anno reale<br>= crescita lenta, decennio difficile</div>
+        <div style="font-size:13px;font-weight:600;font-family:var(--mono);color:var(--text);margin-bottom:1px">€${fmt(azMod)}</div>
+        <div style="font-size:10px;color:var(--text2);margin-bottom:8px">azionario all'anno ${ny+1}</div>
+        <div style="font-size:22px;font-weight:700;font-family:var(--mono)" class="${swrColor2(swrMod)}">${swrMod}%</div>
+        <div style="font-size:10px;color:var(--text2);margin-top:2px">tasso di prelievo</div>
+        <div style="margin-top:8px;font-size:11px;color:var(--amber);background:var(--amber-soft);border-radius:5px;padding:5px 8px;line-height:1.5">
+          Soglia ok: fino al 5% è accettabile con guardrail attivo.
+        </div>
       </div>
-      <div class="metric" style="border-color:rgba(232,93,93,.3)">
-        <div class="metric-label" style="color:var(--red)">🔴 Scenario severo</div>
-        <div style="font-size:11px;color:var(--text3);margin-bottom:6px">-45% anno 1 · poi +5% · caso peggiore</div>
-        <div style="font-size:15px;font-weight:600;font-family:var(--mono);margin-bottom:3px">€${fmt(azSevero)}</div>
-        <div style="font-size:10px;color:var(--text2);margin-bottom:6px">azionario all'anno ${ny + 1}</div>
-        <div style="font-size:16px;font-weight:700;font-family:var(--mono)" class="${swrColor2(swrProj(azSevero))}">SWR ${swrProj(azSevero)}%</div>
-        <div style="font-size:10px;color:var(--red);margin-top:4px">guardrail: taglia spese -10%</div>
+
+      <!-- SEVERO -->
+      <div class="metric" style="border-color:rgba(232,93,93,.35);padding:14px">
+        <div style="font-size:11px;font-weight:700;color:var(--red);margin-bottom:2px">🔴 Scenario severo</div>
+        <div style="font-size:10px;color:var(--text3);margin-bottom:10px">Crash -45% anno 1, poi +5%/anno<br>= il caso peggiore plausibile</div>
+        <div style="font-size:13px;font-weight:600;font-family:var(--mono);color:var(--text);margin-bottom:1px">€${fmt(azSevero)}</div>
+        <div style="font-size:10px;color:var(--text2);margin-bottom:8px">azionario all'anno ${ny+1}</div>
+        <div style="font-size:22px;font-weight:700;font-family:var(--mono)" class="${swrColor2(swrSev)}">${swrSev}%</div>
+        <div style="font-size:10px;color:var(--text2);margin-top:2px">tasso di prelievo</div>
+        <div style="margin-top:6px;display:flex;align-items:baseline;gap:6px">
+          <span style="font-size:10px;color:var(--text3)">con guardrail -10%:</span>
+          <span style="font-size:14px;font-weight:700;font-family:var(--mono)" class="${swrColor2(swrSevGR)}">${swrSevGR}%</span>
+        </div>
+        <div style="margin-top:8px;font-size:11px;color:var(--red);background:var(--red-soft);border-radius:5px;padding:5px 8px;line-height:1.5">
+          Soglia ok: fino al 6.5% con guardrail. Sopra l'8% il piano va rivisto.
+        </div>
       </div>
     </div>
+
+    <!-- Verdict banner -->
+    <div style="background:${sevVerdictBg};border:1px solid ${sevVerdictColor}40;border-left:3px solid ${sevVerdictColor};border-radius:0 8px 8px 0;padding:11px 15px;font-size:12px;color:${sevVerdictColor};line-height:1.7;margin-bottom:12px">
+      <strong>Valutazione scenario peggiore:</strong> ${sevVerdict}
+    </div>
+
+    <!-- Reference table -->
+    <details>
+      <summary><span>Soglie di riferimento SWR — cosa significano i numeri</span></summary>
+      <div class="info-box" style="margin-top:8px">
+        <strong>Senza guardrail (regola del 4%, Trinity Study):</strong>
+        <ul>
+          <li><strong style="color:var(--green)">&lt; 4%</strong> — sostenibile per 30+ anni nel 95% degli scenari storici</li>
+          <li><strong style="color:var(--amber)">4%–5%</strong> — sostenibile per 30 anni nell'85% degli scenari</li>
+          <li><strong style="color:var(--red)">&gt; 5%</strong> — rischio concreto di esaurire il portafoglio</li>
+        </ul>
+        <strong>Con guardrail dinamico + scala obbligazionaria (il tuo caso):</strong>
+        <ul>
+          <li><strong style="color:var(--green)">&lt; 5%</strong> — ottimo, piano solidissimo</li>
+          <li><strong style="color:var(--green)">5%–6.5%</strong> — accettabile: il guardrail gestisce i periodi difficili</li>
+          <li><strong style="color:var(--amber)">6.5%–8%</strong> — attenzione: funziona ma con poco margine</li>
+          <li><strong style="color:var(--red)">&gt; 8%</strong> — piano da rivedere strutturalmente</li>
+        </ul>
+        Le soglie più alte rispetto alla regola del 4% sono giustificate da: (1) la scala ti protegge nei primi anni critici, (2) il guardrail taglia le spese quando serve, (3) la pensione INPS riduce il prelievo nel lungo periodo.
+      </div>
+    </details>
   `;
   // Also pre-fill guardrail with derived azionario
   const gcEl = document.getElementById('vwceCurrent');
