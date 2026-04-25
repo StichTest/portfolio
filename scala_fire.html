@@ -418,20 +418,32 @@
   <div class="view" id="view-ladder">
 
     <div class="view-header">
-      <h2>Scala — gestione dei bond</h2>
-      <p>Traccia lo stato di ogni obbligazione: da acquistare, acquistata, anno corrente o incassata.</p>
-      <span class="action-badge">🛒 Ogni anno: aggiorna lo stato del bond dell'anno corrente</span>
+      <h2>Scala — acquisto e tracciamento dei bond</h2>
+      <p>Tutti i bond vanno acquistati <strong>insieme, 6–12 mesi prima del FIRE</strong>. Questa sezione ti aiuta a tenerli sotto controllo.</p>
+      <span class="action-badge">🛒 Prima del FIRE: acquista tutto in una volta · Durante il FIRE: aggiorna lo stato ogni anno</span>
     </div>
 
     <div class="card">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+        <div style="background:var(--blue-soft);border:1px solid rgba(79,127,255,.25);border-radius:8px;padding:12px 14px">
+          <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:6px">📦 Prima del FIRE — acquisto</div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.7">
+            Acquista <strong style="color:var(--text)">tutti i bond insieme</strong>, 6–12 mesi prima di smettere di lavorare. Non aspettare anno per anno: vuoi bloccare il rendimento oggi e avere tutto pronto il giorno 1 del FIRE.<br><br>
+            Man mano che acquisti, cambia lo stato da <em>Da acquistare</em> → <strong>Acquistato ✓</strong>.
+          </div>
+        </div>
+        <div style="background:var(--green-soft);border:1px solid rgba(46,204,143,.25);border-radius:8px;padding:12px 14px">
+          <div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:6px">📅 Durante il FIRE — incasso annuale</div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.7">
+            Ogni gennaio, il bond dell'anno corrente (evidenziato in blu) arriva a scadenza e viene rimborsato automaticamente sul conto.<br><br>
+            Cambia lo stato → <strong>Incassato ✓✓</strong>, avanza l'anno con il pulsante +, e salva.
+          </div>
+        </div>
+      </div>
       <details style="margin-bottom:14px">
-        <summary><span>Come usare questa sezione</span></summary>
+        <summary><span>Perché comprare tutto in anticipo e non anno per anno?</span></summary>
         <div class="info-box">
-          <strong>Prima del FIRE:</strong> compra i bond uno alla volta (puoi farlo in anticipo di 1–2 anni). Metti lo stato su "Acquistato ✓" man mano che procedi.
-          <br><br>
-          <strong>Durante il FIRE:</strong> ogni gennaio, incassa il bond dell'anno corrente (quello evidenziato in blu). Sposta il suo stato su "Incassato ✓✓". Avanza l'anno con il pulsante + in basso.
-          <br><br>
-          <strong>Importo effettivo:</strong> inserisci quanto hai effettivamente acquistato (potrebbe differire leggermente dal target per disponibilità di mercato). La colonna "Diff." ti dice se sei sopra o sotto il target.
+          Aspettare significa esporsi al rischio che i rendimenti siano peggiorati o che lo strumento giusto non sia più disponibile. Comprando tutto insieme blocchi i rendimenti attuali e sai esattamente quanto incasserai ogni anno. L'unica eccezione sono i bond di estensione (anni 8–10): quelli si decidono solo all'anno 5–6, in base all'andamento dell'azionario.
         </div>
       </details>
 
@@ -475,111 +487,72 @@
   <div class="view" id="view-guardrail">
 
     <div class="view-header">
-      <h2>Guardrail — controllo annuale del portafoglio</h2>
-      <p>Da fare ogni gennaio. Inserisci il valore attuale del tuo portafoglio azionario e la tua spesa annua: l'app ti dice cosa fare.</p>
-      <span class="action-badge">📅 Ogni gennaio: 2 minuti di controllo</span>
+      <h2>Guardrail — controllo annuale</h2>
+      <p>Ogni gennaio aggiorni il valore dell'azionario. L'app ti dice subito cosa fare quest'anno.</p>
+      <span class="action-badge">📅 Ogni gennaio: apri l'app, aggiorna il valore, segui l'istruzione</span>
     </div>
 
+    <!-- GUARDRAIL CARD -->
     <div class="card">
-      <div class="card-title">Calcola il tasso di prelievo effettivo</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px">
 
-      <details style="margin-bottom:14px">
-        <summary><span>Cos'è il "guardrail" e come funziona</span></summary>
-        <div class="info-box">
-          Il <strong>tasso di prelievo</strong> è il rapporto tra quanto spendi e quanto vale il tuo portafoglio azionario. Funziona come un semaforo:
-          <ul>
-            <li>🟢 <strong>Sotto il 2.5%:</strong> L'azionario è cresciuto molto. Puoi permetterti di spendere di più.</li>
-            <li>⚪ <strong>2.5%–5.0%:</strong> zona sicura. Vai avanti normalmente, adegua solo per inflazione.</li>
-            <li>🔴 <strong>Sopra il 5.0%:</strong> L'azionario è sceso. Taglia le spese del 10% quest'anno.</li>
-          </ul>
-          <span class="info-formula">Tasso = spesa annua ÷ valore attuale azionario × 100</span>
-          <strong>Perché usarlo?</strong> Senza guardrail, rischi di spendere troppo durante un crollo di mercato. Con il guardrail, ti adatti automaticamente — senza decisioni emotive.
-        </div>
-      </details>
-
-      <div class="field-group" style="margin-bottom:16px">
         <div class="field">
-          <div class="field-label">📈 Valore attuale portafoglio azionario (€)</div>
-          <input type="number" id="vwceCurrent" value="385000" oninput="this.dataset.manualOverride='1';calcGuardrail()">
-          <div style="font-size:10px;color:var(--text3);margin-top:4px;font-family:var(--mono)">↳ precompilato da Setup · modifica per aggiornamenti annuali</div>
-          <details>
-            <summary><span>Dove trovo questo valore</span></summary>
-            <div class="info-box">
-              Accedi a Fineco o al tuo broker e guarda il valore di mercato attuale del portafoglio azionario. Prendi il valore di un giorno qualsiasi all'inizio di gennaio — non serve essere precisi al centesimo.
-            </div>
-          </details>
+          <div class="field-label">📈 Valore azionario oggi (€)</div>
+          <input type="number" id="vwceCurrent" oninput="this.dataset.manualOverride='1';calcGuardrail()">
+          <div style="font-size:10px;color:var(--text3);margin-top:4px">
+            Autocompilato dal Setup · aggiorna ogni gennaio con il valore reale da Fineco
+          </div>
         </div>
+
         <div class="field">
-          <div class="field-label">💸 Spesa annua effettiva (€)</div>
-          <input type="number" id="spesaEffettiva" value="30000" oninput="calcGuardrail()">
-          <details>
-            <summary><span>Spesa prevista o effettiva?</span></summary>
-            <div class="info-box">
-              Usa la spesa <strong>prevista per l'anno che inizia</strong>, già aggiornata per inflazione (normalmente +2–3%). Se l'anno scorso hai speso €29.000, stima €29.600–30.000 per quest'anno.
-            </div>
-          </details>
+          <div class="field-label">💸 Spesa prevista quest'anno (€)</div>
+          <input type="number" id="spesaEffettiva" oninput="calcGuardrail()">
+          <div style="font-size:10px;color:var(--text3);margin-top:4px">
+            Stima per l'anno che inizia, aggiornata per inflazione (+2–3% sull'anno scorso)
+          </div>
+        </div>
+
+      </div>
+
+      <!-- visual range bar -->
+      <div style="margin-bottom:6px">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:4px;font-family:var(--mono)">
+          <span>0%</span><span style="color:var(--green)">2.5% → spendi di più</span><span>zona ok</span><span style="color:var(--red)">5.0% → taglia spese</span>
+        </div>
+        <div style="display:flex;height:6px;border-radius:3px;overflow:hidden">
+          <div style="flex:2.5;background:var(--green)"></div>
+          <div style="flex:2.5;background:var(--border2)"></div>
+          <div style="flex:1;background:var(--red)"></div>
         </div>
       </div>
 
-      <div class="gr-range">
-        <div class="gr-range-low"></div>
-        <div class="gr-range-mid"></div>
-        <div class="gr-range-high"></div>
-      </div>
-      <div class="gr-range-labels">
-        <span style="color:var(--green)">0%</span>
-        <span style="color:var(--green)">2.5% ↑ spendi di più</span>
-        <span>zona sicura</span>
-        <span style="color:var(--red)">5.0% ↓ taglia spese</span>
-        <span style="color:var(--red)">∞</span>
-      </div>
-
-      <div id="guardrail-result"></div>
+      <div id="guardrail-result" style="margin-top:16px"></div>
     </div>
 
+    <!-- ESTENSIONE CARD -->
     <div class="card">
-      <div class="card-title">Estensione della scala — solo all'anno 5 e 6</div>
+      <div class="card-title">Estensione della scala — da valutare all'anno 5 e 6</div>
 
-      <details style="margin-bottom:14px">
-        <summary><span>Cos'è l'estensione e quando farla</span></summary>
-        <div class="info-box">
-          All'anno 5 o 6 di FIRE, hai consumato metà della scala. È il momento di decidere: <strong>allungarla comprando altri 1–2 anni di bond?</strong>
-          <br><br>
-          La risposta dipende da quanto vale l'azionario rispetto al suo valore iniziale, aggiustato per l'inflazione nel frattempo:
-          <ul>
-            <li>🟢 <strong>Scenario A — azionario sopra il target reale:</strong> mercato andato bene. Vendi una piccola quota dell'azionario (6–7%) e compra 2 anni di bond aggiuntivi. Ottimo momento per farlo.</li>
-            <li>🟡 <strong>Scenario B — azionario tra -20% e 0% dal target:</strong> mercato incerto. Non fare nulla. Aspetta l'anno prossimo.</li>
-            <li>🔴 <strong>Scenario C — azionario sotto il -20% dal target:</strong> crash severo. Non vendere. Vivi con la scala rimanente. Riduci le spese.</li>
-          </ul>
-          <strong>Il bello di questa regola:</strong> è meccanica, non lascia spazio all'emotività.
-        </div>
-      </details>
+      <div style="background:var(--surface2);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:12px;color:var(--text2);line-height:1.8">
+        A metà scala (anno 5 o 6) valuti se comprare altri 1–2 anni di bond, vendendo una piccola quota dell'azionario.
+        <strong style="color:var(--text)">La decisione è meccanica</strong>: dipende solo da quanto vale l'azionario rispetto al giorno del FIRE, corretto per l'inflazione.
+      </div>
 
-      <div class="field-group" style="margin-bottom:16px">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px">
         <div class="field">
-          <div class="field-label">Azionario iniziale al FIRE (€)</div>
-          <input type="number" id="vwceFireExt" value="385000" oninput="this.dataset.manualOverride='1';calcExtension()">
+          <div class="field-label">Azionario al giorno del FIRE (€)</div>
+          <input type="number" id="vwceFireExt" oninput="this.dataset.manualOverride='1';calcExtension()">
+          <div style="font-size:10px;color:var(--text3);margin-top:4px">Autocompilato dal Setup</div>
         </div>
         <div class="field">
           <div class="field-label">Azionario oggi (€)</div>
-          <input type="number" id="vwceTodayExt" value="385000" oninput="this.dataset.manualOverride='1';calcExtension()">
+          <input type="number" id="vwceTodayExt" oninput="this.dataset.manualOverride='1';calcExtension()">
+          <div style="font-size:10px;color:var(--text3);margin-top:4px">Aggiorna con il valore reale</div>
         </div>
         <div class="field">
           <div class="field-label">Inflazione cumulata (%)</div>
           <input type="number" id="inflCumul" value="15" oninput="calcExtension()">
-          <details>
-            <summary><span>Come calcolarla</span></summary>
-            <div class="info-box">
-              Inflazione cumulata in 5 anni al 3%/anno ≈ +16%. Puoi trovare i dati ISTAT su istat.it → Indici dei prezzi al consumo. In alternativa usa 15–20% come stima conservativa per 5 anni.
-            </div>
-          </details>
-        </div>
-        <div class="field">
-          <div class="field-label">Anno FIRE corrente</div>
-          <select id="extYear" onchange="calcExtension()">
-            <option value="5" selected>Anno 5</option>
-            <option value="6">Anno 6</option>
-          </select>
+          <div style="font-size:10px;color:var(--text3);margin-top:4px">~15–20% su 5 anni (dati ISTAT)</div>
         </div>
       </div>
 
@@ -1181,93 +1154,146 @@ function calcGuardrail() {
   if (!vwce || !spesa) return;
 
   const rate = spesa / vwce * 100;
-  let cls, label, action, emoji;
+
+  let bgColor, borderColor, rateColor, icon, zona, titolo, spiegazione, azione, spesaNew;
 
   if (rate < 2.5) {
-    cls='g-ok'; label='🟢 Zona di abbondanza'; emoji='✅';
-    const new_ = Math.round(spesa*1.1);
-    action=`L'azionario è cresciuto molto rispetto a quello che spendi. <strong>Aumenta le spese del 10%</strong> per quest'anno → <strong>€${fmt(new_)}/anno</strong>. Adegua normalmente per inflazione.`;
+    bgColor = 'var(--green-soft)'; borderColor = 'rgba(46,204,143,.4)';
+    rateColor = 'var(--green)'; icon = '🟢'; zona = 'ZONA VERDE';
+    titolo = 'Il portafoglio è cresciuto — puoi spendere di più';
+    spiegazione = "L'azionario vale molto più della tua spesa annua. Questo è il segnale che il tuo FIRE va benissimo.";
+    spesaNew = Math.round(spesa * 1.10);
+    azione = `Aumenta il budget annuale del <strong>+10%</strong> → <strong style="font-size:15px">€${fmt(spesaNew)}</strong>/anno`;
   } else if (rate <= 5.0) {
-    cls='g-neutral'; label='⚪ Zona sicura'; emoji='✓';
-    const adj = Math.round(spesa*1.025);
-    action=`Tutto nella norma. <strong>Mantieni le spese</strong> e adegua solo per inflazione ISTAT → stima €${fmt(adj)}/anno per quest'anno. Nessuna altra azione richiesta.`;
+    bgColor = 'var(--surface2)'; borderColor = 'var(--border2)';
+    rateColor = 'var(--text)'; icon = '⚪'; zona = 'ZONA SICURA';
+    titolo = 'Tutto nella norma — nessuna azione richiesta';
+    spiegazione = "Il tasso di prelievo è nel range ottimale. Il piano funziona come previsto.";
+    spesaNew = Math.round(spesa * 1.025);
+    azione = `Mantieni le spese e adegua solo per inflazione → <strong style="font-size:15px">€${fmt(spesaNew)}</strong>/anno (+2.5%)`;
   } else {
-    cls='g-danger'; label='🔴 Zona di attenzione'; emoji='⚠';
-    const new_ = Math.round(spesa*0.9);
-    action=`L'azionario ha perso valore. <strong>Taglia le spese del 10%</strong> → <strong>€${fmt(new_)}/anno</strong>. Sospendi l'adeguamento all'inflazione quest'anno. Il mercato si riprenderà — la scala copre nel frattempo.`;
+    bgColor = 'var(--red-soft)'; borderColor = 'rgba(232,93,93,.4)';
+    rateColor = 'var(--red)'; icon = '🔴'; zona = 'ZONA ROSSA';
+    titolo = 'Il portafoglio è sceso — riduci le spese temporaneamente';
+    spiegazione = "L'azionario ha perso valore. La scala obbligazionaria ti copre per ora — ma è il momento di stringere la cinghia finché il mercato non si riprende.";
+    spesaNew = Math.round(spesa * 0.90);
+    azione = `Riduci il budget del <strong>-10%</strong> → <strong style="font-size:15px">€${fmt(spesaNew)}</strong>/anno · sospendi l'adeguamento inflazione`;
   }
 
   document.getElementById('guardrail-result').innerHTML = `
-    <div class="guardrail ${cls}">
-      <div class="gr-top">
-        <span class="gr-label">${label}</span>
-        <span class="gr-rate ${rate<2.5?'ok':rate>5?'danger':''}">${rate.toFixed(2)}%</span>
+    <div style="background:${bgColor};border:2px solid ${borderColor};border-radius:10px;padding:18px 20px">
+
+      <!-- Header riga -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div>
+          <div style="font-size:10px;font-weight:700;letter-spacing:.1em;color:${rateColor};margin-bottom:3px">${icon} ${zona}</div>
+          <div style="font-size:14px;font-weight:600;color:var(--text)">${titolo}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:32px;font-weight:700;font-family:var(--mono);color:${rateColor};line-height:1">${rate.toFixed(1)}%</div>
+          <div style="font-size:10px;color:var(--text3)">tasso di prelievo</div>
+        </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
-        <div class="metric" style="background:rgba(0,0,0,.2)"><div class="metric-label">Azionario attuale</div><div style="font-size:14px;font-weight:600;font-family:var(--mono)">€${fmt(vwce)}</div></div>
-        <div class="metric" style="background:rgba(0,0,0,.2)"><div class="metric-label">Spesa annua</div><div style="font-size:14px;font-weight:600;font-family:var(--mono)">€${fmt(spesa)}</div></div>
-        <div class="metric" style="background:rgba(0,0,0,.2)"><div class="metric-label">Tasso effettivo</div><div style="font-size:14px;font-weight:600;font-family:var(--mono)">${rate.toFixed(2)}%</div></div>
+
+      <!-- Spiegazione -->
+      <div style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.7">${spiegazione}</div>
+
+      <!-- Azione -->
+      <div style="background:rgba(0,0,0,.2);border-radius:7px;padding:11px 14px;font-size:13px;color:var(--text);line-height:1.6">
+        <span style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);display:block;margin-bottom:4px">👉 Azione per quest'anno</span>
+        ${azione}
       </div>
-      <div class="gr-action">${emoji} <strong>Azione richiesta:</strong> ${action}</div>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px">
-      <div class="metric" style="border-color:rgba(46,204,143,.3)"><div class="metric-label" style="color:var(--green)">Guardrail basso</div><div class="metric-value ok">2.50%</div><div class="metric-sub">sotto → +10% spese</div></div>
-      <div class="metric"><div class="metric-label">Zona sicura</div><div style="font-size:15px;font-weight:600;font-family:var(--mono)">2.5–5.0%</div><div class="metric-sub">solo adeg. inflazione</div></div>
-      <div class="metric" style="border-color:rgba(232,93,93,.3)"><div class="metric-label" style="color:var(--red)">Guardrail alto</div><div class="metric-value danger">5.00%</div><div class="metric-sub">sopra → -10% spese</div></div>
+
+      <!-- Mini stats -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px">
+        <div style="background:rgba(0,0,0,.15);border-radius:6px;padding:8px 10px">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Azionario oggi</div>
+          <div style="font-size:13px;font-weight:600;font-family:var(--mono)">€${fmt(vwce)}</div>
+        </div>
+        <div style="background:rgba(0,0,0,.15);border-radius:6px;padding:8px 10px">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Spesa attuale</div>
+          <div style="font-size:13px;font-weight:600;font-family:var(--mono)">€${fmt(spesa)}</div>
+        </div>
+        <div style="background:rgba(0,0,0,.15);border-radius:6px;padding:8px 10px">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Budget nuovo</div>
+          <div style="font-size:13px;font-weight:600;font-family:var(--mono);color:${rateColor}">€${fmt(spesaNew)}</div>
+        </div>
+      </div>
     </div>
   `;
   calcExtension();
 }
 
 function calcExtension() {
+  const extEl = document.getElementById('extension-result');
+  if (!extEl) return;
+
+  const yr = state.currentFireYear;
+  if (yr < 5 || yr > 6) {
+    extEl.innerHTML = `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;font-size:12px;color:var(--text3);text-align:center">
+      Questa verifica si fa solo all'anno 5 e 6 di FIRE.<br>
+      <span style="color:var(--text2)">Sei all'anno <strong style="color:var(--text)">${yr}</strong> — torna qui quando arrivi all'anno 5.</span>
+    </div>`;
+    return;
+  }
+
   const vwceFire = +document.getElementById('vwceFireExt').value || state.vwceInitial;
   const vwceToday = +document.getElementById('vwceTodayExt').value || state.vwceInitial;
   const infl = (+document.getElementById('inflCumul').value || 15) / 100;
-  const yr = +document.getElementById('extYear').value || 5;
 
   const realTarget = vwceFire * (1 + infl);
   const diff = vwceToday - realTarget;
   const pct = ((vwceToday / realTarget - 1) * 100).toFixed(1);
 
-  let scenario, col;
-  if (diff >= 0) { scenario='A'; col='var(--green)'; }
-  else if (vwceToday >= vwceFire * 0.8) { scenario='B'; col='var(--amber)'; }
-  else { scenario='C'; col='var(--red)'; }
-
+  let scenario, scenCol, scenBg, scenIcon, scenTitolo, scenDesc, scenAzione;
   const extAmt = Math.round(state.annualExp * 2 * 1.18);
   const sellAmt = Math.round(vwceToday * 0.065);
 
-  document.getElementById('extension-result').innerHTML = `
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
-      <div class="metric"><div class="metric-label">Target reale azionario</div><div style="font-size:13px;font-weight:600;font-family:var(--mono)">€${fmt(Math.round(realTarget))}</div><div class="metric-sub">azionario iniziale +${Math.round(infl*100)}% inflaz.</div></div>
-      <div class="metric"><div class="metric-label">Azionario oggi</div><div style="font-size:13px;font-weight:600;font-family:var(--mono)">€${fmt(vwceToday)}</div></div>
-      <div class="metric"><div class="metric-label">Scostamento reale</div><div style="font-size:13px;font-weight:600;font-family:var(--mono);color:${col}">${diff>=0?'+':''}${fmt(Math.round(diff))}</div><div class="metric-sub">${pct}% vs target reale</div></div>
+  if (diff >= 0) {
+    scenario='A'; scenCol='var(--green)'; scenBg='var(--green-soft)'; scenIcon='🟢';
+    scenTitolo = 'Mercato andato bene — estendi la scala';
+    scenDesc = `L'azionario ha superato il suo valore reale di partenza (inflazione inclusa). È il momento ideale per vendere una piccola quota e comprare altri 2 anni di bond.`;
+    scenAzione = `Vendi circa <strong>€${fmt(sellAmt)}</strong> di azionario (6–7%) → acquista bond per <strong>€${fmt(extAmt)}</strong> (2 anni) → la scala arriva all'anno ${yr+2}`;
+  } else if (vwceToday >= vwceFire * 0.8) {
+    scenario='B'; scenCol='var(--amber)'; scenBg='var(--amber-soft)'; scenIcon='🟡';
+    scenTitolo = 'Mercato incerto — aspetta';
+    scenDesc = `L'azionario è leggermente sotto il suo valore reale di partenza, ma non abbastanza da preoccuparsi. Non è il momento di vendere.`;
+    scenAzione = yr===5 ? `Non fare nulla quest'anno. Rivaluta all'anno 6.` : `Non fare nulla. La scala esistente regge — vivi con gli anni rimanenti.`;
+  } else {
+    scenario='C'; scenCol='var(--red)'; scenBg='var(--red-soft)'; scenIcon='🔴';
+    scenTitolo = "Crash severo — non toccare l'azionario";
+    scenDesc = `L'azionario è sceso di oltre il 20% in termini reali. Vendere ora significherebbe cristallizzare le perdite nel momento peggiore.`;
+    scenAzione = `Non vendere nulla. Vivi con la scala rimanente. Riduci le spese (guardrail). La pensione dal ${state.pensionYear} ridurrà il prelievo necessario.`;
+  }
+
+  extEl.innerHTML = `
+    <!-- confronto numeri -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
+      <div class="metric">
+        <div class="metric-label">Azionario al FIRE</div>
+        <div style="font-size:14px;font-weight:600;font-family:var(--mono)">€${fmt(vwceFire)}</div>
+        <div class="metric-sub">valore iniziale</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Target reale oggi</div>
+        <div style="font-size:14px;font-weight:600;font-family:var(--mono)">€${fmt(Math.round(realTarget))}</div>
+        <div class="metric-sub">+${Math.round(infl*100)}% inflazione cumulata</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Azionario oggi</div>
+        <div style="font-size:14px;font-weight:600;font-family:var(--mono);color:${scenCol}">€${fmt(vwceToday)}</div>
+        <div class="metric-sub" style="color:${scenCol}">${diff>=0?'+':''}${pct}% vs target reale</div>
+      </div>
     </div>
-    <div class="ext-card">
-      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Anno ${yr} di FIRE · Scenario attivo: <strong style="color:${col}">Scenario ${scenario}</strong></div>
-      <div class="ext-scenario">
-        <div class="ext-dot" style="background:var(--green);opacity:${scenario==='A'?1:.25}"></div>
-        <div class="ext-body">
-          <div class="ext-title" style="color:${scenario==='A'?'var(--green)':'var(--text3)'}">Scenario A — azionario sopra il valore reale iniziale</div>
-          <div class="ext-desc">Mercato andato bene. Vendi il 6–7% dell'azionario e compra 2 anni aggiuntivi di scala. La dipendenza dall'azionario si sposta all'anno ${yr+2}.</div>
-          ${scenario==='A'?`<div class="ext-action">→ Vendi ~€${fmt(sellAmt)} di azionario → acquista bond per ~€${fmt(extAmt)} (2 anni)</div>`:''}
-        </div>
-      </div>
-      <div class="ext-scenario">
-        <div class="ext-dot" style="background:var(--amber);opacity:${scenario==='B'?1:.25}"></div>
-        <div class="ext-body">
-          <div class="ext-title" style="color:${scenario==='B'?'var(--amber)':'var(--text3)'}">Scenario B — azionario tra -20% e 0% dal valore reale</div>
-          <div class="ext-desc">Zona grigia. Non vendere azionario ora. Rimanda la verifica all'anno prossimo. Applica guardrail se tasso supera il 5%.</div>
-          ${scenario==='B'?`<div class="ext-action" style="color:var(--amber);background:var(--amber-soft)">→ Nessuna vendita · rivaluta ${yr===5?'anno 6':'tra 6 mesi'}</div>`:''}
-        </div>
-      </div>
-      <div class="ext-scenario">
-        <div class="ext-dot" style="background:var(--red);opacity:${scenario==='C'?1:.25}"></div>
-        <div class="ext-body">
-          <div class="ext-title" style="color:${scenario==='C'?'var(--red)':'var(--text3)'}">Scenario C — azionario sotto il -20% dal valore reale</div>
-          <div class="ext-desc">Crash severo. La scala copre gli anni rimanenti. Non vendere l'azionario a questi prezzi. Riduci le spese al minimo. Rivaluta ogni 6 mesi.</div>
-          ${scenario==='C'?`<div class="ext-action" style="color:var(--red);background:var(--red-soft)">→ Spese minimo · nessuna vendita · pensione dal ${state.pensionYear}</div>`:''}
-        </div>
+
+    <!-- scenario banner -->
+    <div style="background:${scenBg};border:2px solid ${scenCol}50;border-radius:10px;padding:16px 18px">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.1em;color:${scenCol};margin-bottom:4px">${scenIcon} SCENARIO ${scenario} · ANNO ${yr}</div>
+      <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:8px">${scenTitolo}</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.7">${scenDesc}</div>
+      <div style="background:rgba(0,0,0,.2);border-radius:7px;padding:11px 14px;font-size:12px;color:var(--text);line-height:1.7">
+        <span style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);display:block;margin-bottom:4px">👉 Azione</span>
+        ${scenAzione}
       </div>
     </div>
   `;
