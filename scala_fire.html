@@ -306,34 +306,23 @@
       <div class="field-group">
 
         <div class="field">
+          <div class="field-label">💰 Patrimonio totale al giorno del FIRE (€)</div>
+          <input type="number" id="patrimonio" value="500000" oninput="recalc()">
+          <details>
+            <summary><span>Cosa inserire qui</span></summary>
+            <div class="info-box">
+              Il valore complessivo di tutti i tuoi investimenti nel momento in cui inizi il FIRE: ETF azionari, obbligazioni già in portafoglio, liquidità investita. <strong>Non includere</strong> la liquidità sul conto corrente tenuta come buffer mensile. Il sistema calcola automaticamente quanto destinare alla scala e quanto rimane come azionario.
+            </div>
+          </details>
+        </div>
+
+        <div class="field">
           <div class="field-label">💸 Spesa annua totale (€)</div>
           <input type="number" id="annualExp" value="30000" oninput="recalc()">
           <details>
             <summary><span>Cosa inserire qui</span></summary>
             <div class="info-box">
-              Tutto quello che spendi in un anno: affitto/mutuo, cibo, trasporti, svago, viaggi. Includi anche le spese straordinarie medie (es. riparazioni auto, dentista). <strong>Sovrastima leggermente</strong> — è meglio avere margine che restare a corto. Esempio: se spendi ~€2.000/mese, metti €28.000–30.000.
-            </div>
-          </details>
-        </div>
-
-        <div class="field">
-          <div class="field-label">📅 Anno di inizio FIRE</div>
-          <input type="number" id="fireYear" value="2027" min="2025" max="2040" oninput="recalc()">
-          <details>
-            <summary><span>Cosa inserire qui</span></summary>
-            <div class="info-box">
-              L'anno in cui smetti di lavorare. Serve per calcolare le scadenze dei bond: se inizi nel 2027, il primo bond scadrà nel 2027, il secondo nel 2028, ecc.
-            </div>
-          </details>
-        </div>
-
-        <div class="field">
-          <div class="field-label">📈 Valore portafoglio azionario al giorno del FIRE (€)</div>
-          <input type="number" id="vwceInitial" value="385000" oninput="recalc()">
-          <details>
-            <summary><span>Cosa inserire qui</span></summary>
-            <div class="info-box">
-              Il valore totale del tuo portafoglio azionario nel momento in cui inizi il FIRE. Questo è il "motore" del tuo patrimonio a lungo termine — non lo tocchi nei primi anni. <strong>Nota:</strong> questo valore è usato per calcolare il tasso di prelievo (SWR) e decidere se il portafoglio regge nel lungo periodo.
+              Tutto quello che spendi in un anno: affitto/mutuo, cibo, trasporti, svago, viaggi, spese straordinarie medie. <strong>Sovrastima leggermente</strong> — è meglio avere margine che restare a corto. Esempio: se spendi ~€2.000/mese, metti €28.000–30.000.
             </div>
           </details>
         </div>
@@ -351,7 +340,18 @@
           <details>
             <summary><span>Quanti anni scegliere?</span></summary>
             <div class="info-box">
-              Quanti anni di spese vuoi "blindare" con obbligazioni. <strong>7 anni è il compromesso standard:</strong> copre la grande maggioranza dei bear market storici (il peggiore durato ~6 anni), senza immobilizzare troppo capitale in asset a basso rendimento. Più anni = più sicurezza ma meno crescita del patrimonio.
+              Quanti anni di spese vuoi "blindare" con obbligazioni. <strong>7 anni è il compromesso standard:</strong> copre la grande maggioranza dei bear market storici (il peggiore durato ~6 anni), senza immobilizzare troppo capitale in asset a basso rendimento. Più anni = più sicurezza, ma sottrae più capitale all'azionario (che cresce di più nel lungo periodo).
+            </div>
+          </details>
+        </div>
+
+        <div class="field">
+          <div class="field-label">📅 Anno di inizio FIRE</div>
+          <input type="number" id="fireYear" value="2027" min="2025" max="2040" oninput="recalc()">
+          <details>
+            <summary><span>Cosa inserire qui</span></summary>
+            <div class="info-box">
+              L'anno in cui smetti di lavorare. Serve per calcolare le scadenze dei bond: se inizi nel 2027, il primo bond scadrà nel 2027, il secondo nel 2028, ecc.
             </div>
           </details>
         </div>
@@ -497,7 +497,8 @@
       <div class="field-group" style="margin-bottom:16px">
         <div class="field">
           <div class="field-label">📈 Valore attuale portafoglio azionario (€)</div>
-          <input type="number" id="vwceCurrent" value="385000" oninput="calcGuardrail()">
+          <input type="number" id="vwceCurrent" value="385000" oninput="this.dataset.manualOverride='1';calcGuardrail()">
+          <div style="font-size:10px;color:var(--text3);margin-top:4px;font-family:var(--mono)">↳ precompilato da Setup · modifica per aggiornamenti annuali</div>
           <details>
             <summary><span>Dove trovo questo valore</span></summary>
             <div class="info-box">
@@ -554,11 +555,11 @@
       <div class="field-group" style="margin-bottom:16px">
         <div class="field">
           <div class="field-label">Azionario iniziale al FIRE (€)</div>
-          <input type="number" id="vwceFireExt" value="385000" oninput="calcExtension()">
+          <input type="number" id="vwceFireExt" value="385000" oninput="this.dataset.manualOverride='1';calcExtension()">
         </div>
         <div class="field">
           <div class="field-label">Azionario oggi (€)</div>
-          <input type="number" id="vwceTodayExt" value="385000" oninput="calcExtension()">
+          <input type="number" id="vwceTodayExt" value="385000" oninput="this.dataset.manualOverride='1';calcExtension()">
         </div>
         <div class="field">
           <div class="field-label">Inflazione cumulata (%)</div>
@@ -756,9 +757,10 @@ const STATUS_LABELS = {
 };
 
 let state = {
+  patrimonio: 500000,
   annualExp: 30000,
   fireYear: 2027,
-  vwceInitial: 385000,
+  vwceInitial: 0,
   ladderYears: 7,
   pensionMonthly: 600,
   pensionYear: 2051,
@@ -809,7 +811,7 @@ function loadData() {
 function resetData() {
   if (!confirm('Cancellare tutti i dati e tornare ai valori predefiniti?')) return;
   localStorage.removeItem(STORAGE_KEY);
-  state = { annualExp:30000, fireYear:2027, vwceInitial:385000, ladderYears:7, pensionMonthly:600, pensionYear:2051, currentFireYear:1, rungs:[], notes:'', lastSaved:null };
+  state = { patrimonio:500000, annualExp:30000, fireYear:2027, vwceInitial:0, ladderYears:7, pensionMonthly:600, pensionYear:2051, currentFireYear:1, rungs:[], notes:'', lastSaved:null };
   initRungs();
   syncInputsFromState();
   recalc();
@@ -897,13 +899,16 @@ function initRungs() {
 }
 
 function recalc() {
+  state.patrimonio = +document.getElementById('patrimonio').value || 500000;
   state.annualExp = +document.getElementById('annualExp').value || 30000;
   state.fireYear = +document.getElementById('fireYear').value || 2027;
-  state.vwceInitial = +document.getElementById('vwceInitial').value || 385000;
   state.ladderYears = +document.getElementById('ladderYears').value || 7;
   state.pensionMonthly = +document.getElementById('pensionMonthly').value || 600;
   state.pensionYear = +document.getElementById('pensionYear').value || 2051;
   initRungs();
+  // Derive azionario residuo from patrimonio minus ladder
+  const totalScalaCalc = state.rungs.reduce((a,r) => a + r.amount, 0);
+  state.vwceInitial = Math.max(0, state.patrimonio - totalScalaCalc);
   markUnsaved();
   renderSetup();
   renderLadder();
@@ -913,35 +918,45 @@ function recalc() {
 // ── Setup ─────────────────────────────────────────────────────────────
 function renderSetup() {
   const totalScala = state.rungs.reduce((a,r) => a + r.amount, 0);
-  const vwce = state.vwceInitial;
-  const patrimonio = totalScala + vwce;
-  const swrBase = (state.annualExp / vwce * 100).toFixed(1);
+  const azionario = Math.max(0, state.patrimonio - totalScala);
+  state.vwceInitial = azionario; // keep in sync
+  const pctScala = state.patrimonio > 0 ? (totalScala / state.patrimonio * 100).toFixed(1) : 0;
+  const pctAz = state.patrimonio > 0 ? (azionario / state.patrimonio * 100).toFixed(1) : 0;
   const pensionAnnual = state.pensionMonthly * 12;
-  const netPension = state.annualExp - pensionAnnual;
-  const swrPension = (netPension / vwce * 100).toFixed(1);
+  const netSpesa = Math.max(0, state.annualExp - pensionAnnual);
+  const swrGross = azionario > 0 ? (state.annualExp / azionario * 100).toFixed(1) : '—';
+  const swrNet = azionario > 0 ? (netSpesa / azionario * 100).toFixed(1) : '—';
+  const swrColor = (v) => +v > 5 ? 'warn' : +v > 3.5 ? '' : 'ok';
 
   document.getElementById('setup-metrics').innerHTML = `
     <div class="metric">
       <div class="metric-label">Patrimonio totale</div>
-      <div class="metric-value">€${fmt(patrimonio)}</div>
-      <div class="metric-sub">scala + azionario</div>
+      <div class="metric-value mono">€${fmt(state.patrimonio)}</div>
+      <div class="metric-sub">al giorno del FIRE</div>
     </div>
     <div class="metric">
-      <div class="metric-label">Scala totale</div>
-      <div class="metric-value mono">€${fmt(totalScala)}</div>
-      <div class="metric-sub">${state.ladderYears} anni di spese</div>
+      <div class="metric-label">→ Scala (${pctScala}%)</div>
+      <div class="metric-value" style="color:var(--accent)">€${fmt(totalScala)}</div>
+      <div class="metric-sub">${state.ladderYears} anni · fino al ${state.fireYear + state.ladderYears - 1}</div>
     </div>
     <div class="metric">
-      <div class="metric-label">SWR post-scala</div>
-      <div class="metric-value ${+swrBase>5?'warn':'ok'}">${swrBase}%</div>
-      <div class="metric-sub">${+swrBase>5?'⚠ sopra 5%':'✓ ok'} · senza pensione</div>
+      <div class="metric-label">→ Azionario residuo (${pctAz}%)</div>
+      <div class="metric-value ${swrColor(swrGross)}">€${fmt(azionario)}</div>
+      <div class="metric-sub">SWR lordo ${swrGross}%</div>
     </div>
     <div class="metric">
-      <div class="metric-label">SWR con pensione</div>
-      <div class="metric-value ${+swrPension>4?'warn':'ok'}">${swrPension}%</div>
-      <div class="metric-sub">dal ${state.pensionYear}</div>
+      <div class="metric-label">SWR netto (con pensione)</div>
+      <div class="metric-value ${swrColor(swrNet)}">${swrNet}%</div>
+      <div class="metric-sub">dal ${state.pensionYear} · spesa netta €${fmt(Math.round(netSpesa))}</div>
     </div>
   `;
+  // Also pre-fill guardrail with derived azionario
+  const gcEl = document.getElementById('vwceCurrent');
+  if (gcEl && !gcEl.dataset.manualOverride) gcEl.value = azionario;
+  const gfEl = document.getElementById('vwceFireExt');
+  if (gfEl && !gfEl.dataset.manualOverride) gfEl.value = azionario;
+  const gtEl = document.getElementById('vwceTodayExt');
+  if (gtEl && !gtEl.dataset.manualOverride) gtEl.value = azionario;
 
   let rows = '';
   for (let i = 0; i < state.ladderYears; i++) {
