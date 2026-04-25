@@ -388,7 +388,10 @@
     <!-- METRICS SUMMARY -->
     <div class="section-sep"><span>Riepilogo calcolato</span></div>
 
-    <div class="metrics" id="setup-metrics"></div>
+    <div class="metrics" id="setup-metrics" style="grid-template-columns:1fr"></div>
+
+    <div class="section-sep"><span>SWR proiettato a fine scala — anno <span id="swr-year-label">8</span></span></div>
+    <div id="setup-swr" style="margin-bottom:12px"></div>
 
     <div class="card">
       <div class="card-title">Dettaglio scala — bond da acquistare per ogni anno</div>
@@ -910,6 +913,8 @@ function recalc() {
   const totalScalaCalc = state.rungs.reduce((a,r) => a + r.amount, 0);
   state.vwceInitial = Math.max(0, state.patrimonio - totalScalaCalc);
   markUnsaved();
+  const swrYearEl = document.getElementById('swr-year-label');
+  if (swrYearEl) swrYearEl.textContent = state.ladderYears + 1;
   renderSetup();
   renderLadder();
   renderChecklist();
@@ -928,26 +933,70 @@ function renderSetup() {
   const swrNet = azionario > 0 ? (netSpesa / azionario * 100).toFixed(1) : '—';
   const swrColor = (v) => +v > 5 ? 'warn' : +v > 3.5 ? '' : 'ok';
 
+  // Project azionario at end of ladder for 3 scenarios
+  const ny = state.ladderYears;
+  const azBase    = Math.round(azionario * Math.pow(1.07, ny));
+  const azMod     = Math.round(azionario * Math.pow(1.03, ny));
+  const azSevero  = Math.round(azionario * 0.55 * Math.pow(1.05, Math.max(0, ny - 1)));
+  const swrProj   = (az) => az > 0 ? (state.annualExp / az * 100).toFixed(1) : '—';
+  const swrColor2 = (v) => +v > 5 ? 'danger' : +v > 3.5 ? 'warn' : 'ok';
+  const pensionActive = state.pensionYear <= (state.fireYear + ny);
+  const spesaFine = pensionActive ? Math.max(0, state.annualExp - pensionAnnual) : state.annualExp;
+
   document.getElementById('setup-metrics').innerHTML = `
-    <div class="metric">
-      <div class="metric-label">Patrimonio totale</div>
-      <div class="metric-value mono">€${fmt(state.patrimonio)}</div>
-      <div class="metric-sub">al giorno del FIRE</div>
+    <div class="metric" style="grid-column:1/-1;background:var(--surface2);border-radius:8px;padding:13px 16px;border:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;align-items:center">
+      <div>
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Patrimonio totale</div>
+        <div style="font-size:17px;font-weight:600;font-family:var(--mono)">€${fmt(state.patrimonio)}</div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">→ Scala obbligazionaria</div>
+        <div style="font-size:17px;font-weight:600;font-family:var(--mono);color:var(--accent)">€${fmt(totalScala)}</div>
+        <div style="font-size:10px;color:var(--text2);margin-top:2px">${pctScala}% · ${ny} anni · fino al ${state.fireYear + ny - 1}</div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">→ Azionario residuo</div>
+        <div style="font-size:17px;font-weight:600;font-family:var(--mono)">€${fmt(azionario)}</div>
+        <div style="font-size:10px;color:var(--text2);margin-top:2px">${pctAz}% · cresce indisturbato per ${ny} anni</div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Spesa anno ${ny + 1}</div>
+        <div style="font-size:17px;font-weight:600;font-family:var(--mono)">€${fmt(Math.round(spesaFine))}</div>
+        <div style="font-size:10px;color:var(--text2);margin-top:2px">${pensionActive ? 'netta · pensione già attiva' : 'lorda · pensione non ancora attiva'}</div>
+      </div>
     </div>
-    <div class="metric">
-      <div class="metric-label">→ Scala (${pctScala}%)</div>
-      <div class="metric-value" style="color:var(--accent)">€${fmt(totalScala)}</div>
-      <div class="metric-sub">${state.ladderYears} anni · fino al ${state.fireYear + state.ladderYears - 1}</div>
+  `;
+
+  // SWR projected cards — shown below separately
+  document.getElementById('setup-swr').innerHTML = `
+    <div style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.7">
+      SWR calcolato al momento in cui finisce la scala (anno ${ny + 1}), quando inizi a prelevare dall'azionario.
+      L'azionario ha avuto <strong>${ny} anni per crescere indisturbato</strong> — il SWR reale è molto migliore di quello apparente al giorno del FIRE.
+      ${pensionActive ? `Dal <strong>${state.pensionYear}</strong> la pensione copre €${fmt(pensionAnnual)}/anno → spesa netta €${fmt(Math.round(spesaFine))}.` : `La pensione inizia nel <strong>${state.pensionYear}</strong>, dopo la scala.`}
     </div>
-    <div class="metric">
-      <div class="metric-label">→ Azionario residuo (${pctAz}%)</div>
-      <div class="metric-value ${swrColor(swrGross)}">€${fmt(azionario)}</div>
-      <div class="metric-sub">SWR lordo ${swrGross}%</div>
-    </div>
-    <div class="metric">
-      <div class="metric-label">SWR netto (con pensione)</div>
-      <div class="metric-value ${swrColor(swrNet)}">${swrNet}%</div>
-      <div class="metric-sub">dal ${state.pensionYear} · spesa netta €${fmt(Math.round(netSpesa))}</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+      <div class="metric" style="border-color:rgba(46,204,143,.3)">
+        <div class="metric-label" style="color:var(--green)">🟢 Scenario ottimista</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:6px">+7% reale/anno · mercato storico medio</div>
+        <div style="font-size:15px;font-weight:600;font-family:var(--mono);margin-bottom:3px">€${fmt(azBase)}</div>
+        <div style="font-size:10px;color:var(--text2);margin-bottom:6px">azionario all'anno ${ny + 1}</div>
+        <div style="font-size:16px;font-weight:700;font-family:var(--mono)" class="${swrColor2(swrProj(azBase))}">SWR ${swrProj(azBase)}%</div>
+      </div>
+      <div class="metric" style="border-color:rgba(245,166,35,.3)">
+        <div class="metric-label" style="color:var(--amber)">🟡 Scenario moderato</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:6px">+3% reale/anno · crescita lenta</div>
+        <div style="font-size:15px;font-weight:600;font-family:var(--mono);margin-bottom:3px">€${fmt(azMod)}</div>
+        <div style="font-size:10px;color:var(--text2);margin-bottom:6px">azionario all'anno ${ny + 1}</div>
+        <div style="font-size:16px;font-weight:700;font-family:var(--mono)" class="${swrColor2(swrProj(azMod))}">SWR ${swrProj(azMod)}%</div>
+      </div>
+      <div class="metric" style="border-color:rgba(232,93,93,.3)">
+        <div class="metric-label" style="color:var(--red)">🔴 Scenario severo</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:6px">-45% anno 1 · poi +5% · caso peggiore</div>
+        <div style="font-size:15px;font-weight:600;font-family:var(--mono);margin-bottom:3px">€${fmt(azSevero)}</div>
+        <div style="font-size:10px;color:var(--text2);margin-bottom:6px">azionario all'anno ${ny + 1}</div>
+        <div style="font-size:16px;font-weight:700;font-family:var(--mono)" class="${swrColor2(swrProj(azSevero))}">SWR ${swrProj(azSevero)}%</div>
+        <div style="font-size:10px;color:var(--red);margin-top:4px">guardrail: taglia spese -10%</div>
+      </div>
     </div>
   `;
   // Also pre-fill guardrail with derived azionario
@@ -1161,24 +1210,40 @@ function renderChecklist() {
   document.getElementById('cl-pension').innerHTML =
     `<strong>Dal ${state.pensionYear}:</strong> pensione €${fmt(state.pensionMonthly)}/mese (€${fmt(pensionAnnual)}/anno) → prelievo netto dall'azionario scende a <strong>€${fmt(Math.round(net))}/anno</strong> → SWR effettivo <strong>${swr}%</strong>`;
 
-  const scenarios = [
-    { label:'Base (7% reale)', col:'var(--green)', v:Math.round(state.vwceInitial*Math.pow(1.07,state.ladderYears)) },
-    { label:'Moderato (3% reale)', col:'var(--amber)', v:Math.round(state.vwceInitial*Math.pow(1.03,state.ladderYears)) },
-    { label:'Severo (-45% anno 1)', col:'var(--red)', v:Math.round(state.vwceInitial*0.55*Math.pow(1.05,state.ladderYears-1)) },
-  ].map(s => ({ ...s, swr:(state.annualExp/s.v*100).toFixed(1) }));
+  // same 3-scenario projection as Setup
+  const azResiduo = state.vwceInitial;
+  const ny2 = state.ladderYears;
+  const sc = [
+    { label:'🟢 Ottimista (+7%/y)', col:'var(--green)',  note:'mercato storico medio',    v: Math.round(azResiduo * Math.pow(1.07, ny2)) },
+    { label:'🟡 Moderato (+3%/y)',  col:'var(--amber)',  note:'crescita lenta',            v: Math.round(azResiduo * Math.pow(1.03, ny2)) },
+    { label:'🔴 Severo (-45%+5%)', col:'var(--red)',    note:'crash anno 1 poi ripresa',  v: Math.round(azResiduo * 0.55 * Math.pow(1.05, Math.max(0,ny2-1))) },
+  ];
+  const pensionActiveAtEnd = state.pensionYear <= (state.fireYear + ny2);
+  const spesaPrelievo = pensionActiveAtEnd ? Math.max(0, state.annualExp - pensionAnnual) : state.annualExp;
+  const swrC = (v) => +v > 5 ? 'danger' : +v > 3.5 ? 'warn' : 'ok';
 
   document.getElementById('cl-scenarios').innerHTML = `
+    <div style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.7">
+      L'azionario non viene toccato durante i ${ny2} anni di scala. Il SWR si calcola sul valore <em>proiettato</em> all'anno ${ny2+1},
+      con spesa ${pensionActiveAtEnd ? `netta <strong>€${fmt(Math.round(spesaPrelievo))}</strong> (pensione già attiva dal ${state.pensionYear})` : `lorda <strong>€${fmt(state.annualExp)}</strong> (pensione dal ${state.pensionYear}, non ancora attiva)`}.
+    </div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-      ${scenarios.map(s=>`<div class="metric">
-        <div class="metric-label" style="color:${s.col}">${s.label}</div>
-        <div style="font-size:14px;font-weight:600;font-family:var(--mono);margin:5px 0">€${fmt(s.v)}</div>
-        <div class="metric-sub">Azionario all'anno ${state.ladderYears+1}</div>
-        <div style="font-size:12px;font-family:var(--mono);margin-top:5px;color:${+s.swr>5?'var(--amber)':'var(--green)'}">SWR ${s.swr}%</div>
-      </div>`).join('')}
+      ${sc.map(s => {
+        const swr = s.v > 0 ? (spesaPrelievo / s.v * 100).toFixed(1) : '—';
+        const swrGuardrail = s.v > 0 ? (state.annualExp * 0.9 / s.v * 100).toFixed(1) : '—';
+        return `<div class="metric" style="border-color:${s.col}40">
+          <div class="metric-label" style="color:${s.col}">${s.label}</div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:6px">${s.note}</div>
+          <div style="font-size:14px;font-weight:600;font-family:var(--mono);margin-bottom:2px">€${fmt(s.v)}</div>
+          <div style="font-size:10px;color:var(--text2);margin-bottom:8px">azionario anno ${ny2+1}</div>
+          <div style="font-size:15px;font-weight:700;font-family:var(--mono)" class="${swrC(swr)}">SWR ${swr}%</div>
+          ${+swr > 5 ? `<div style="font-size:10px;color:var(--amber);margin-top:4px">con guardrail -10%: ${swrGuardrail}%</div>` : ''}
+        </div>`;
+      }).join('')}
     </div>
     <div style="font-size:11px;color:var(--text2);margin-top:10px;line-height:1.7">
-      Nello scenario severo il guardrail taglia le spese a €${fmt(Math.round(state.annualExp*0.9))}/anno.
-      Con la pensione dal ${state.pensionYear} il prelievo netto si riduce di €${fmt(pensionAnnual)}/anno.
+      Nello scenario severo il guardrail taglia le spese a €${fmt(Math.round(state.annualExp*0.9))}/anno — riducendo il SWR al primo prelievo.
+      Anche nel caso peggiore, il portafoglio ha avuto ${ny2} anni per parzialmente recuperare prima che inizi a prelevare.
     </div>
   `;
 }
