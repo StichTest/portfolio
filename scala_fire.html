@@ -364,6 +364,8 @@
           </details>
         </div>
 
+        <div style="grid-column:1/-1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 16px" id="strategy-suggestion"></div>
+
         <div class="field">
           <div class="field-label">📅 Anno di inizio FIRE</div>
           <input type="number" id="fireYear" value="2027" min="2025" max="2040" oninput="recalc()">
@@ -459,28 +461,7 @@
     </div>
 
     <div class="card">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
-        <div style="background:var(--blue-soft);border:1px solid rgba(79,127,255,.25);border-radius:8px;padding:12px 14px">
-          <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:6px">📦 Prima del FIRE — acquisto</div>
-          <div style="font-size:12px;color:var(--text2);line-height:1.7">
-            Acquista <strong style="color:var(--text)">tutti i bond insieme</strong>, 6–12 mesi prima di smettere di lavorare. Non aspettare anno per anno: vuoi bloccare il rendimento oggi e avere tutto pronto il giorno 1 del FIRE.<br><br>
-            Man mano che acquisti, cambia lo stato da <em>Da acquistare</em> → <strong>Acquistato ✓</strong>.
-          </div>
-        </div>
-        <div style="background:var(--green-soft);border:1px solid rgba(46,204,143,.25);border-radius:8px;padding:12px 14px">
-          <div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:6px">📅 Durante il FIRE — incasso annuale</div>
-          <div style="font-size:12px;color:var(--text2);line-height:1.7">
-            Nel mese scelto per il check, il bond dell'anno corrente (evidenziato in blu) arriva a scadenza e viene rimborsato automaticamente sul conto.<br><br>
-            Cambia lo stato → <strong>Incassato ✓✓</strong>, avanza l'anno con il pulsante +, e salva.
-          </div>
-        </div>
-      </div>
-      <details style="margin-bottom:14px">
-        <summary><span>Perché comprare tutto in anticipo e non anno per anno?</span></summary>
-        <div class="info-box">
-          Aspettare significa esporsi al rischio che i rendimenti siano peggiorati o che lo strumento giusto non sia più disponibile. Comprando tutto insieme blocchi i rendimenti attuali e sai esattamente quanto incasserai ogni anno. L'unica eccezione sono i bond di estensione: quelli si decidono quando restano 2–3 anni di scala (vedi tab Guardrail), in base all'andamento dell'azionario.
-        </div>
-      </details>
+      <div id="ladder-phase-boxes" style="margin-bottom:16px"></div>
 
       <div class="row" style="margin-bottom:8px">
         <div style="font-size:12px;color:var(--text2)">Incassati: <strong id="ladder-total-text" style="color:var(--text)">—</strong></div>
@@ -611,8 +592,8 @@
       <div class="check-item">
         <div class="check-num">1</div>
         <div class="check-body">
-          <div class="check-title">Incassa il bond in scadenza</div>
-          <div class="check-desc">Verifica che il rimborso del bond dell'anno corrente sia accreditato sul conto. Trasferisci sul conto corrente. <strong>Non toccare l'azionario</strong> per i primi <strong id="cl-years">7</strong> anni — qualunque cosa succeda al mercato.</div>
+          <div class="check-title" id="cl-step1-title">Incassa il bond in scadenza</div>
+          <div class="check-desc" id="cl-step1-desc">Verifica che il rimborso del bond dell'anno corrente sia accreditato sul conto. Trasferisci sul conto corrente. <strong>Non toccare l'azionario</strong> per i primi <strong id="cl-years">7</strong> anni — qualunque cosa succeda al mercato.</div>
           <details style="margin-top:6px">
             <summary><span>Dove trovo il bond da incassare</span></summary>
             <div class="info-box">
@@ -652,12 +633,12 @@
       <div class="check-item">
         <div class="check-num">4</div>
         <div class="check-body">
-          <div class="check-title">Verifica estensione (<span id="cl-ext-years">solo agli anni N-2 e N-1</span>)</div>
-          <div class="check-desc">Vai alla tab Guardrail → sezione "Estensione scala". Inserisci i valori e segui lo scenario indicato (A, B o C). La decisione è meccanica — non serve giudizio personale.</div>
+          <div class="check-title" id="cl-step4-title">Verifica estensione (<span id="cl-ext-years">solo agli anni N-2 e N-1</span>)</div>
+          <div class="check-desc" id="cl-step4-desc">Vai alla tab Guardrail → sezione "Estensione scala". Inserisci i valori e segui lo scenario indicato (A, B o C). La decisione è meccanica — non serve giudizio personale.</div>
           <details style="margin-top:6px">
-            <summary><span>Cosa succede dopo l'anno 7?</span></summary>
-            <div class="info-box">
-              Se hai esteso la scala, continui a incassare bond. Quando la scala finisce, inizi a vivere dell'azionario — a quel punto il portafoglio ha avuto 7–10 anni per crescere e il tasso di prelievo dovrebbe essere sceso significativamente. Dal <strong id="cl-pension-year-note">2051</strong> in poi, la pensione riduce ulteriormente i prelievi dall'azionario.
+            <summary><span id="cl-step4-sum">Cosa succede dopo l'anno ${state.ladderYears}?</span></summary>
+            <div class="info-box" id="cl-step4-box">
+              Se hai esteso la scala, continui a incassare bond. Quando la scala finisce, inizi a vivere dell'azionario — a quel punto il portafoglio ha avuto anni per crescere. Dal <strong id="cl-pension-year-note">2051</strong> in poi, la pensione riduce ulteriormente i prelievi dall'azionario.
             </div>
           </details>
         </div>
@@ -667,7 +648,7 @@
         <div class="check-num">5</div>
         <div class="check-body">
           <div class="check-title">Aggiorna l'app e salva</div>
-          <div class="check-desc">Segna il bond come "Incassato ✓✓" nella tab Scala. Aggiorna l'anno FIRE corrente. Premi 💾 Salva. Scrivi eventuali note nella sezione apposita.</div>
+          <div class="check-desc" id="cl-step5-desc">Segna il bond come "Incassato ✓✓" nella tab Scala. Aggiorna l'anno FIRE corrente. Premi 💾 Salva. Scrivi eventuali note nella sezione apposita.</div>
         </div>
       </div>
 
@@ -1117,6 +1098,83 @@ function renderSetup() {
     </div>${rows}`;
 }
 
+// ── Ladder phase boxes ────────────────────────────────────────────────
+function renderLadderPhaseBoxes(lt) {
+  const el = document.getElementById('ladder-phase-boxes');
+  if (!el) return;
+  const month = state.checkMonth || 'nel mese scelto';
+
+  const BOXES = {
+    fixed: {
+      before: {
+        icon: '📦', label: 'Prima del FIRE — acquisto unico',
+        col: 'var(--accent)', bg: 'var(--blue-soft)', border: 'rgba(79,127,255,.25)',
+        text: `Acquista <strong>tutti i bond insieme</strong>, 6–12 mesi prima di smettere di lavorare.
+               Non aspettare anno per anno: vuoi bloccare i rendimenti oggi e avere tutto pronto il giorno 1 del FIRE.
+               <br><br>Man mano che acquisti cambia lo stato → <strong>Acquistato ✓</strong>.`,
+        tip: { q: 'Perché comprare tutto in anticipo?', a: "Aspettare significa rischiare che i rendimenti siano peggiorati o che lo strumento giusto non sia più disponibile. Comprando tutto insieme blocchi i rendimenti attuali e sai esattamente quanto incasserai ogni anno." }
+      },
+      during: {
+        icon: '📅', label: 'Durante il FIRE — incasso annuale',
+        col: 'var(--green)', bg: 'var(--green-soft)', border: 'rgba(46,204,143,.25)',
+        text: `A ${month}, il bond dell'anno corrente (evidenziato in blu) arriva a scadenza e viene rimborsato automaticamente sul conto.
+               <br><br>Cambia lo stato → <strong>Incassato ✓✓</strong>, avanza l'anno con il pulsante + e salva.`,
+        tip: null
+      }
+    },
+    rolling: {
+      before: {
+        icon: '🔄', label: 'Prima del FIRE — acquisto iniziale',
+        col: 'var(--accent)', bg: 'var(--blue-soft)', border: 'rgba(79,127,255,.25)',
+        text: `Acquista solo i <strong>primi 2 anni</strong> di bond, 3–6 mesi prima del FIRE.
+               Non comprare l'intera scala: con la rolling lasci il massimo capitale in azionario.
+               <br><br>Cambia lo stato dei 2 bond acquistati → <strong>Acquistato ✓</strong>.`,
+        tip: { q: 'Perché solo 2 anni?', a: "Con la rolling hai sempre 1–2 anni di bond come buffer. Non ne servono di più perché ogni anno ne aggiungi uno nuovo. Comprarne troppi in anticipo immobilizzerebbe inutilmente capitale che potrebbe crescere in azionario." }
+      },
+      during: {
+        icon: '🔄', label: 'Durante il FIRE — ciclo annuale',
+        col: 'var(--green)', bg: 'var(--green-soft)', border: 'rgba(46,204,143,.25)',
+        text: `A ${month}, ogni anno:
+               <ol style="margin:8px 0 0 16px;line-height:1.9">
+                 <li>Incassa il bond in scadenza → <strong>Incassato ✓✓</strong></li>
+                 <li>Controlla il guardrail (tab 3)</li>
+                 <li>Se azionario ok o verde: <strong>acquista il bond per l'anno N+2</strong></li>
+                 <li>Se azionario rosso: salta l'acquisto, rivaluta tra 6 mesi</li>
+               </ol>`,
+        tip: { q: "Cosa succede se non compro il bond in un anno difficile?", a: "Rimani con 1 solo anno di copertura invece di 2. Non è un problema se il guardrail è attivo e hai tagliato le spese. Se il mercato resta in rosso a lungo, valuta di attingere alla liquidità invece di vendere azionario." }
+      }
+    },
+    hybrid: {
+      before: {
+        icon: '📦', label: 'Prima del FIRE — acquisto fisso (anni 1–3)',
+        col: 'var(--amber)', bg: 'var(--amber-soft)', border: 'rgba(245,166,35,.25)',
+        text: `Acquista i <strong>primi 3 anni</strong> di bond insieme, 6–12 mesi prima del FIRE.
+               Anni 4 in poi: non comprare nulla ora — passerai alla rolling durante il FIRE.
+               <br><br>Cambia lo stato dei 3 bond acquistati → <strong>Acquistato ✓</strong>.`,
+        tip: { q: 'Perché 3 anni fissi e poi rolling?', a: "I primi 3 anni sono i più rischiosi per il sequence of returns risk: un crollo subito dopo il FIRE fa più danni. I 3 anni fissi ti danno protezione totale in quel periodo. Dall'anno 4 il portafoglio è più stabile e puoi permetterti la flessibilità della rolling." }
+      },
+      during: {
+        icon: '📅', label: 'Durante il FIRE — due fasi',
+        col: 'var(--green)', bg: 'var(--green-soft)', border: 'rgba(46,204,143,.25)',
+        text: `<strong>Anni 1–3 (fase fissa):</strong> incassa il bond in scadenza ogni anno a ${month}. Nessun acquisto da fare — i bond successivi sono già in portafoglio.
+               <br><br>
+               <strong>Dall'anno 4 (fase rolling):</strong> ogni anno a ${month} incassa il bond in scadenza <em>e</em> acquista il bond per l'anno N+2, se il guardrail è ok.`,
+        tip: { q: "Come capisco in quale fase sono?", a: "Guarda l'anno FIRE corrente (pulsante + in questa pagina). Anno 1–3 = fase fissa, nessun acquisto. Anno 4+ = fase rolling, acquista il prossimo bond." }
+      }
+    }
+  };
+
+  const b = BOXES[lt] || BOXES.fixed;
+  const renderBox = (box) => `
+    <div style="background:${box.bg};border:1px solid ${box.border};border-radius:8px;padding:12px 14px">
+      <div style="font-size:11px;font-weight:700;color:${box.col};margin-bottom:6px">${box.icon} ${box.label}</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.7">${box.text}</div>
+      ${box.tip ? `<details style="margin-top:8px"><summary style="font-size:10px;color:${box.col};cursor:pointer;list-style:none;display:inline-flex;align-items:center;gap:3px">▸ <span style="font-weight:500">${box.tip.q}</span></summary><div style="background:var(--bg);border:1px solid var(--border);border-left:2px solid ${box.col};border-radius:0 5px 5px 0;padding:8px 10px;margin-top:6px;font-size:11px;color:var(--text2);line-height:1.65">${box.tip.a}</div></details>` : ''}
+    </div>`;
+
+  el.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${renderBox(b.before)}${renderBox(b.during)}</div>`;
+}
+
 // ── Ladder ────────────────────────────────────────────────────────────
 function rungPhase(i, lt) {
   const cy = state.currentFireYear - 1; // 0-based
@@ -1140,10 +1198,10 @@ function renderLadder() {
   const consumed = state.rungs.filter(r => r.status === 'consumed').length;
   const pct = state.ladderYears > 0 ? (consumed / state.ladderYears * 100) : 0;
 
-  document.getElementById('ladder-total').textContent = `€${fmt(purchased)} / €${fmt(total)} acquistati`;
-  document.getElementById('ladder-total-text').textContent = `${consumed} di ${state.ladderYears} anni incassati`;
-  document.getElementById('ladder-fill').style.width = pct + '%';
-  document.getElementById('current-year-display').textContent = state.currentFireYear;
+  const ltEl = document.getElementById('ladder-total'); if (ltEl) ltEl.textContent = `€${fmt(purchased)} / €${fmt(total)} acquistati`;
+  const lttEl = document.getElementById('ladder-total-text'); if (lttEl) lttEl.textContent = `${consumed} di ${state.ladderYears} anni incassati`;
+  const lfEl = document.getElementById('ladder-fill'); if (lfEl) lfEl.style.width = pct + '%';
+  const cydEl = document.getElementById('current-year-display'); if (cydEl) cydEl.textContent = state.currentFireYear;
 
   const banners = {
     fixed:   { col:'var(--accent)', bg:'var(--blue-soft)',  text:'<strong>Scala fissa:</strong> acquista tutti i bond insieme prima del FIRE. Segna ogni bond come <em>Acquistato ✓</em> man mano che procedi.' },
@@ -1152,6 +1210,7 @@ function renderLadder() {
   };
   const b = banners[lt] || banners.fixed;
 
+  renderLadderPhaseBoxes(lt);
   let html = `<div style="background:${b.bg};border:1px solid ${b.col}30;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--text2);line-height:1.6">${b.text}</div>`;
 
   for (let i = 0; i < state.ladderYears; i++) {
@@ -1375,7 +1434,6 @@ function calcExtension() {
 
 // ── Checklist ─────────────────────────────────────────────────────────
 function renderChecklist() {
-  document.getElementById('cl-years').textContent = state.ladderYears;
   const clMonth = document.getElementById('cl-month');
   if (clMonth) clMonth.textContent = state.checkMonth || 'nel mese scelto';
   const ny = state.ladderYears;
@@ -1400,6 +1458,82 @@ function renderChecklist() {
     if (lt === 'fixed')  lbadge.textContent = '🛒 Prima del FIRE: acquista tutto in una volta · Durante il FIRE: aggiorna lo stato ogni anno';
     if (lt === 'rolling') lbadge.textContent = '🔄 Ogni anno: compra 1–2 anni di bond · incassa quello in scadenza · aggiorna lo stato';
     if (lt === 'hybrid') lbadge.textContent = "🛒 Prima del FIRE: acquista 3 anni fissi · poi rolling dall'anno 4";
+  }
+
+  // ── Strategy-aware checklist items ──────────────────────────────────
+  const lt3 = state.ladderType || 'fixed';
+  // SWR iniziale = spesa ÷ patrimonio totale (base per scegliere la strategia)
+  const swrNum = state.patrimonio > 0 ? (state.annualExp / state.patrimonio * 100) : 0;
+
+  // Step 1 — incasso bond
+  const s1title = document.getElementById('cl-step1-title');
+  const s1desc  = document.getElementById('cl-step1-desc');
+  if (s1title && s1desc) {
+    if (lt3 === 'fixed') {
+      s1title.textContent = 'Incassa il bond in scadenza';
+      s1desc.innerHTML = `Verifica che il rimborso sia accreditato. Trasferisci sul conto corrente. <strong>Non toccare l'azionario</strong> per i primi <strong>${state.ladderYears}</strong> anni — qualunque cosa succeda al mercato.`;
+    } else if (lt3 === 'rolling') {
+      s1title.textContent = 'Incassa il bond in scadenza e compra il prossimo';
+      s1desc.innerHTML = `Incassa il bond dell'anno corrente. Poi, sempre in questo mese, <strong>acquista il bond per l'anno N+2</strong> (2 anni avanti). Se l'azionario è in zona rossa (guardrail), salta l'acquisto e rivaluta tra 6 mesi.`;
+    } else {
+      s1title.textContent = lt3 === 'hybrid' && state.currentFireYear <= 3
+        ? 'Incassa il bond in scadenza (fase fissa)'
+        : 'Incassa il bond in scadenza e compra il prossimo (fase rolling)';
+      s1desc.innerHTML = state.currentFireYear <= 3
+        ? `Sei nella <strong>fase fissa</strong> (primi 3 anni). Incassa il bond e non comprare altro — i prossimi sono già acquistati.`
+        : `Sei nella <strong>fase rolling</strong>. Incassa il bond dell'anno corrente e acquista il bond per l'anno N+2.`;
+    }
+  }
+
+  // Step 4 — estensione o acquisto rolling
+  const s4title = document.getElementById('cl-step4-title');
+  const s4desc  = document.getElementById('cl-step4-desc');
+  const s4box   = document.getElementById('cl-step4-box');
+  const clExtEl = document.getElementById('cl-ext-years');
+  if (s4title && s4desc) {
+    if (lt3 === 'fixed') {
+      s4title.innerHTML = `Verifica estensione <span id="cl-ext-years">solo agli anni ${checkY1} e ${checkY2}</span>`;
+      s4desc.textContent = `Vai alla tab Guardrail → sezione "Estensione scala". Segui lo scenario indicato (A/B/C). La decisione è meccanica.`;
+      if (s4box) s4box.innerHTML = `Con la scala fissa, l'estensione è l'unico modo per allungare la copertura senza toccare l'azionario durante un crollo. Dal ${state.pensionYear} la pensione riduce il prelievo necessario.`;
+    } else if (lt3 === 'rolling') {
+      s4title.innerHTML = `Aggiorna il guardrail e decidi se acquistare il prossimo bond`;
+      s4desc.innerHTML = `Con la rolling, l'acquisto del prossimo bond fa già parte dello step 1. Qui controlla solo se il guardrail segnala zona rossa — in quel caso <strong>salta l'acquisto</strong> e usa la liquidità del bond incassato per le spese.`;
+      if (s4box) s4box.innerHTML = `Con la rolling non c'è una "estensione" formale: compri sempre 1–2 anni avanti. Se il guardrail è rosso per 2+ anni consecutivi, considera di ridurre la spesa invece di acquistare il bond.`;
+    } else {
+      s4title.innerHTML = `Verifica estensione o acquisto rolling (anni ${checkY1}–${checkY2}+)`;
+      s4desc.innerHTML = `Fino all'anno 3: nessuna azione (scala fissa). Dall'anno 4: acquista il prossimo bond come nella rolling. Agli anni ${checkY1}/${checkY2}: verifica anche la possibilità di estensione formale se l'azionario è in zona verde.`;
+    }
+  }
+
+  // Step 5 — salva
+  const s5desc = document.getElementById('cl-step5-desc');
+  if (s5desc) {
+    const s5extra = lt3 !== 'fixed'
+      ? ' Verifica che il prossimo bond da acquistare sia annotato nella tab Scala.'
+      : '';
+    s5desc.textContent = `Segna il bond come "Incassato ✓✓" nella tab Scala. Aggiorna l'anno FIRE corrente. Premi 💾 Salva.${s5extra}`;
+  }
+
+  // Strategy suggestion box in Setup
+  const suggEl = document.getElementById('strategy-suggestion');
+  if (suggEl) {
+    let sugg, suggCol, suggBg;
+    if (swrNum > 4 || swrNum === 0) {
+      sugg = `<strong>Consigliata per il tuo piano: Scala fissa.</strong> Con un SWR ${swrNum > 0 ? 'di ' + swrNum.toFixed(1) + '%' : 'elevato'} hai poco margine — la scala fissa elimina ogni rischio operativo nei primi anni critici.`;
+      suggCol = 'var(--accent)'; suggBg = 'var(--blue-soft)';
+    } else if (swrNum > 3) {
+      sugg = `<strong>Consigliata per il tuo piano: Strategia ibrida.</strong> Con un SWR di ${swrNum.toFixed(1)}% hai un buon margine ma non abbondante. I primi 3 anni fissi ti proteggono dal sequence risk, poi la rolling massimizza la crescita dell'azionario.`;
+      suggCol = 'var(--amber)'; suggBg = 'var(--amber-soft)';
+    } else {
+      sugg = `<strong>Consigliata per il tuo piano: Rolling.</strong> Con un SWR di ${swrNum.toFixed(1)}% il tuo patrimonio è molto solido. La rolling lascia il massimo capitale in azionario e richiede solo pochi minuti di operatività all'anno.`;
+      suggCol = 'var(--green)'; suggBg = 'var(--green-soft)';
+    }
+    suggEl.innerHTML = `<div style="font-size:11px;color:${suggCol};line-height:1.7;display:flex;gap:10px;align-items:flex-start">
+      <span style="font-size:16px;flex-shrink:0">💡</span>
+      <span>${sugg}</span>
+    </div>`;
+    suggEl.style.background = suggBg;
+    suggEl.style.borderColor = suggCol + '40';
   }
 
   // Post-scala section
