@@ -265,11 +265,11 @@
           <span class="step-arrow">→</span>
           <span class="step-chip">2. Acquista i bond</span>
           <span class="step-arrow">→</span>
-          <span class="step-chip">3. Ogni gennaio: incassa il bond</span>
+          <span class="step-chip">3. Ogni anno (mese scelto): incassa il bond</span>
           <span class="step-arrow">→</span>
           <span class="step-chip">4. Controlla il Guardrail</span>
           <span class="step-arrow">→</span>
-          <span class="step-chip">5. All'anno 5–6: estendi?</span>
+          <span class="step-chip">5. Agli anni N-2 e N-1: estendi?</span>
         </div>
       </div>
     </details>
@@ -346,6 +346,25 @@
         </div>
 
         <div class="field">
+          <div class="field-label">🔄 Strategia di scala</div>
+          <select id="ladderType" onchange="recalc()">
+            <option value="fixed">Scala fissa — acquisto unico</option>
+            <option value="rolling">Rolling — 1–2 anni per volta</option>
+            <option value="hybrid">Ibrida — 3 anni fissi + rolling</option>
+          </select>
+          <details>
+            <summary><span>Qual è la differenza?</span></summary>
+            <div class="info-box">
+              <strong>Scala fissa:</strong> compri tutti i bond insieme 6–12 mesi prima del FIRE. Massima protezione dal sequence of returns risk. Immobilizza più capitale in bond.
+              <br><br>
+              <strong>Rolling (1–2 anni):</strong> compri solo 1–2 anni di bond per volta, ogni anno. Lasci più capitale investito in azionario. Richiede disciplina: devi comprare il bond anche durante i crolli.
+              <br><br>
+              <strong>Ibrida (consigliata con SWR &lt; 4%):</strong> compri 3 anni fissi subito (protezione nei primi anni critici), poi passi alla rolling dall'anno 4. Bilancia protezione e rendimento. Ideale se il tuo SWR è basso e hai buona tolleranza al rischio.
+            </div>
+          </details>
+        </div>
+
+        <div class="field">
           <div class="field-label">📅 Anno di inizio FIRE</div>
           <input type="number" id="fireYear" value="2027" min="2025" max="2040" oninput="recalc()">
           <details>
@@ -379,6 +398,22 @@
         </div>
 
       </div>
+
+        <div class="field" style="grid-column:1/-1">
+          <div class="field-label">📆 Mese preferito per il check annuale</div>
+          <select id="checkMonth" onchange="recalc()">
+            <option>Gennaio</option><option>Febbraio</option><option>Marzo</option>
+            <option>Aprile</option><option>Maggio</option><option>Giugno</option>
+            <option>Luglio</option><option>Agosto</option><option>Settembre</option>
+            <option>Ottobre</option><option>Novembre</option><option>Dicembre</option>
+          </select>
+          <details>
+            <summary><span>Qual è il mese migliore?</span></summary>
+            <div class="info-box">
+              Non esiste un mese "giusto" in assoluto, ma <strong>evita dicembre e gennaio</strong> — i mercati sono spesso più volatili a fine/inizio anno e le valutazioni possono essere distorte. <strong>Aprile o ottobre</strong> sono spesso buone scelte: mercati più stabili, e coincidono con la chiusura dei trimestri. Scegli un mese che ricordi facilmente e che sia lontano da periodi di forte stress emotivo.
+            </div>
+          </details>
+        </div>
 
       <div style="margin-top:16px;text-align:right">
         <button class="btn btn-primary" onclick="saveData()">💾 Salva configurazione</button>
@@ -419,8 +454,8 @@
 
     <div class="view-header">
       <h2>Scala — acquisto e tracciamento dei bond</h2>
-      <p>Tutti i bond vanno acquistati <strong>insieme, 6–12 mesi prima del FIRE</strong>. Questa sezione ti aiuta a tenerli sotto controllo.</p>
-      <span class="action-badge">🛒 Prima del FIRE: acquista tutto in una volta · Durante il FIRE: aggiorna lo stato ogni anno</span>
+      <p id="ladder-strategy-desc">Tutti i bond vanno acquistati <strong>insieme, 6–12 mesi prima del FIRE</strong>. Questa sezione ti aiuta a tenerli sotto controllo.</p>
+      <span class="action-badge" id="ladder-strategy-badge">🛒 Prima del FIRE: acquista tutto in una volta · Durante il FIRE: aggiorna lo stato ogni anno</span>
     </div>
 
     <div class="card">
@@ -435,7 +470,7 @@
         <div style="background:var(--green-soft);border:1px solid rgba(46,204,143,.25);border-radius:8px;padding:12px 14px">
           <div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:6px">📅 Durante il FIRE — incasso annuale</div>
           <div style="font-size:12px;color:var(--text2);line-height:1.7">
-            Ogni gennaio, il bond dell'anno corrente (evidenziato in blu) arriva a scadenza e viene rimborsato automaticamente sul conto.<br><br>
+            Nel mese scelto per il check, il bond dell'anno corrente (evidenziato in blu) arriva a scadenza e viene rimborsato automaticamente sul conto.<br><br>
             Cambia lo stato → <strong>Incassato ✓✓</strong>, avanza l'anno con il pulsante +, e salva.
           </div>
         </div>
@@ -443,7 +478,7 @@
       <details style="margin-bottom:14px">
         <summary><span>Perché comprare tutto in anticipo e non anno per anno?</span></summary>
         <div class="info-box">
-          Aspettare significa esporsi al rischio che i rendimenti siano peggiorati o che lo strumento giusto non sia più disponibile. Comprando tutto insieme blocchi i rendimenti attuali e sai esattamente quanto incasserai ogni anno. L'unica eccezione sono i bond di estensione (anni 8–10): quelli si decidono solo all'anno 5–6, in base all'andamento dell'azionario.
+          Aspettare significa esporsi al rischio che i rendimenti siano peggiorati o che lo strumento giusto non sia più disponibile. Comprando tutto insieme blocchi i rendimenti attuali e sai esattamente quanto incasserai ogni anno. L'unica eccezione sono i bond di estensione: quelli si decidono quando restano 2–3 anni di scala (vedi tab Guardrail), in base all'andamento dell'azionario.
         </div>
       </details>
 
@@ -488,8 +523,8 @@
 
     <div class="view-header">
       <h2>Guardrail — controllo annuale</h2>
-      <p>Ogni gennaio aggiorni il valore dell'azionario. L'app ti dice subito cosa fare quest'anno.</p>
-      <span class="action-badge">📅 Ogni gennaio: apri l'app, aggiorna il valore, segui l'istruzione</span>
+      <p>Nel tuo mese di check aggiorni il valore dell'azionario. L'app ti dice subito cosa fare quest'anno.</p>
+      <span class="action-badge" id="gr-action-badge">📅 Ogni anno: apri l'app nel mese scelto, aggiorna il valore, segui l'istruzione</span>
     </div>
 
     <!-- GUARDRAIL CARD -->
@@ -500,7 +535,7 @@
           <div class="field-label">📈 Valore azionario oggi (€)</div>
           <input type="number" id="vwceCurrent" oninput="this.dataset.manualOverride='1';calcGuardrail()">
           <div style="font-size:10px;color:var(--text3);margin-top:4px">
-            Autocompilato dal Setup · aggiorna ogni gennaio con il valore reale da Fineco
+            Autocompilato dal Setup · aggiorna ogni anno nel tuo mese di check con il valore reale da Fineco
           </div>
         </div>
 
@@ -531,28 +566,30 @@
 
     <!-- ESTENSIONE CARD -->
     <div class="card">
-      <div class="card-title">Estensione della scala — da valutare all'anno 5 e 6</div>
+      <div class="card-title">Estensione della scala — <span id="ext-card-title">da valutare quando restano 2–3 anni</span></div>
 
       <div style="background:var(--surface2);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:12px;color:var(--text2);line-height:1.8">
-        A metà scala (anno 5 o 6) valuti se comprare altri 1–2 anni di bond, vendendo una piccola quota dell'azionario.
+        Quando restano <strong style="color:var(--text)" id="ext-intro-years">2–3 anni</strong> di scala valuti se comprare altri 1–2 anni di bond, vendendo una piccola quota dell'azionario.
         <strong style="color:var(--text)">La decisione è meccanica</strong>: dipende solo da quanto vale l'azionario rispetto al giorno del FIRE, corretto per l'inflazione.
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px">
         <div class="field">
           <div class="field-label">Azionario al giorno del FIRE (€)</div>
-          <input type="number" id="vwceFireExt" oninput="this.dataset.manualOverride='1';calcExtension()">
-          <div style="font-size:10px;color:var(--text3);margin-top:4px">Autocompilato dal Setup</div>
+          <input type="number" id="vwceFireExt" readonly style="opacity:.6;cursor:not-allowed">
+          <div style="font-size:10px;color:var(--text3);margin-top:4px">↳ calcolato automaticamente dal Setup</div>
         </div>
         <div class="field">
           <div class="field-label">Azionario oggi (€)</div>
-          <input type="number" id="vwceTodayExt" oninput="this.dataset.manualOverride='1';calcExtension()">
-          <div style="font-size:10px;color:var(--text3);margin-top:4px">Aggiorna con il valore reale</div>
+          <input type="number" id="vwceTodayExt" readonly style="opacity:.6;cursor:not-allowed">
+          <div style="font-size:10px;color:var(--text3);margin-top:4px">↳ sincronizzato con il campo azionario sopra</div>
         </div>
         <div class="field">
-          <div class="field-label">Inflazione cumulata (%)</div>
-          <input type="number" id="inflCumul" value="15" oninput="calcExtension()">
-          <div style="font-size:10px;color:var(--text3);margin-top:4px">~15–20% su 5 anni (dati ISTAT)</div>
+          <div class="field-label">Inflazione annua (%)</div>
+          <input type="number" id="inflRate" step="0.1" oninput="recalc()" placeholder="2.5">
+          <div style="font-size:10px;color:var(--text3);margin-top:4px">
+            Default 2.5% · modifica solo se l'inflazione reale si discosta (dati ISTAT)
+          </div>
         </div>
       </div>
 
@@ -564,8 +601,8 @@
   <div class="view" id="view-checklist">
 
     <div class="view-header">
-      <h2>Checklist annuale — ogni gennaio</h2>
-      <p>5 azioni in ordine. Le prime 4 richiedono ~10 minuti. L'app fa i calcoli, tu prendi le decisioni.</p>
+      <h2>Checklist annuale — <span id="cl-month">nel mese scelto</span></h2>
+      <p>5 azioni in ordine. Richiedono ~10 minuti in tutto. Fai tutto nello stesso mese ogni anno.</p>
       <span class="action-badge green">⏱️ ~10 minuti totali ogni anno</span>
     </div>
 
@@ -615,12 +652,12 @@
       <div class="check-item">
         <div class="check-num">4</div>
         <div class="check-body">
-          <div class="check-title">Verifica estensione (solo anno 5 e 6)</div>
+          <div class="check-title">Verifica estensione (<span id="cl-ext-years">solo agli anni N-2 e N-1</span>)</div>
           <div class="check-desc">Vai alla tab Guardrail → sezione "Estensione scala". Inserisci i valori e segui lo scenario indicato (A, B o C). La decisione è meccanica — non serve giudizio personale.</div>
           <details style="margin-top:6px">
             <summary><span>Cosa succede dopo l'anno 7?</span></summary>
             <div class="info-box">
-              Se hai esteso la scala agli anni 8–9–10, continui a incassare bond. Quando la scala finisce, inizi a vivere dell'azionario — a quel punto il portafoglio ha avuto 7–10 anni per crescere e il tasso di prelievo dovrebbe essere sceso significativamente. Dal <strong id="cl-pension-year-note">2051</strong> in poi, la pensione riduce ulteriormente i prelievi dall'azionario.
+              Se hai esteso la scala, continui a incassare bond. Quando la scala finisce, inizi a vivere dell'azionario — a quel punto il portafoglio ha avuto 7–10 anni per crescere e il tasso di prelievo dovrebbe essere sceso significativamente. Dal <strong id="cl-pension-year-note">2051</strong> in poi, la pensione riduce ulteriormente i prelievi dall'azionario.
             </div>
           </details>
         </div>
@@ -637,23 +674,10 @@
       <div class="pension-note" id="cl-pension"></div>
     </div>
 
-    <div class="section-sep"><span>Proiezione azionario a fine scala</span></div>
+    <div class="section-sep"><span>Fase post-scala — cosa fare quando i bond finiscono</span></div>
 
     <div class="card">
-      <div class="card-title">Scenari di rendimento azionario — dopo <span id="cl-years-end">7</span> anni</div>
-      <details style="margin-bottom:12px">
-        <summary><span>Come leggere questi scenari</span></summary>
-        <div class="info-box">
-          Mostra quanto potrebbe valere l'azionario quando finisce la scala (e devi iniziare a prelevare da esso). Il <strong>SWR</strong> (Safe Withdrawal Rate) indica la percentuale che dovresti prelevare annualmente — sotto il 4% è considerato sostenibile a lungo termine.
-          <ul>
-            <li><strong>Scenario base (7% reale):</strong> mercato storico medio. L'azionario più che raddoppia.</li>
-            <li><strong>Moderato (3% reale):</strong> crescita lenta. Comunque positivo.</li>
-            <li><strong>Severo (-45% anno 1):</strong> crash pesante nel primo anno, poi lenta ripresa. Il caso peggiore plausibile.</li>
-          </ul>
-          In tutti gli scenari, la pensione INPS riduce il prelievo necessario dall'azionario.
-        </div>
-      </details>
-      <div id="cl-scenarios"></div>
+      <div id="cl-postscala"></div>
     </div>
   </div>
 
@@ -709,13 +733,13 @@ const INSTRUMENTS = [
     instr: 'ETF obbligazionario a scadenza (estensione)',
     sub: 'Estensione anno 8 · sovraccalib. +18%',
     tag: 'ext.', tagClass: 'tag-amber', overcal: 0.18,
-    tips: 'iShares iBonds Dec 2035 Corp UCITS ETF. Da acquistare solo se si attiva lo Scenario A all\'anno 5 o 6 (azionario sopra il target reale). Non acquistare in anticipo: la decisione dipende dalla verifica di estensione.'
+    tips: 'iShares iBonds Dec 2035 Corp UCITS ETF. Da acquistare solo se si attiva lo Scenario A nella verifica di estensione (quando restano 2–3 anni di scala). Non acquistare in anticipo.'
   },
   {
     instr: 'ETF obbligazionario a scadenza (estensione)',
     sub: 'Estensione anno 9 · sovraccalib. +20%',
     tag: 'ext.', tagClass: 'tag-amber', overcal: 0.20,
-    tips: 'iShares iBonds Dec 2036 Corp UCITS ETF. Stessa logica dell\'anno 8 ext. Da acquistare solo in caso di Scenario A nella verifica di estensione dell\'anno 6.'
+    tips: "iShares iBonds Dec 2036 Corp UCITS ETF. Stessa logica dell'estensione precedente. Da acquistare solo in caso di Scenario A nella seconda verifica di estensione."
   },
   {
     instr: 'Titolo di Stato o ETF a scadenza (estensione)',
@@ -734,6 +758,9 @@ const STATUS_LABELS = {
 
 let state = {
   patrimonio: 500000,
+  checkMonth: 'Gennaio',
+  inflRate: 2.5,
+  ladderType: 'fixed',
   annualExp: 30000,
   fireYear: 2027,
   vwceInitial: 0,
@@ -787,7 +814,7 @@ function loadData() {
 function resetData() {
   if (!confirm('Cancellare tutti i dati e tornare ai valori predefiniti?')) return;
   localStorage.removeItem(STORAGE_KEY);
-  state = { patrimonio:500000, annualExp:30000, fireYear:2027, vwceInitial:0, ladderYears:7, pensionMonthly:600, pensionYear:2051, currentFireYear:1, rungs:[], notes:'', lastSaved:null };
+  state = { patrimonio:500000, checkMonth:'Gennaio', inflRate:2.5, ladderType:'fixed', annualExp:30000, fireYear:2027, vwceInitial:0, ladderYears:7, pensionMonthly:600, pensionYear:2051, currentFireYear:1, rungs:[], notes:'', lastSaved:null };
   initRungs();
   syncInputsFromState();
   recalc();
@@ -836,7 +863,7 @@ function syncInputsFromState() {
   set('notes-input', state.notes || '');
   set('vwceCurrent', state.vwceInitial);
   set('spesaEffettiva', state.annualExp);
-  set('vwceFireExt', state.vwceInitial);
+  set('vwceFireExt', state.vwceInitial); // always auto from Setup
   set('vwceTodayExt', state.vwceInitial);
 }
 
@@ -876,6 +903,9 @@ function initRungs() {
 
 function recalc() {
   state.patrimonio = +document.getElementById('patrimonio').value || 500000;
+  const chkEl = document.getElementById('checkMonth'); if(chkEl) state.checkMonth = chkEl.value;
+  const inflEl = document.getElementById('inflRate'); if(inflEl) state.inflRate = +inflEl.value || 2.5;
+  const ltEl = document.getElementById('ladderType'); if(ltEl) state.ladderType = ltEl.value;
   state.annualExp = +document.getElementById('annualExp').value || 30000;
   state.fireYear = +document.getElementById('fireYear').value || 2027;
   state.ladderYears = +document.getElementById('ladderYears').value || 7;
@@ -897,24 +927,35 @@ function recalc() {
 function renderSetup() {
   const totalScala = state.rungs.reduce((a,r) => a + r.amount, 0);
   const azionario = Math.max(0, state.patrimonio - totalScala);
-  state.vwceInitial = azionario; // keep in sync
-  const pctScala = state.patrimonio > 0 ? (totalScala / state.patrimonio * 100).toFixed(1) : 0;
-  const pctAz = state.patrimonio > 0 ? (azionario / state.patrimonio * 100).toFixed(1) : 0;
+  // azionario e strategia
+  const lt = state.ladderType || 'fixed';
+  const bondImm = lt === 'fixed'  ? totalScala
+                : lt === 'hybrid' ? Math.round(state.annualExp * 3 * 1.08)
+                : Math.round(state.annualExp * 2 * 1.04);
+  const azLibero = Math.max(0, state.patrimonio - bondImm);
+  state.vwceInitial = azLibero; // guardrail usa azionario al netto dei bond acquistati
+  const pctScala = state.patrimonio > 0 ? (bondImm / state.patrimonio * 100).toFixed(1) : 0;
+  const pctAz = state.patrimonio > 0 ? (azLibero / state.patrimonio * 100).toFixed(1) : 0;
   const pensionAnnual = state.pensionMonthly * 12;
   const netSpesa = Math.max(0, state.annualExp - pensionAnnual);
-  const swrGross = azionario > 0 ? (state.annualExp / azionario * 100).toFixed(1) : '—';
-  const swrNet = azionario > 0 ? (netSpesa / azionario * 100).toFixed(1) : '—';
+  const swrGross = azLibero > 0 ? (state.annualExp / azLibero * 100).toFixed(1) : '—';
+  const swrNet = azLibero > 0 ? (netSpesa / azLibero * 100).toFixed(1) : '—';
   const swrColor = (v) => +v > 5 ? 'warn' : +v > 3.5 ? '' : 'ok';
 
   // Project azionario at end of ladder for 3 scenarios
   const ny = state.ladderYears;
-  const azBase    = Math.round(azionario * Math.pow(1.07, ny));
-  const azMod     = Math.round(azionario * Math.pow(1.03, ny));
-  const azSevero  = Math.round(azionario * 0.55 * Math.pow(1.05, Math.max(0, ny - 1)));
+  const azBase    = Math.round(azLibero * Math.pow(1.07, ny));
+  const azMod     = Math.round(azLibero * Math.pow(1.03, ny));
+  const azSevero  = Math.round(azLibero * 0.55 * Math.pow(1.05, Math.max(0, ny - 1)));
   const swrProj   = (az) => az > 0 ? (state.annualExp / az * 100).toFixed(1) : '—';
   const swrColor2 = (v) => +v > 5 ? 'danger' : +v > 3.5 ? 'warn' : 'ok';
   const pensionActive = state.pensionYear <= (state.fireYear + ny);
   const spesaFine = pensionActive ? Math.max(0, state.annualExp - pensionAnnual) : state.annualExp;
+  const pctBond = state.patrimonio > 0 ? (bondImm / state.patrimonio * 100).toFixed(1) : 0;
+  const pctLibero = state.patrimonio > 0 ? (azLibero / state.patrimonio * 100).toFixed(1) : 0;
+  const ltLabel = lt === 'fixed' ? `${ny} anni di bond acquistati subito`
+                : lt === 'hybrid' ? '3 anni fissi · resto rolling'
+                : '1–2 anni per volta · rolling';
 
   document.getElementById('setup-metrics').innerHTML = `
     <div class="metric" style="grid-column:1/-1;background:var(--surface2);border-radius:8px;padding:13px 16px;border:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;align-items:center">
@@ -923,14 +964,14 @@ function renderSetup() {
         <div style="font-size:17px;font-weight:600;font-family:var(--mono)">€${fmt(state.patrimonio)}</div>
       </div>
       <div>
-        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">→ Scala obbligazionaria</div>
-        <div style="font-size:17px;font-weight:600;font-family:var(--mono);color:var(--accent)">€${fmt(totalScala)}</div>
-        <div style="font-size:10px;color:var(--text2);margin-top:2px">${pctScala}% · ${ny} anni · fino al ${state.fireYear + ny - 1}</div>
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">→ Bond immobilizzati subito</div>
+        <div style="font-size:17px;font-weight:600;font-family:var(--mono);color:var(--accent)">€${fmt(bondImm)}</div>
+        <div style="font-size:10px;color:var(--text2);margin-top:2px">${pctBond}% · ${ltLabel}</div>
       </div>
       <div>
-        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">→ Azionario residuo</div>
-        <div style="font-size:17px;font-weight:600;font-family:var(--mono)">€${fmt(azionario)}</div>
-        <div style="font-size:10px;color:var(--text2);margin-top:2px">${pctAz}% · cresce indisturbato per ${ny} anni</div>
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">→ Azionario che cresce</div>
+        <div style="font-size:17px;font-weight:600;font-family:var(--mono)">€${fmt(azLibero)}</div>
+        <div style="font-size:10px;color:var(--text2);margin-top:2px">${pctAz}% · indisturbato per ${ny} anni</div>
       </div>
       <div>
         <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Spesa anno ${ny + 1}</div>
@@ -964,99 +1005,92 @@ function renderSetup() {
     sevVerdictColor = 'var(--red)'; sevVerdictBg = 'var(--red-soft)';
   }
 
+  // ── verdict helper ──────────────────────────────────────────────────
+  const swrVerdict2 = (swr, swrGR) => {
+    const s = +swr, g = +swrGR;
+    if (s  <  4)   return { badge:'✅ Solido',      col:'var(--green)', bg:'var(--green-soft)', action:`Preleva normalmente. Il portafoglio regge anche senza aggiustamenti.` };
+    if (s  <  5)   return { badge:'✅ Ok',           col:'var(--green)', bg:'var(--green-soft)', action:`Attiva il guardrail ogni anno. Adegua le spese al mercato.` };
+    if (g  <= 6.5) return { badge:'⚠️ Gestibile',   col:'var(--amber)', bg:'var(--amber-soft)', action:`Il guardrail porta il SWR a ${swrGR}% — gestibile. Taglia le spese del 10% negli anni difficili.` };
+    if (g  <= 8)   return { badge:'⚠️ Attenzione',  col:'var(--amber)', bg:'var(--amber-soft)', action:`Margine ridotto. Valuta di ridurre la scala (meno anni = più azionario) o aumentare il patrimonio prima del FIRE.` };
+    return         { badge:'🔴 Da rivedere',         col:'var(--red)',   bg:'var(--red-soft)',   action:`SWR troppo alto anche con guardrail. Serve più patrimonio, meno spesa, o meno anni di scala.` };
+  };
+
+  const scenarios = [
+    { icon:'🟢', label:'Mercato buono',   desc:`+7%/anno reale — rendimento storico medio`,        az: azBase,   swr: swrBase, swrGR: azBase   > 0 ? (spesaFine*0.9/azBase*100).toFixed(1)   : '—' },
+    { icon:'🟡', label:'Mercato lento',   desc:`+3%/anno reale — decennio di crescita debole`,     az: azMod,    swr: swrMod,  swrGR: azMod    > 0 ? (spesaFine*0.9/azMod*100).toFixed(1)    : '—' },
+    { icon:'🔴', label:'Mercato in crash',desc:`-45% anno 1, poi +5% — il caso peggiore`,          az: azSevero, swr: swrSev,  swrGR: azSevero > 0 ? (spesaFine*0.9/azSevero*100).toFixed(1) : '—' },
+  ].map(s => ({ ...s, v: swrVerdict2(s.swr, s.swrGR) }));
+
+  // overall verdict = worst case
+  const worstV = swrVerdict2(swrSev, swrSevGR);
+
   document.getElementById('setup-swr').innerHTML = `
-    <!-- Intro box -->
-    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:13px 16px;margin-bottom:12px;font-size:12px;color:var(--text2);line-height:1.8">
-      <strong style="color:var(--text)">Come leggere questi numeri</strong><br>
-      Il <strong style="color:var(--text)">SWR (tasso di prelievo)</strong> misura quanto prelevi ogni anno dall'azionario rispetto al suo valore.
-      Qui è calcolato all'<strong style="color:var(--text)">anno ${ny + 1}</strong> — quando finisce la scala e inizi davvero a prelevare —
-      non al giorno del FIRE. Durante i <strong style="color:var(--text)">${ny} anni di scala</strong> l'azionario cresce indisturbato,
-      quindi il SWR reale è molto migliore di quello che vedi sottraendo la scala dal patrimonio oggi.
-      ${pensionActive
-        ? `La pensione è già attiva dall'anno ${ny+1}: la spesa effettiva scende a <strong style="color:var(--text)">€${fmt(Math.round(spesaFine))}/anno</strong>.`
-        : `La pensione inizia nel ${state.pensionYear}, <em>dopo</em> la fine della scala: la spesa rimane €${fmt(state.annualExp)}/anno.`}
+
+    <!-- context strip -->
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:11px 16px;margin-bottom:14px;font-size:12px;color:var(--text2);line-height:1.8;display:flex;gap:16px;flex-wrap:wrap;align-items:center">
+      <span>⏱ Quando inizierai a prelevare: <strong style="color:var(--text)">anno ${ny+1} (${state.fireYear + ny})</strong></span>
+      <span style="color:var(--border2)">|</span>
+      <span>💸 Spesa da coprire: <strong style="color:var(--text)">€${fmt(Math.round(spesaFine))}/anno</strong>${pensionActive ? ` <span style="color:var(--green);font-size:10px">(pensione attiva)</span>` : ` <span style="color:var(--text3);font-size:10px">(pensione dal ${state.pensionYear})</span>`}</span>
+      <span style="color:var(--border2)">|</span>
+      <span>📈 Azionario disponibile: <strong style="color:var(--text)">€${fmt(azLibero)}</strong> · cresce indisturbato per <strong style="color:var(--text)">${ny} anni</strong></span>
     </div>
 
-    <!-- 3 scenario cards -->
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
+    <!-- 3 scenario rows -->
+    ${scenarios.map(s => `
+      <div style="display:grid;grid-template-columns:28px 1fr auto auto;gap:0 14px;align-items:center;background:var(--surface2);border:1px solid ${s.v.col}30;border-left:3px solid ${s.v.col};border-radius:0 8px 8px 0;padding:13px 16px;margin-bottom:8px">
 
-      <!-- OTTIMISTA -->
-      <div class="metric" style="border-color:rgba(46,204,143,.35);padding:14px">
-        <div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:2px">🟢 Scenario ottimista</div>
-        <div style="font-size:10px;color:var(--text3);margin-bottom:10px">Azionario +7%/anno reale<br>= rendimento storico medio mondiale</div>
-        <div style="font-size:13px;font-weight:600;font-family:var(--mono);color:var(--text);margin-bottom:1px">€${fmt(azBase)}</div>
-        <div style="font-size:10px;color:var(--text2);margin-bottom:8px">azionario all'anno ${ny+1}</div>
-        <div style="font-size:22px;font-weight:700;font-family:var(--mono)" class="${swrColor2(swrBase)}">${swrBase}%</div>
-        <div style="font-size:10px;color:var(--text2);margin-top:2px">tasso di prelievo</div>
-        <div style="margin-top:8px;font-size:11px;color:var(--green);background:var(--green-soft);border-radius:5px;padding:5px 8px;line-height:1.5">
-          Soglia ok: sotto il 4% è sostenibile indefinitamente secondo la ricerca storica.
-        </div>
-      </div>
+        <div style="font-size:18px;line-height:1">${s.icon}</div>
 
-      <!-- MODERATO -->
-      <div class="metric" style="border-color:rgba(245,166,35,.35);padding:14px">
-        <div style="font-size:11px;font-weight:700;color:var(--amber);margin-bottom:2px">🟡 Scenario moderato</div>
-        <div style="font-size:10px;color:var(--text3);margin-bottom:10px">Azionario +3%/anno reale<br>= crescita lenta, decennio difficile</div>
-        <div style="font-size:13px;font-weight:600;font-family:var(--mono);color:var(--text);margin-bottom:1px">€${fmt(azMod)}</div>
-        <div style="font-size:10px;color:var(--text2);margin-bottom:8px">azionario all'anno ${ny+1}</div>
-        <div style="font-size:22px;font-weight:700;font-family:var(--mono)" class="${swrColor2(swrMod)}">${swrMod}%</div>
-        <div style="font-size:10px;color:var(--text2);margin-top:2px">tasso di prelievo</div>
-        <div style="margin-top:8px;font-size:11px;color:var(--amber);background:var(--amber-soft);border-radius:5px;padding:5px 8px;line-height:1.5">
-          Soglia ok: fino al 5% è accettabile con guardrail attivo.
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:1px">${s.label}</div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:8px">${s.desc}</div>
+          <div style="background:${s.v.bg};border-radius:5px;padding:7px 10px;font-size:11px;color:${s.v.col};line-height:1.6">
+            <strong>${s.v.badge}</strong> — ${s.v.action}
+          </div>
         </div>
-      </div>
 
-      <!-- SEVERO -->
-      <div class="metric" style="border-color:rgba(232,93,93,.35);padding:14px">
-        <div style="font-size:11px;font-weight:700;color:var(--red);margin-bottom:2px">🔴 Scenario severo</div>
-        <div style="font-size:10px;color:var(--text3);margin-bottom:10px">Crash -45% anno 1, poi +5%/anno<br>= il caso peggiore plausibile</div>
-        <div style="font-size:13px;font-weight:600;font-family:var(--mono);color:var(--text);margin-bottom:1px">€${fmt(azSevero)}</div>
-        <div style="font-size:10px;color:var(--text2);margin-bottom:8px">azionario all'anno ${ny+1}</div>
-        <div style="font-size:22px;font-weight:700;font-family:var(--mono)" class="${swrColor2(swrSev)}">${swrSev}%</div>
-        <div style="font-size:10px;color:var(--text2);margin-top:2px">tasso di prelievo</div>
-        <div style="margin-top:6px;display:flex;align-items:baseline;gap:6px">
-          <span style="font-size:10px;color:var(--text3)">con guardrail -10%:</span>
-          <span style="font-size:14px;font-weight:700;font-family:var(--mono)" class="${swrColor2(swrSevGR)}">${swrSevGR}%</span>
+        <div style="text-align:right;min-width:90px">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Azionario al ${state.fireYear + ny}</div>
+          <div style="font-size:14px;font-weight:600;font-family:var(--mono);margin-bottom:6px">€${fmt(s.az)}</div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:1px">SWR</div>
+          <div style="font-size:22px;font-weight:700;font-family:var(--mono);color:${s.v.col};line-height:1">${s.swr}%</div>
         </div>
-        <div style="margin-top:8px;font-size:11px;color:var(--red);background:var(--red-soft);border-radius:5px;padding:5px 8px;line-height:1.5">
-          Soglia ok: fino al 6.5% con guardrail. Sopra l'8% il piano va rivisto.
-        </div>
+
+        ${+s.swr > 5 ? `
+        <div style="text-align:right;min-width:80px;padding-left:12px;border-left:1px solid var(--border)">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:1px">Con guardrail</div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:1px">(-10% spese)</div>
+          <div style="font-size:18px;font-weight:700;font-family:var(--mono);color:${swrColor2(s.swrGR)};margin-top:4px">${s.swrGR}%</div>
+        </div>` : '<div></div>'}
       </div>
+    `).join('')}
+
+    <!-- overall verdict -->
+    <div style="background:${worstV.bg};border:1px solid ${worstV.col}40;border-radius:8px;padding:12px 16px;margin-top:4px;font-size:12px;color:${worstV.col};line-height:1.7">
+      <strong>Valutazione complessiva (caso peggiore):</strong> ${worstV.badge} — ${worstV.action}
     </div>
 
-    <!-- Verdict banner -->
-    <div style="background:${sevVerdictBg};border:1px solid ${sevVerdictColor}40;border-left:3px solid ${sevVerdictColor};border-radius:0 8px 8px 0;padding:11px 15px;font-size:12px;color:${sevVerdictColor};line-height:1.7;margin-bottom:12px">
-      <strong>Valutazione scenario peggiore:</strong> ${sevVerdict}
-    </div>
-
-    <!-- Reference table -->
-    <details>
-      <summary><span>Soglie di riferimento SWR — cosa significano i numeri</span></summary>
+    <details style="margin-top:10px">
+      <summary><span>Come si leggono le soglie SWR</span></summary>
       <div class="info-box" style="margin-top:8px">
-        <strong>Senza guardrail (regola del 4%, Trinity Study):</strong>
-        <ul>
-          <li><strong style="color:var(--green)">&lt; 4%</strong> — sostenibile per 30+ anni nel 95% degli scenari storici</li>
-          <li><strong style="color:var(--amber)">4%–5%</strong> — sostenibile per 30 anni nell'85% degli scenari</li>
-          <li><strong style="color:var(--red)">&gt; 5%</strong> — rischio concreto di esaurire il portafoglio</li>
+        Il <strong>tasso di prelievo (SWR)</strong> è semplicemente: spesa annua ÷ valore azionario. Più è basso, più il piano è robusto.
+        Con scala + guardrail le soglie accettabili sono più alte rispetto alla classica "regola del 4%":
+        <ul style="margin-top:6px">
+          <li><strong style="color:var(--green)">Sotto il 4%</strong> — ottimo: regge anche senza alcun aggiustamento</li>
+          <li><strong style="color:var(--green)">4%–5%</strong> — buono: il guardrail gestisce i periodi difficili</li>
+          <li><strong style="color:var(--amber)">5%–6.5%</strong> — accettabile: guardrail obbligatorio, margine ridotto</li>
+          <li><strong style="color:var(--red)">Sopra il 6.5%</strong> — rischio concreto: riduci la scala, aumenta il patrimonio o riduci la spesa</li>
         </ul>
-        <strong>Con guardrail dinamico + scala obbligazionaria (il tuo caso):</strong>
-        <ul>
-          <li><strong style="color:var(--green)">&lt; 5%</strong> — ottimo, piano solidissimo</li>
-          <li><strong style="color:var(--green)">5%–6.5%</strong> — accettabile: il guardrail gestisce i periodi difficili</li>
-          <li><strong style="color:var(--amber)">6.5%–8%</strong> — attenzione: funziona ma con poco margine</li>
-          <li><strong style="color:var(--red)">&gt; 8%</strong> — piano da rivedere strutturalmente</li>
-        </ul>
-        Le soglie più alte rispetto alla regola del 4% sono giustificate da: (1) la scala ti protegge nei primi anni critici, (2) il guardrail taglia le spese quando serve, (3) la pensione INPS riduce il prelievo nel lungo periodo.
       </div>
     </details>
   `;
-  // Also pre-fill guardrail with derived azionario
+  // Pre-fill guardrail with strategy-aware azionario
   const gcEl = document.getElementById('vwceCurrent');
-  if (gcEl && !gcEl.dataset.manualOverride) gcEl.value = azionario;
+  if (gcEl && !gcEl.dataset.manualOverride) gcEl.value = azLibero;
   const gfEl = document.getElementById('vwceFireExt');
-  if (gfEl && !gfEl.dataset.manualOverride) gfEl.value = azionario;
+  if (gfEl) gfEl.value = azLibero; // always sync — net of bonds actually purchased
   const gtEl = document.getElementById('vwceTodayExt');
-  if (gtEl && !gtEl.dataset.manualOverride) gtEl.value = azionario;
+  if (gtEl) gtEl.value = azionario; // always sync from Setup azionario
 
   let rows = '';
   for (let i = 0; i < state.ladderYears; i++) {
@@ -1084,7 +1118,23 @@ function renderSetup() {
 }
 
 // ── Ladder ────────────────────────────────────────────────────────────
+function rungPhase(i, lt) {
+  const cy = state.currentFireYear - 1; // 0-based
+  if (lt === 'fixed') return 'buy-now';
+  if (lt === 'hybrid') {
+    if (i < 3) return i < cy ? 'past' : 'buy-now';
+    if (i < cy) return 'past';
+    if (i <= cy + 1) return 'rolling-window';
+    return 'rolling-later';
+  }
+  // rolling
+  if (i < cy) return 'past';
+  if (i <= cy + 1) return 'rolling-window';
+  return 'rolling-later';
+}
+
 function renderLadder() {
+  const lt = state.ladderType || 'fixed';
   const purchased = state.rungs.filter(r => r.status !== 'pending').reduce((a,r) => a+r.amount, 0);
   const total = state.rungs.reduce((a,r) => a+r.amount, 0);
   const consumed = state.rungs.filter(r => r.status === 'consumed').length;
@@ -1095,16 +1145,34 @@ function renderLadder() {
   document.getElementById('ladder-fill').style.width = pct + '%';
   document.getElementById('current-year-display').textContent = state.currentFireYear;
 
-  let html = '';
+  const banners = {
+    fixed:   { col:'var(--accent)', bg:'var(--blue-soft)',  text:'<strong>Scala fissa:</strong> acquista tutti i bond insieme prima del FIRE. Segna ogni bond come <em>Acquistato ✓</em> man mano che procedi.' },
+    rolling: { col:'var(--green)',  bg:'var(--green-soft)', text:'<strong>Rolling:</strong> acquista solo i bond della finestra attiva (in verde). Ogni anno: incassa quello in scadenza, compra il successivo.' },
+    hybrid:  { col:'var(--amber)',  bg:'var(--amber-soft)', text:"<strong>Ibrida:</strong> i primi 3 anni (blu) vanno acquistati subito. Dall'anno 4 in poi: rolling — acquista 1–2 anni per volta nel mese del check." },
+  };
+  const b = banners[lt] || banners.fixed;
+
+  let html = `<div style="background:${b.bg};border:1px solid ${b.col}30;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--text2);line-height:1.6">${b.text}</div>`;
+
   for (let i = 0; i < state.ladderYears; i++) {
     const ins = INSTRUMENTS[Math.min(i, INSTRUMENTS.length-1)];
     const r = state.rungs[i];
     const yr = state.fireYear + i;
     const isCur = (i+1) === state.currentFireYear;
+    const phase = rungPhase(i, lt);
     const target = Math.round(state.annualExp*(1+ins.overcal));
     const diff = r.amount - target;
+    const isLater = phase === 'rolling-later';
 
-    html += `<div class="rung ${r.status==='consumed'?'consumed':''} ${isCur?'active-rung':''}">
+    let borderCol = 'var(--border)', bgCol = '';
+    let phasePill = `<span class="tag ${ins.tagClass}">${ins.tag}</span>`;
+
+    if (isCur)                                           { borderCol='var(--accent)'; bgCol='var(--blue-soft)'; }
+    if (phase==='rolling-window' && !isCur)              { borderCol='rgba(46,204,143,.5)'; bgCol='var(--green-soft)'; phasePill='<span class="tag tag-green">🔄 acquista ora</span>'; }
+    if (lt==='hybrid' && i<3 && phase==='buy-now'&& !isCur){ phasePill='<span class="tag tag-blue">📦 fisso</span>'; }
+    if (isLater)                                         { phasePill='<span class="tag" style="background:var(--surface2);color:var(--text3)">⏳ futuro</span>'; }
+
+    html += `<div class="rung ${r.status==='consumed'?'consumed':''} ${isCur?'active-rung':''}" style="border-color:${borderCol};${bgCol?'background:'+bgCol+';':''}${isLater?'opacity:.45;':''}">
       <div class="rung-year-block">
         <div class="rung-year">${i+1}°</div>
         <div class="rung-cal">${yr}</div>
@@ -1114,13 +1182,13 @@ function renderLadder() {
         ${Object.entries(STATUS_LABELS).map(([k,v])=>`<option value="${k}"${r.status===k?' selected':''}>${v}</option>`).join('')}
       </select>
       <div>
-        <div class="rung-instr">${ins.instr} <span class="tag ${ins.tagClass}">${ins.tag}</span></div>
+        <div class="rung-instr">${ins.instr} ${phasePill}</div>
         <div class="rung-sub">${ins.sub}</div>
         <details style="margin-top:5px"><summary style="font-size:10px;color:var(--accent);cursor:pointer;list-style:none;display:inline-flex;align-items:center;gap:3px" onclick="event.stopPropagation()">▸ <span style="font-weight:500">strumenti ottimali</span></summary><div style="background:var(--bg);border:1px solid var(--border);border-left:2px solid var(--accent);border-radius:0 5px 5px 0;padding:8px 10px;margin-top:5px;font-size:11px;color:var(--text2);line-height:1.65;max-width:340px">${ins.tips}</div></details>
       </div>
       <div style="text-align:right">
         <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Importo eff. €</div>
-        <input class="rung-input" type="number" value="${r.amount}" onchange="setAmount(${i},this.value)">
+        <input class="rung-input" type="number" value="${r.amount}" onchange="setAmount(${i},this.value)" ${isLater?'disabled':''}>
       </div>
       <div style="text-align:right">
         <div style="font-size:10px;color:var(--text3);margin-bottom:3px">Target</div>
@@ -1150,6 +1218,7 @@ function changeCurrentYear(d) {
 // ── Guardrail ─────────────────────────────────────────────────────────
 function calcGuardrail() {
   const vwce = +document.getElementById('vwceCurrent').value || 0;
+  const todayEl = document.getElementById('vwceTodayExt'); if(todayEl && vwce) todayEl.value = vwce;
   const spesa = +document.getElementById('spesaEffettiva').value || 0;
   if (!vwce || !spesa) return;
 
@@ -1229,17 +1298,22 @@ function calcExtension() {
   if (!extEl) return;
 
   const yr = state.currentFireYear;
-  if (yr < 5 || yr > 6) {
+  const ny = state.ladderYears;
+  const checkY1 = ny - 2; // e.g. 3 for 5y ladder, 5 for 7y ladder
+  const checkY2 = ny - 1;
+  if (yr < checkY1 || yr > checkY2) {
     extEl.innerHTML = `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;font-size:12px;color:var(--text3);text-align:center">
-      Questa verifica si fa solo all'anno 5 e 6 di FIRE.<br>
-      <span style="color:var(--text2)">Sei all'anno <strong style="color:var(--text)">${yr}</strong> — torna qui quando arrivi all'anno 5.</span>
+      Con una scala di <strong style="color:var(--text)">${ny} anni</strong>, questa verifica si fa all'anno <strong style="color:var(--text)">${checkY1}</strong> e all'anno <strong style="color:var(--text)">${checkY2}</strong>.<br>
+      <span style="color:var(--text2)">Sei all'anno <strong style="color:var(--text)">${yr}</strong> — ${yr < checkY1 ? `torna qui quando arrivi all'anno ${checkY1}` : 'la finestra di estensione è passata'}.</span>
     </div>`;
     return;
   }
 
   const vwceFire = +document.getElementById('vwceFireExt').value || state.vwceInitial;
   const vwceToday = +document.getElementById('vwceTodayExt').value || state.vwceInitial;
-  const infl = (+document.getElementById('inflCumul').value || 15) / 100;
+  const annualRate = state.inflRate || 2.5;
+  const yearsPassed = Math.max(1, yr); // years since FIRE
+  const infl = Math.pow(1 + annualRate / 100, yearsPassed) - 1;
 
   const realTarget = vwceFire * (1 + infl);
   const diff = vwceToday - realTarget;
@@ -1258,7 +1332,7 @@ function calcExtension() {
     scenario='B'; scenCol='var(--amber)'; scenBg='var(--amber-soft)'; scenIcon='🟡';
     scenTitolo = 'Mercato incerto — aspetta';
     scenDesc = `L'azionario è leggermente sotto il suo valore reale di partenza, ma non abbastanza da preoccuparsi. Non è il momento di vendere.`;
-    scenAzione = yr===5 ? `Non fare nulla quest'anno. Rivaluta all'anno 6.` : `Non fare nulla. La scala esistente regge — vivi con gli anni rimanenti.`;
+    scenAzione = yr===checkY1 ? `Non fare nulla quest'anno. Rivaluta all'anno ${checkY2}.` : `Non fare nulla. La scala esistente regge — vivi con gli anni rimanenti.`;
   } else {
     scenario='C'; scenCol='var(--red)'; scenBg='var(--red-soft)'; scenIcon='🔴';
     scenTitolo = "Crash severo — non toccare l'azionario";
@@ -1277,7 +1351,7 @@ function calcExtension() {
       <div class="metric">
         <div class="metric-label">Target reale oggi</div>
         <div style="font-size:14px;font-weight:600;font-family:var(--mono)">€${fmt(Math.round(realTarget))}</div>
-        <div class="metric-sub">+${Math.round(infl*100)}% inflazione cumulata</div>
+        <div class="metric-sub">+${(infl*100).toFixed(1)}% inflaz. cumulata (${annualRate}%/anno × ${yearsPassed} anni)</div>
       </div>
       <div class="metric">
         <div class="metric-label">Azionario oggi</div>
@@ -1302,8 +1376,86 @@ function calcExtension() {
 // ── Checklist ─────────────────────────────────────────────────────────
 function renderChecklist() {
   document.getElementById('cl-years').textContent = state.ladderYears;
-  const clYearsEnd = document.getElementById('cl-years-end');
-  if (clYearsEnd) clYearsEnd.textContent = state.ladderYears;
+  const clMonth = document.getElementById('cl-month');
+  if (clMonth) clMonth.textContent = state.checkMonth || 'nel mese scelto';
+  const ny = state.ladderYears;
+  const checkY1 = ny - 2, checkY2 = ny - 1;
+  const clExt = document.getElementById('cl-ext-years');
+  if (clExt) clExt.textContent = `solo agli anni ${checkY1} e ${checkY2}`;
+  const extIntro = document.getElementById('ext-intro-years');
+  if (extIntro) extIntro.textContent = `${checkY2}–${checkY1} anni`;
+  const extTitle = document.getElementById('ext-card-title');
+  if (extTitle) extTitle.textContent = `da valutare all'anno ${checkY1} e ${checkY2}`;
+
+  // Update ladder section description based on strategy
+  const lt = state.ladderType || 'fixed';
+  const ldesc = document.getElementById('ladder-strategy-desc');
+  const lbadge = document.getElementById('ladder-strategy-badge');
+  if (ldesc) {
+    if (lt === 'fixed')  { ldesc.innerHTML = 'Tutti i bond vanno acquistati <strong>insieme, 6–12 mesi prima del FIRE</strong>. Questa sezione ti aiuta a tenerli sotto controllo.'; }
+    if (lt === 'rolling'){ ldesc.innerHTML = 'Strategia <strong>rolling</strong>: acquisti 1–2 anni di bond per volta, ogni anno nel mese del check. Non comprare tutto subito.'; }
+    if (lt === 'hybrid') { ldesc.innerHTML = "Strategia <strong>ibrida</strong>: acquista i primi 3 anni di bond subito (scala fissa), poi passa alla rolling dall'anno 4 in poi."; }
+  }
+  if (lbadge) {
+    if (lt === 'fixed')  lbadge.textContent = '🛒 Prima del FIRE: acquista tutto in una volta · Durante il FIRE: aggiorna lo stato ogni anno';
+    if (lt === 'rolling') lbadge.textContent = '🔄 Ogni anno: compra 1–2 anni di bond · incassa quello in scadenza · aggiorna lo stato';
+    if (lt === 'hybrid') lbadge.textContent = "🛒 Prima del FIRE: acquista 3 anni fissi · poi rolling dall'anno 4";
+  }
+
+  // Post-scala section
+  const lt2 = state.ladderType || 'fixed';
+  const pensionAnnualPS = state.pensionMonthly * 12;
+  const postScalaEl = document.getElementById('cl-postscala');
+  if (postScalaEl) {
+    const strategies = {
+      fixed: {
+        title: 'Scala fissa terminata — passa ai prelievi diretti',
+        desc: `Dall'anno ${ny+1} non hai più bond in scadenza. Ogni anno, nel mese del check, vendi dall'azionario quanto ti serve per vivere. Il guardrail (tab 3) ti guida su quanto prelevare.`,
+        steps: [
+          `Nel mese del check: calcola la spesa dell'anno prossimo`,
+          `Controlla il guardrail → determina il budget`,
+          `Vendi la quota necessaria di azionario (non vendere in anticipo)`,
+          `Valuta se tenere 1 anno di spese in liquidità come buffer psicologico`
+        ]
+      },
+      rolling: {
+        title: 'Rolling in corso — compra il prossimo bond',
+        desc: `Con la rolling non c'è un "fine scala": ogni anno compri il bond per l'anno N+2 (2 anni avanti) e incassi quello in scadenza. Il ciclo continua finché il guardrail non segnala che l'azionario è cresciuto abbastanza da non aver più bisogno del buffer.`,
+        steps: [
+          `Incassa il bond in scadenza`,
+          `Controlla il guardrail → determina il budget`,
+          `Se azionario in zona verde: valuta di smettere la rolling e prelevare direttamente`,
+          `Se azionario ok/rosso: compra il bond per l'anno N+2`
+        ]
+      },
+      hybrid: {
+        title: 'Fase ibrida — scala fissa esaurita, rolling in corso',
+        desc: `I 3 anni di scala fissa ti hanno protetto nella fase più critica. Dall'anno 4 sei in modalità rolling: ogni anno compri 1–2 anni di bond e incassi quello in scadenza. Puoi fermarti quando il SWR scende sotto il 3.5%.`,
+        steps: [
+          `Incassa il bond in scadenza dell'anno`,
+          `Controlla il guardrail`,
+          `Compra il bond per l'anno N+1 o N+2 (max 2 anni avanti)`,
+          `Se SWR &lt; 3.5% per 2 anni consecutivi: valuta di passare a prelievi diretti`
+        ]
+      }
+    };
+    const s = strategies[lt2] || strategies.fixed;
+    postScalaEl.innerHTML = `
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">${s.title}</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.8;margin-bottom:14px">${s.desc}
+        ${pensionAnnualPS > 0 ? `<br><span style="color:var(--green)">Dal ${state.pensionYear}: pensione €${fmt(pensionAnnualPS)}/anno → prelievo dall'azionario si riduce significativamente.</span>` : ''}
+      </div>
+      <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Azioni ogni anno</div>
+      ${s.steps.map((st,i) => `<div style="display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--border)">
+        <div style="width:20px;height:20px;border-radius:50%;background:var(--blue-soft);color:var(--accent);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">${i+1}</div>
+        <div style="font-size:12px;color:var(--text);line-height:1.6">${st}</div>
+      </div>`).join('')}
+      <div style="margin-top:12px;background:var(--surface2);border-radius:7px;padding:10px 13px;font-size:11px;color:var(--text2);line-height:1.7">
+        💡 I numeri precisi (SWR, valore azionario proiettato, azioni consigliate per ogni scenario) li trovi nella sezione <strong style="color:var(--text)">SWR proiettato a fine scala</strong> nella tab Configurazione.
+      </div>
+    `;
+  }
+  // cl-years-end removed — no-op
 
   const clPensionNote = document.getElementById('cl-pension-year-note');
   if (clPensionNote) clPensionNote.textContent = state.pensionYear;
@@ -1311,7 +1463,7 @@ function renderChecklist() {
   const pensionAnnual = state.pensionMonthly * 12;
   const net = state.annualExp - pensionAnnual;
   const swr = (net / state.vwceInitial * 100).toFixed(1);
-  document.getElementById('cl-pension').innerHTML =
+  const clPensEl = document.getElementById('cl-pension'); if (clPensEl) clPensEl.innerHTML =
     `<strong>Dal ${state.pensionYear}:</strong> pensione €${fmt(state.pensionMonthly)}/mese (€${fmt(pensionAnnual)}/anno) → prelievo netto dall'azionario scende a <strong>€${fmt(Math.round(net))}/anno</strong> → SWR effettivo <strong>${swr}%</strong>`;
 
   // same 3-scenario projection as Setup
@@ -1326,29 +1478,48 @@ function renderChecklist() {
   const spesaPrelievo = pensionActiveAtEnd ? Math.max(0, state.annualExp - pensionAnnual) : state.annualExp;
   const swrC = (v) => +v > 5 ? 'danger' : +v > 3.5 ? 'warn' : 'ok';
 
-  document.getElementById('cl-scenarios').innerHTML = `
-    <div style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.7">
-      L'azionario non viene toccato durante i ${ny2} anni di scala. Il SWR si calcola sul valore <em>proiettato</em> all'anno ${ny2+1},
-      con spesa ${pensionActiveAtEnd ? `netta <strong>€${fmt(Math.round(spesaPrelievo))}</strong> (pensione già attiva dal ${state.pensionYear})` : `lorda <strong>€${fmt(state.annualExp)}</strong> (pensione dal ${state.pensionYear}, non ancora attiva)`}.
+  const swrVerdict = (swrNum) => {
+    if (swrNum <= 0) return { text: '—', col: 'var(--text3)', action: '' };
+    if (swrNum < 4)  return { text: '✅ Piano solido', col: 'var(--green)',  action: 'Preleva normalmente. Adegua per inflazione ogni anno.' };
+    if (swrNum < 5)  return { text: '⚠️ Gestibile',   col: 'var(--amber)', action: 'Attiva il guardrail. Adegua le spese ogni anno in base al mercato.' };
+    if (swrNum < 6.5)return { text: '⚠️ Attenzione',  col: 'var(--amber)', action: 'Guardrail obbligatorio. Taglia le spese del 10% finché il mercato non recupera.' };
+    return           { text: '🔴 Piano da rivedere', col: 'var(--red)',   action: 'Il SWR è troppo alto. Valuta di ridurre la scala, aumentare il patrimonio o ridurre la spesa prima del FIRE.' };
+  };
+
+  const clScenEl = document.getElementById('cl-scenarios'); if (!clScenEl) return;
+  clScenEl.innerHTML = `
+    <div style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.8;background:var(--surface2);border-radius:8px;padding:11px 14px">
+      L'azionario cresce <strong style="color:var(--text)">indisturbato</strong> durante i ${ny2} anni di scala.
+      Il SWR (tasso di prelievo) si calcola all'<strong style="color:var(--text)">anno ${ny2+1}</strong>, quando inizi davvero a prelevare —
+      con spesa ${pensionActiveAtEnd
+        ? `netta <strong style="color:var(--text)">€${fmt(Math.round(spesaPrelievo))}/anno</strong> <span style="color:var(--green)">(pensione attiva dal ${state.pensionYear})</span>`
+        : `lorda <strong style="color:var(--text)">€${fmt(state.annualExp)}/anno</strong> <span style="color:var(--text3)">(pensione dal ${state.pensionYear})</span>`}.
     </div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-      ${sc.map(s => {
-        const swr = s.v > 0 ? (spesaPrelievo / s.v * 100).toFixed(1) : '—';
-        const swrGuardrail = s.v > 0 ? (state.annualExp * 0.9 / s.v * 100).toFixed(1) : '—';
-        return `<div class="metric" style="border-color:${s.col}40">
-          <div class="metric-label" style="color:${s.col}">${s.label}</div>
-          <div style="font-size:10px;color:var(--text3);margin-bottom:6px">${s.note}</div>
-          <div style="font-size:14px;font-weight:600;font-family:var(--mono);margin-bottom:2px">€${fmt(s.v)}</div>
-          <div style="font-size:10px;color:var(--text2);margin-bottom:8px">azionario anno ${ny2+1}</div>
-          <div style="font-size:15px;font-weight:700;font-family:var(--mono)" class="${swrC(swr)}">SWR ${swr}%</div>
-          ${+swr > 5 ? `<div style="font-size:10px;color:var(--amber);margin-top:4px">con guardrail -10%: ${swrGuardrail}%</div>` : ''}
-        </div>`;
-      }).join('')}
-    </div>
-    <div style="font-size:11px;color:var(--text2);margin-top:10px;line-height:1.7">
-      Nello scenario severo il guardrail taglia le spese a €${fmt(Math.round(state.annualExp*0.9))}/anno — riducendo il SWR al primo prelievo.
-      Anche nel caso peggiore, il portafoglio ha avuto ${ny2} anni per parzialmente recuperare prima che inizi a prelevare.
-    </div>
+    ${sc.map(s => {
+      const swrNum = s.v > 0 ? spesaPrelievo / s.v * 100 : 0;
+      const swrStr = swrNum > 0 ? swrNum.toFixed(1) : '—';
+      const swrGRNum = s.v > 0 ? (spesaPrelievo * 0.9) / s.v * 100 : 0;
+      const swrGRStr = swrGRNum > 0 ? swrGRNum.toFixed(1) : '—';
+      const v = swrVerdict(swrNum);
+      const needsGR = swrNum > 5;
+      return `<div style="background:var(--surface2);border:1px solid ${s.col}40;border-left:3px solid ${s.col};border-radius:0 8px 8px 0;padding:14px 16px;margin-bottom:8px;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:start">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:${s.col};margin-bottom:1px">${s.label}</div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:8px">${s.note}</div>
+          <div style="font-size:12px;color:var(--text);margin-bottom:2px">Azionario all'anno ${ny2+1}: <strong style="font-family:var(--mono)">€${fmt(s.v)}</strong></div>
+          ${needsGR ? `<div style="font-size:11px;color:var(--text2)">SWR con guardrail -10%: <span style="font-family:var(--mono);font-weight:600">${swrGRStr}%</span></div>` : ''}
+          <div style="margin-top:10px;background:rgba(0,0,0,.2);border-radius:6px;padding:8px 10px;font-size:11px;color:var(--text);line-height:1.6">
+            <span style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:3px">👉 Cosa fare</span>
+            ${v.action}
+          </div>
+        </div>
+        <div style="text-align:right;min-width:80px">
+          <div style="font-size:28px;font-weight:700;font-family:var(--mono);color:${v.col};line-height:1">${swrStr}%</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px">SWR</div>
+          <div style="font-size:11px;font-weight:600;color:${v.col};margin-top:6px">${v.text}</div>
+        </div>
+      </div>`;
+    }).join('')}
   `;
 }
 
