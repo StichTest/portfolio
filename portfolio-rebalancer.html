@@ -382,6 +382,12 @@ tr.drag-over td{border-top:2px solid var(--accent)}
       <div id="tgt-cat-rows" style="display:flex;flex-direction:column;gap:8px"></div>
     </div>
 
+    <!-- FIXED AMOUNTS -->
+    <div style="margin-top:12px;padding:10px 12px;background:#0e1f30;border:1px solid #1e3a5f;border-radius:10px">
+      <div style="font-size:11px;color:#90caf9;margin-bottom:8px;font-weight:600">💶 Importi fissi (opzionale) — sovrascrivono il target % nel ribilanciamento</div>
+      <div id="tgt-fixed-rows" style="display:flex;flex-direction:column;gap:6px"></div>
+    </div>
+
     <hr class="modal-div">
 
     <!-- SUBCAT TARGETS -->
@@ -606,6 +612,8 @@ ETF_DB.forEach(function(e){if(e.i)DB_ISIN[e.i]=e;if(e.t)DB_TICKER[e.t]=e;});
 // catTargets: % of total portfolio, must sum to 100
 // subcatTargets[cat][sub]: % OF CATEGORY, must sum to 100 per cat
 var nextId=30;
+// fixedAmounts: optional fixed € amounts for specific categories (overrides % target for rebalance calc)
+var fixedAmounts={}; // e.g. {"Obbligazionario": 5000}
 var catTargets={Azionario:60,Obbligazionario:18,"Materie Prime":8,Immobiliare:6,"Liquidità":8,Crypto:0,Altro:0};
 var subcatTargets={Azionario:{Globale:0,USA:0,Europa:0,Emergenti:0,Pacifico:0},Obbligazionario:{Governativo:0,Corporate:0,"High Yield":0,Emergenti:0}};
 var subcats={Azionario:["Globale","USA","Europa","Emergenti","Pacifico"],Obbligazionario:["Governativo","Corporate","High Yield","Emergenti"]};
@@ -634,6 +642,8 @@ var subcats={Azionario:["Globale","USA","Europa","Emergenti","Pacifico"],Obbliga
         });
       });
     }
+    var fa=localStorage.getItem("pf_fixedAmounts");
+    if(fa){var pfa=JSON.parse(fa);Object.keys(pfa).forEach(function(c){var v=parseFloat(pfa[c]);if(!isNaN(v)&&v>0)fixedAmounts[c]=v;});}
   }catch(e){}
 })();
 var etfs=[
@@ -878,6 +888,7 @@ function saveTargetsLocal(){
   try{
     localStorage.setItem("pf_catTargets",JSON.stringify(catTargets));
     localStorage.setItem("pf_subcatTargets",JSON.stringify(subcatTargets));
+    localStorage.setItem("pf_fixedAmounts",JSON.stringify(fixedAmounts));
   }catch(e){}
 }
 // loadTargetsLocal() removed — targets loaded at startup via IIFE
@@ -1175,24 +1186,29 @@ function renderOverview(){
 
 // ── REBALANCE ─────────────────────────────────────────────────────────
 function calcTargets(newTot){
+  // Resolve effective target value per category
+  // fixedAmounts override % targets for those categories
+  function catTargetValue(cat){
+    if(fixedAmounts[cat]&&fixedAmounts[cat]>0)return fixedAmounts[cat];
+    return (catTargets[cat]||0)/100*newTot;
+  }
   return etfs.map(function(e){
     var cat=e.c,sub=e.s;
-    var catPct=(catTargets[cat]||0)/100;
+    var catTv=catTargetValue(cat);
     var tv;
     if(HAS_SUBCATS.includes(cat)&&sub&&(subcats[cat]||[]).indexOf(sub)>=0){
       var subcatPct=((subcatTargets[cat]||{})[sub]||0)/100;
-      var portfolioPct=catPct*subcatPct;
       var subItems=etfs.filter(function(x){return x.c===cat&&x.s===sub;});
       var subVal=subItems.reduce(function(a,x){return a+x.v;},0);
       var w=subVal>0?e.v/subVal:1/Math.max(subItems.length,1);
-      tv=portfolioPct*w*newTot;
+      tv=catTv*subcatPct*w;
     }else{
       var ungrouped=etfs.filter(function(x){if(x.c!==cat)return false;if(!HAS_SUBCATS.includes(cat))return true;return !x.s||(subcats[cat]||[]).indexOf(x.s)<0;});
       var subcatSum=HAS_SUBCATS.includes(cat)?Object.values(subcatTargets[cat]||{}).reduce(function(a,v){return a+v;},0)/100:0;
       var remainFrac=Math.max(0,1-subcatSum);
       var ugVal=ungrouped.reduce(function(a,x){return a+x.v;},0);
       var w=ugVal>0?e.v/ugVal:1/Math.max(ungrouped.length,1);
-      tv=catPct*remainFrac*w*newTot;
+      tv=catTv*remainFrac*w;
     }
     return Object.assign({},e,{tv:tv,diff:tv-e.v});
   });
@@ -1210,8 +1226,13 @@ function renderRebalance(){
       var isBuy=e.diff>1,isNeu=Math.abs(e.diff)<=1;
       var ac=isNeu?"#64748b":isBuy?"#66bb6a":"#ef5350";
       var bb=isNeu?"#1e293b":isBuy?"rgba(20,83,45,.25)":"rgba(127,29,29,.25)";
+      // When new capital provided, show how much of it to allocate here
+      var capShare=0;
+      if(cap>0&&e.diff>0){capShare=Math.min(e.diff,cap);}
       var lbl=isNeu?"≈ OK":isBuy?"▲ ACQUISTA":"▼ SOVRAP.";
       var amt=isNeu?"≈ OK":(isBuy?"+ ":"- ")+fmt(Math.abs(e.diff));
+      if(cap>0&&capShare>0)amt="+ "+fmt(capShare)+" ora";
+      else if(cap>0&&isNeu)amt="✓ OK";
       var tP=newTot>0?((e.tv/newTot)*100).toFixed(1):0;
       var subL=e.s?" · "+e.s:"";
       if(e.diff>1)buyItems.push(e);else if(Math.abs(e.diff)<=1)okItems.push(e);else sellItems.push(e);
@@ -1233,12 +1254,24 @@ function renderRebalance(){
       +"<div class='reb-list'>"+rebHtml+"</div>"
       +"<div class='card'><div class='card-lbl'>Riepilogo</div><div class='sg3'>"+sc("Acquistare",buyItems,"#66bb6a")+sc("Bilanciati",okItems,"#64748b")+sc("Sovrappeso",sellItems,"#ef5350")+"</div></div>";
   }
+  // Build fixed amounts display
+  var fixedDisplay="";
+  Object.keys(fixedAmounts).forEach(function(c){
+    if(fixedAmounts[c]>0){var col=(COL[c]||COL.Altro).accent;fixedDisplay+="<span style='font-size:11px;color:"+col+";font-family:DM Mono,monospace'>"+c+": "+fmt(fixedAmounts[c])+" fisso</span> ";}
+  });
+
   document.getElementById("tab-ribilancia").innerHTML=
-    "<div class='card' style='margin-bottom:14px'><div class='card-lbl'>Nuovo capitale (opzionale)</div>"
-    +"<div style='display:flex;align-items:center;gap:14px;flex-wrap:wrap'>"
+    "<div class='card' style='margin-bottom:14px'>"
+    +"<div class='card-lbl'>Importo da investire</div>"
+    +"<div style='display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:10px'>"
     +"<div class='cap-wrap'><span class='cap-euro'>€</span><input class='cap-inp' type='number' inputmode='decimal' id='cap-inp' placeholder='0.00' oninput='renderRebalance()' value='"+(cap||"")+"'></div>"
-    +"<div style='color:var(--muted);font-size:12px'>Totale: <span style='color:var(--accent);font-family:DM Mono,monospace;font-weight:600'>"+fmt(newTot)+"</span></div>"
-    +"</div></div>"+warn+info+rebHtml;
+    +(cap>0?"<div style='color:var(--muted);font-size:12px'>Portfolio totale dopo: <span style='color:var(--accent);font-family:DM Mono,monospace;font-weight:600'>"+fmt(newTot)+"</span></div>":"")
+    +"</div>"
+    +(fixedDisplay?"<div style='display:flex;gap:10px;flex-wrap:wrap;margin-top:4px'>"+fixedDisplay+"</div>":"")
+    +"</div>"
+    +warn+info
+    +(cap>0?"<div style='color:#64748b;font-size:11px;margin-bottom:12px'>💡 Con <span style='color:var(--accent);font-family:DM Mono,monospace'>"+fmt(cap)+"</span> disponibili — distribuzione ottimale per avvicinarsi ai target:</div>":"")
+    +rebHtml;
 }
 
 // ── MUTATIONS ─────────────────────────────────────────────────────────
@@ -1564,7 +1597,7 @@ function copyExport(){navigator.clipboard.writeText(curExpTxt).then(function(){v
 function dlExport(){var ext=expFmt==="json"?"json":expFmt==="csv"?"csv":"txt",mime=expFmt==="json"?"application/json":expFmt==="csv"?"text/csv":"text/plain",date=new Date().toISOString().slice(0,10);var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([curExpTxt],{type:mime}));a.download="portfolio_"+date+"."+ext;a.click();}
 
 // ── TARGET EDITOR MODAL ───────────────────────────────────────────────
-var tempCatTargets={}, tempSubcatTargets={};
+var tempCatTargets={}, tempSubcatTargets={}, tempFixedAmounts={};
 
 function openTargetModal(){
   // Deep copy current targets into temp
@@ -1577,6 +1610,8 @@ function openTargetModal(){
       tempSubcatTargets[cat][sub]=subcatTargets[cat][sub]||0;
     });
   });
+  tempFixedAmounts={};
+  CATS.forEach(function(c){if(fixedAmounts[c])tempFixedAmounts[c]=fixedAmounts[c];});
   renderTargetEditor();
   document.getElementById("target-modal").style.display="flex";
   pushState("target");
@@ -1669,6 +1704,24 @@ function renderTargetEditor(){
     });
     subcatSection.innerHTML=html;
   }
+  // Fixed amounts rows
+  var fixedRows=document.getElementById("tgt-fixed-rows");
+  if(fixedRows){
+    fixedRows.innerHTML=CATS.map(function(c){
+      var col=(COL[c]||COL.Altro).accent;
+      var v=tempFixedAmounts[c]||"";
+      return "<div style='display:flex;align-items:center;gap:10px'>"
+        +"<div style='width:7px;height:7px;border-radius:50%;background:"+col+";flex-shrink:0'></div>"
+        +"<span style='flex:1;font-size:12px;color:#94a3b8'>"+c+"</span>"
+        +"<div style='display:flex;align-items:center;gap:4px'>"
+        +"<span style='color:var(--accent);font-family:DM Mono,monospace;font-size:14px'>€</span>"
+        +"<input type='number' inputmode='decimal' min='0' step='100' value='"+v+"'"
+        +" data-cat='"+c+"' placeholder='—'"
+        +" oninput='onTempFixedInput(this)'"
+        +" style='width:90px;background:var(--bg);border:1px solid #1e3a5f;border-radius:8px;padding:6px 8px;color:var(--text);font-family:DM Mono,monospace;font-size:15px;text-align:right;outline:none'>"
+        +"</div></div>";
+    }).join("");
+  }
   // hide error
   document.getElementById("tgt-error").style.display="none";
 }
@@ -1720,6 +1773,13 @@ function onTempSubcatInput(inp){
   });
 }
 
+function onTempFixedInput(inp){
+  var cat=inp.dataset.cat;
+  var v=parseFloat(inp.value);
+  if(isNaN(v)||v<=0){delete tempFixedAmounts[cat];}
+  else{tempFixedAmounts[cat]=v;}
+}
+
 function saveTargetModal(){
   // Validate cat sum
   var catSum=Object.values(tempCatTargets).reduce(function(a,v){return a+v;},0);
@@ -1750,10 +1810,13 @@ function saveTargetModal(){
       subcatTargets[cat][sub]=tempSubcatTargets[cat][sub]||0;
     });
   });
+  fixedAmounts={};
+  Object.keys(tempFixedAmounts).forEach(function(c){if(tempFixedAmounts[c]>0)fixedAmounts[c]=tempFixedAmounts[c];});
   // Save to localStorage
   try{
     localStorage.setItem("pf_catTargets",JSON.stringify(catTargets));
     localStorage.setItem("pf_subcatTargets",JSON.stringify(subcatTargets));
+    localStorage.setItem("pf_fixedAmounts",JSON.stringify(fixedAmounts));
   }catch(e){}
   // Save to Drive immediately
   saveToDrive();
