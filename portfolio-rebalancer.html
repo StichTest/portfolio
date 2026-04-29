@@ -386,8 +386,15 @@ tr.drag-over td{border-top:2px solid var(--accent)}
 
     <!-- SUBCAT TARGETS -->
     <div id="tgt-subcat-section">
-      <div style="font-size:12px;font-weight:600;color:#94a3b8;margin-bottom:10px">SOTTOCATEGORIE <span style="font-weight:400;color:var(--muted)">(somma = 100% per cat)</span></div>
+      <div style="font-size:12px;font-weight:600;color:#94a3b8;margin-bottom:10px">SOTTOCATEGORIE <span style="font-weight:400;color:var(--muted)">(somma = 100% per cat, o lascia tutto a 0)</span></div>
       <div id="tgt-subcat-rows" style="display:flex;flex-direction:column;gap:16px"></div>
+    </div>
+
+    <hr class="modal-div">
+    <div>
+      <div style="font-size:12px;font-weight:600;color:#94a3b8;margin-bottom:4px">💶 IMPORTI FISSI <span style="font-weight:400;color:var(--muted)">(opzionale — priorità sul % nel ribilanciamento)</span></div>
+      <div style="font-size:11px;color:#475569;margin-bottom:10px">Utile per: liquidità di sicurezza, scala obbligazionaria, allocazioni stabili indipendenti dal totale.</div>
+      <div id="tgt-fixed-rows" style="display:flex;flex-direction:column;gap:6px"></div>
     </div>
 
     <div id="tgt-error" style="display:none;background:#2a1a1a;border:1px solid #7f1d1d;border-radius:8px;padding:10px 13px;color:#fca5a5;font-size:12px;margin-top:12px"></div>
@@ -1631,46 +1638,40 @@ function closeTargetModal(){
 }
 
 function renderTargetEditor(){
-  var catRows=document.getElementById("tgt-cat-rows");
+  // ── Section 1: Category % targets ──────────────────────────────────
   var catSum=Object.values(tempCatTargets).reduce(function(a,v){return a+v;},0);
   var sumEl=document.getElementById("tgt-cat-sum");
-  if(sumEl){sumEl.textContent=catSum.toFixed(1)+"%";sumEl.style.color=Math.abs(catSum-100)<0.1?"#66bb6a":catSum>100?"#ef5350":"#ffa726";}
-
+  if(sumEl){
+    sumEl.textContent=catSum.toFixed(1)+"%";
+    sumEl.style.color=Math.abs(catSum-100)<0.1?"#66bb6a":catSum>100?"#ef5350":"#ffa726";
+  }
+  var catRows=document.getElementById("tgt-cat-rows");
   if(catRows){
+    var tot=total();
     catRows.innerHTML=CATS.map(function(c){
       var col=(COL[c]||COL.Altro).accent;
-      var isFixed=!!(tempFixedAmounts[c]&&tempFixedAmounts[c]>0);
+      var tgt=tempCatTargets[c]||0;
       var catVal=etfs.filter(function(e){return e.c===c;}).reduce(function(a,e){return a+e.v;},0);
-      var tot=total();
-      var actPct=tot>0?(catVal/tot)*100:0;
-      var tgtPct=tempCatTargets[c]||0;
-      var fixedV=tempFixedAmounts[c]||"";
-      var diff=actPct-tgtPct,ds=(diff>=0?"+":"")+diff.toFixed(1);
-      var dc=Math.abs(diff)<0.5?"#66bb6a":Math.abs(diff)<3?"#ffa726":"#ef5350";
-            var cEnc=encodeURIComponent(c);
-      var modeToggle="<div style='display:flex;background:var(--bg);border:1px solid var(--border);border-radius:6px;overflow:hidden;flex-shrink:0'>"
-        +"<button onclick=\"setTgtMode(decodeURIComponent('"+cEnc+"'),'pct')\" style=\"border:none;padding:4px 8px;font-size:10px;font-weight:700;cursor:pointer;background:"+(isFixed?"transparent":"#1e3a5f")+";color:"+(isFixed?"#475569":"var(--accent)")+";font-family:DM Mono,monospace\">%</button>"
-        +"<button onclick=\"setTgtMode(decodeURIComponent('"+cEnc+"'),'fixed')\" style=\"border:none;padding:4px 8px;font-size:10px;font-weight:700;cursor:pointer;background:"+(isFixed?"#1e3a5f":"transparent")+";color:"+(isFixed?"var(--accent)":"#475569")+";font-family:DM Mono,monospace\">€</button>"
-        +"</div>";
-      var inputArea=isFixed
-        ?"<div style='display:flex;align-items:center;gap:4px'><span style='color:var(--accent);font-family:DM Mono,monospace;font-size:14px'>€</span><input type='number' inputmode='decimal' min='0' step='500' value='"+fixedV+"' data-cat='"+c+"' data-mode='fixed' oninput='onTempFixedInput(this)' style='width:90px;background:var(--bg);border:1px solid #1e3a5f;border-radius:8px;padding:6px 8px;color:var(--text);font-family:DM Mono,monospace;font-size:16px;text-align:right;outline:none'></div>"
-        :"<div style='display:flex;align-items:center;gap:4px'><input type='number' inputmode='decimal' min='0' max='100' step='1' value='"+tgtPct+"' data-cat='"+c+"' oninput='onTempCatInput(this)' style='width:60px;background:var(--bg);border:1px solid #1e3a5f;border-radius:8px;padding:6px 8px;color:var(--text);font-family:DM Mono,monospace;font-size:16px;text-align:center;outline:none'><span style='color:var(--muted);font-size:12px'>%</span></div>";
-      var actDisplay=isFixed
-        ?"<span style='font-size:11px;color:var(--muted);font-family:DM Mono,monospace'>att:"+fmt(catVal)+"</span>"
-        :"<span style='font-size:11px;color:var(--muted);font-family:DM Mono,monospace'>att:"+actPct.toFixed(1)+"%</span><span style='font-size:11px;color:"+dc+";font-family:DM Mono,monospace'>"+ds+"%</span>";
-      return "<div id='catrow-"+c.replace(/\s/g,"-")+"' style='display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2);border-radius:10px;border:1px solid var(--border)'>"
+      var act=tot>0?(catVal/tot)*100:0;
+      var diff=act-tgt,ac=allocColor(act,tgt),ds=(diff>=0?"+":"")+diff.toFixed(1);
+      return "<div style='display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--s2);border-radius:10px;border:1px solid var(--border)'>"
         +"<div style='width:9px;height:9px;border-radius:50%;background:"+col+";flex-shrink:0'></div>"
         +"<span style='flex:1;font-size:13px'>"+c+"</span>"
-        +actDisplay
-        +modeToggle
-        +inputArea
+        +"<span style='font-size:11px;color:var(--muted);font-family:DM Mono,monospace;min-width:60px;text-align:right'>att:"+act.toFixed(1)+"%</span>"
+        +"<span style='font-size:11px;color:"+ac+";font-family:DM Mono,monospace;min-width:44px;text-align:right'>"+ds+"%</span>"
+        +"<div style='display:flex;align-items:center;gap:4px'>"
+        +"<input type='number' inputmode='decimal' min='0' max='100' step='1' value='"+tgt+"' data-cat='"+c+"'"
+        +" oninput='onTempCatInput(this)'"
+        +" style='width:58px;background:var(--bg);border:1px solid #1e3a5f;border-radius:8px;padding:7px 6px;color:var(--text);font-family:DM Mono,monospace;font-size:16px;text-align:center;outline:none'>"
+        +"<span style='color:var(--muted);font-size:12px'>%</span></div>"
         +"</div>";
     }).join("");
   }
 
-  // Subcat rows (only categories with % mode show subcat targets)
+  // ── Section 2: Subcategory % targets ──────────────────────────────
   var subcatSection=document.getElementById("tgt-subcat-rows");
   if(subcatSection){
+    var tot=total();
     var html="";
     HAS_SUBCATS.forEach(function(cat){
       var catItems=etfs.filter(function(e){return e.c===cat;});
@@ -1678,134 +1679,134 @@ function renderTargetEditor(){
       var col=(COL[cat]||COL.Altro).accent;
       var catVal=catItems.reduce(function(a,e){return a+e.v;},0);
       var subcatSum=Object.values(tempSubcatTargets[cat]||{}).reduce(function(a,v){return a+v;},0);
-      var sumOk=Math.abs(subcatSum-100)<0.1,over=subcatSum>100.05;
+      var sumOk=subcatSum<0.1||Math.abs(subcatSum-100)<0.1;
+      var over=subcatSum>100.05;
       var catId=cat.replace(/\s/g,"-");
-      var isCatFixed=!!(tempFixedAmounts[cat]&&tempFixedAmounts[cat]>0);
-
       html+="<div>"
         +"<div style='display:flex;align-items:center;gap:8px;margin-bottom:6px'>"
         +"<div style='width:8px;height:8px;border-radius:50%;background:"+col+"'></div>"
         +"<span style='font-size:12px;font-weight:600;color:"+col+"'>"+cat.toUpperCase()+"</span>"
-        +(isCatFixed?"<span style='font-size:10px;color:#90caf9;font-family:DM Mono,monospace'>target fisso "+fmt(tempFixedAmounts[cat])+"</span>"
-          :"<span id='tsc-badge-"+catId+"' style='font-size:11px;font-family:DM Mono,monospace;font-weight:700;color:"+(sumOk?"#66bb6a":over?"#ef5350":"#ffa726")+"'>"+subcatSum.toFixed(1)+"%</span>"
-          +"<span id='tsc-remain-"+catId+"' style='font-size:10px;font-family:DM Mono,monospace;color:"+(sumOk?"#66bb6a":over?"#ef5350":"#ffa726")+";margin-left:4px'>"+(sumOk?"✓ Perfetto":over?"Superi di "+(subcatSum-100).toFixed(1)+"%":"Mancano "+(100-subcatSum).toFixed(1)+"%")+"</span>")
+        +"<span id='tsc-badge-"+catId+"' style='font-size:11px;font-family:DM Mono,monospace;font-weight:700;color:"+(sumOk?"#66bb6a":over?"#ef5350":"#ffa726")+"'>"+subcatSum.toFixed(0)+"%</span>"
+        +"<span id='tsc-remain-"+catId+"' style='font-size:10px;color:"+(sumOk?"#66bb6a":over?"#ef5350":"#ffa726")+";margin-left:2px'>"
+        +(subcatSum<0.1?"(non impostato)":sumOk?"✓":over?"superi di "+(subcatSum-100).toFixed(1)+"%":"mancano "+(100-subcatSum).toFixed(1)+"%")
+        +"</span></div>"
+        +"<div style='height:5px;background:#1e293b;border-radius:3px;margin-bottom:10px;overflow:hidden'>"
+        +"<div id='tsc-bar-"+catId+"' style='height:100%;border-radius:3px;transition:width .3s;width:"+Math.min(subcatSum,100)+"%;background:"+(sumOk?"#66bb6a":over?"#ef5350":"#ffa726")+"'></div>"
         +"</div>"
-        +(isCatFixed?"":"<div style='height:6px;background:#1e293b;border-radius:3px;margin-bottom:10px;overflow:hidden'><div id='tsc-bar-"+catId+"' style='height:100%;border-radius:3px;transition:width .3s;width:"+Math.min(subcatSum,100)+"%;background:"+(sumOk?"#66bb6a":over?"#ef5350":"#ffa726")+"'></div></div>")
-        +"<div style='display:flex;flex-direction:column;gap:6px;padding-left:0'>";
-
+        +"<div style='display:flex;flex-direction:column;gap:6px'>";
       (subcats[cat]||[]).forEach(function(sub){
-        var isSubFixed=!!(tempFixedAmountsSub[cat]&&tempFixedAmountsSub[cat][sub]>0);
-        var v=(tempSubcatTargets[cat]||{})[sub]||0;
-        var fixedV=(tempFixedAmountsSub[cat]||{})[sub]||"";
+        var tgt=(tempSubcatTargets[cat]||{})[sub]||0;
         var subVal=catItems.filter(function(e){return e.s===sub;}).reduce(function(a,e){return a+e.v;},0);
         var actOfCat=catVal>0?(subVal/catVal)*100:0;
-        var diff=actOfCat-v,ds=(diff>=0?"+":"")+diff.toFixed(1);
-        var dc=Math.abs(diff)<0.5?"#66bb6a":Math.abs(diff)<3?"#ffa726":"#ef5350";
+        var diff=actOfCat-tgt,ac=allocColor(actOfCat,tgt),ds=(diff>=0?"+":"")+diff.toFixed(1);
         var sc=subcatColor(cat,sub);
-                var catEnc=encodeURIComponent(cat),subEnc=encodeURIComponent(sub);
-        var modeToggleSub="<div style='display:flex;background:var(--bg);border:1px solid var(--border);border-radius:6px;overflow:hidden;flex-shrink:0'>"
-          +"<button onclick=\"setSubTgtMode(decodeURIComponent('"+catEnc+"'),decodeURIComponent('"+subEnc+"'),'pct')\" style=\"border:none;padding:3px 7px;font-size:10px;font-weight:700;cursor:pointer;background:"+(isSubFixed?"transparent":"#1e3a5f")+";color:"+(isSubFixed?"#475569":"var(--accent)")+";font-family:DM Mono,monospace\">%</button>"
-          +"<button onclick=\"setSubTgtMode(decodeURIComponent('"+catEnc+"'),decodeURIComponent('"+subEnc+"'),'fixed')\" style=\"border:none;padding:3px 7px;font-size:10px;font-weight:700;cursor:pointer;background:"+(isSubFixed?"#1e3a5f":"transparent")+";color:"+(isSubFixed?"var(--accent)":"#475569")+";font-family:DM Mono,monospace\">€</button>"
-          +"</div>";
-        var inputAreaSub=isSubFixed
-          ?"<div style='display:flex;align-items:center;gap:4px'><span style='color:var(--accent);font-family:DM Mono,monospace;font-size:13px'>€</span><input type='number' inputmode='decimal' min='0' step='500' value='"+fixedV+"' data-cat='"+cat+"' data-sub='"+sub+"' data-mode='fixed' oninput='onTempFixedSubInput(this)' style='width:80px;background:var(--bg);border:1px solid #1e3a5f;border-radius:8px;padding:5px 7px;color:var(--text);font-family:DM Mono,monospace;font-size:15px;text-align:right;outline:none'></div>"
-          :"<div style='display:flex;align-items:center;gap:4px'><input type='number' inputmode='decimal' min='0' max='100' step='1' value='"+v+"' data-cat='"+cat+"' data-sub='"+sub+"' oninput='onTempSubcatInput(this)' style='width:55px;background:var(--bg);border:1px solid #1e3a5f;border-radius:8px;padding:5px 7px;color:var(--text);font-family:DM Mono,monospace;font-size:15px;text-align:center;outline:none'><span style='color:var(--muted);font-size:11px'>%</span></div>";
-        var actDisplaySub=isSubFixed
-          ?"<span style='font-size:10px;color:var(--muted);font-family:DM Mono,monospace'>att:"+fmt(subVal)+"</span>"
-          :"<span style='font-size:10px;color:var(--muted);font-family:DM Mono,monospace'>att:"+actOfCat.toFixed(1)+"%</span><span style='font-size:10px;color:"+dc+";font-family:DM Mono,monospace'>"+ds+"%</span>";
         html+="<div style='display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--s2);border-radius:8px;border:1px solid var(--border)'>"
           +"<div style='width:3px;height:16px;border-radius:2px;background:"+sc+";flex-shrink:0'></div>"
           +"<span style='flex:1;font-size:12px'>"+sub+"</span>"
-          +actDisplaySub
-          +modeToggleSub
-          +inputAreaSub
+          +"<span style='font-size:10px;color:var(--muted);font-family:DM Mono,monospace;min-width:58px;text-align:right'>att:"+actOfCat.toFixed(1)+"%</span>"
+          +"<span style='font-size:10px;color:"+ac+";font-family:DM Mono,monospace;min-width:44px;text-align:right'>"+ds+"%</span>"
+          +"<div style='display:flex;align-items:center;gap:4px'>"
+          +"<input type='number' inputmode='decimal' min='0' max='100' step='1' value='"+tgt+"'"
+          +" data-cat='"+cat+"' data-sub='"+sub+"' oninput='onTempSubcatInput(this)'"
+          +" style='width:52px;background:var(--bg);border:1px solid #1e3a5f;border-radius:8px;padding:6px 5px;color:var(--text);font-family:DM Mono,monospace;font-size:15px;text-align:center;outline:none'>"
+          +"<span style='color:var(--muted);font-size:11px'>%</span></div>"
           +"</div>";
       });
-      html+="</div></div></div>";
+      html+="</div></div>";
     });
     subcatSection.innerHTML=html;
+  }
+
+  // ── Section 3: Fixed € overrides ────────────────────────────────────
+  var fixedRows=document.getElementById("tgt-fixed-rows");
+  if(fixedRows){
+    var allRows="";
+    // Categories
+    CATS.forEach(function(c){
+      var col=(COL[c]||COL.Altro).accent;
+      var v=tempFixedAmounts[c]||"";
+      allRows+="<div style='display:flex;align-items:center;gap:10px;padding:7px 10px;background:var(--s2);border-radius:8px;border:1px solid var(--border)'>"
+        +"<div style='width:7px;height:7px;border-radius:50%;background:"+col+";flex-shrink:0'></div>"
+        +"<span style='flex:1;font-size:12px;color:#94a3b8'>"+c+"</span>"
+        +"<div style='display:flex;align-items:center;gap:4px'>"
+        +"<span style='color:var(--accent);font-size:14px;font-family:DM Mono,monospace'>€</span>"
+        +"<input type='number' inputmode='decimal' min='0' step='100' value='"+v+"' placeholder='—'"
+        +" data-cat='"+c+"' oninput='onTempFixedInput(this)'"
+        +" style='width:90px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:6px 8px;color:var(--text);font-family:DM Mono,monospace;font-size:15px;text-align:right;outline:none'>"
+        +"</div></div>";
+    });
+    // Subcategories (flat list)
+    allRows+="<div style='margin-top:8px;color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:.06em;padding:4px 2px'>Sottocategorie</div>";
+    HAS_SUBCATS.forEach(function(cat){
+      var catItems=etfs.filter(function(e){return e.c===cat;});
+      if(!catItems.length)return;
+      (subcats[cat]||[]).forEach(function(sub){
+        var sc=subcatColor(cat,sub);
+        var v=(tempFixedAmountsSub[cat]||{})[sub]||"";
+        allRows+="<div style='display:flex;align-items:center;gap:10px;padding:6px 10px;background:var(--s2);border-radius:8px;border:1px solid var(--border)'>"
+          +"<div style='width:3px;height:14px;border-radius:2px;background:"+sc+";flex-shrink:0'></div>"
+          +"<span style='flex:1;font-size:11px;color:#94a3b8'>"+cat+" › "+sub+"</span>"
+          +"<div style='display:flex;align-items:center;gap:4px'>"
+          +"<span style='color:var(--accent);font-size:13px;font-family:DM Mono,monospace'>€</span>"
+          +"<input type='number' inputmode='decimal' min='0' step='100' value='"+v+"' placeholder='—'"
+          +" data-cat='"+cat+"' data-sub='"+sub+"' oninput='onTempFixedSubInput(this)'"
+          +" style='width:90px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:5px 8px;color:var(--text);font-family:DM Mono,monospace;font-size:14px;text-align:right;outline:none'>"
+          +"</div></div>";
+      });
+    });
+    fixedRows.innerHTML=allRows;
   }
   document.getElementById("tgt-error").style.display="none";
 }
 
-function setTgtMode(cat, mode){
-  if(mode==="fixed"){
-    // switching to fixed: clear pct contribution from sum
-    // keep tempCatTargets but mode is fixed now
-    if(!tempFixedAmounts[cat])tempFixedAmounts[cat]=0;
-  } else {
-    delete tempFixedAmounts[cat];
-  }
-  renderTargetEditor();
-}
-function setSubTgtMode(cat, sub, mode){
-  if(mode==="fixed"){
-    if(!tempFixedAmountsSub[cat])tempFixedAmountsSub[cat]={};
-    if(!tempFixedAmountsSub[cat][sub])tempFixedAmountsSub[cat][sub]=0;
-  } else {
-    if(tempFixedAmountsSub[cat])delete tempFixedAmountsSub[cat][sub];
-  }
-  renderTargetEditor();
-}
-function onTempFixedSubInput(inp){
-  var cat=inp.dataset.cat,sub=inp.dataset.sub;
-  var v=parseFloat(inp.value);
-  if(!tempFixedAmountsSub[cat])tempFixedAmountsSub[cat]={};
-  tempFixedAmountsSub[cat][sub]=isNaN(v)||v<=0?0:v;
-}
 function onTempCatInput(inp){
   var cat=inp.dataset.cat;
   var v=parseFloat(inp.value);
   tempCatTargets[cat]=isNaN(v)?0:Math.max(0,v);
-  // update sum display
   var catSum=Object.values(tempCatTargets).reduce(function(a,v){return a+v;},0);
   var sumEl=document.getElementById("tgt-cat-sum");
-  if(sumEl){
-    sumEl.textContent=catSum.toFixed(1)+"%";
-    sumEl.style.color=Math.abs(catSum-100)<0.1?"#66bb6a":catSum>100?"#ef5350":"#ffa726";
-  }
-}
-function onTempSubcatInput(inp){
-  var cat=inp.dataset.cat,sub=inp.dataset.sub;
-  var v=parseFloat(inp.value);
-  if(!tempSubcatTargets[cat])tempSubcatTargets[cat]={};
-  tempSubcatTargets[cat][sub]=isNaN(v)?0:Math.max(0,v);
-  // Update live sum badge for this category
-  var sum=Object.values(tempSubcatTargets[cat]).reduce(function(a,v){return a+v;},0);
-  var badge=document.getElementById("tsc-badge-"+cat.replace(/\s/g,"-"));
-  var bar=document.getElementById("tsc-bar-"+cat.replace(/\s/g,"-"));
-  var remain=document.getElementById("tsc-remain-"+cat.replace(/\s/g,"-"));
-  var ok=Math.abs(sum-100)<0.1,over=sum>100.05;
-  if(badge){
-    badge.textContent=sum.toFixed(1)+"%";
-    badge.style.color=ok?"#66bb6a":over?"#ef5350":"#ffa726";
-    badge.style.fontWeight="700";
-  }
-  if(remain){
-    var r=100-sum;
-    if(ok)remain.textContent="✓ Perfetto";
-    else if(over)remain.textContent="Superi di "+(-r).toFixed(1)+"%";
-    else remain.textContent="Mancano "+r.toFixed(1)+"%";
-    remain.style.color=ok?"#66bb6a":over?"#ef5350":"#ffa726";
-  }
-  if(bar){
-    var pct=Math.min(sum,100);
-    bar.style.width=pct+"%";
-    bar.style.background=ok?"#66bb6a":over?"#ef5350":"#ffa726";
-  }
-  // Highlight the input row if over budget
-  var allInps=document.querySelectorAll("input[data-cat='"+cat+"']");
-  allInps.forEach(function(i){
-    i.style.borderColor=over?"#ef5350":"#1e3a5f";
-  });
+  if(sumEl){sumEl.textContent=catSum.toFixed(1)+"%";sumEl.style.color=Math.abs(catSum-100)<0.1?"#66bb6a":catSum>100?"#ef5350":"#ffa726";}
 }
 
-function onTempFixedInput(inp){
-  var cat=inp.dataset.cat;
+function onTempSubcatInput2(inp){
+  var cat=inp.dataset.cat2,sub=inp.dataset.sub2,isFixed=!!inp.dataset.fixed;
   var v=parseFloat(inp.value);
-  if(isNaN(v)||v<=0){delete tempFixedAmounts[cat];}
-  else{tempFixedAmounts[cat]=v;}
+  if(isFixed){
+    if(!tempFixedAmountsSub[cat])tempFixedAmountsSub[cat]={};
+    tempFixedAmountsSub[cat][sub]=isNaN(v)||v<=0?0:v;
+    // toggle visual state: if fixed value entered, disable % input in same row
+    var row=inp.closest("div[style*='align-items:center']");
+    if(row){
+      var pctInp=row.querySelector("input:not([data-fixed])");
+      if(pctInp){pctInp.disabled=v>0;pctInp.style.borderColor=v>0?"#334155":"#1e3a5f";pctInp.parentElement.style.opacity=v>0?"0.35":"1";}
+      var euroSpan=inp.previousElementSibling;
+      if(euroSpan)euroSpan.style.color=v>0?"var(--accent)":"#334155";
+      inp.style.borderColor=v>0?"var(--accent)":"#1e3a5f";
+    }
+  } else {
+    if(!tempSubcatTargets[cat])tempSubcatTargets[cat]={};
+    tempSubcatTargets[cat][sub]=isNaN(v)?0:Math.max(0,v);
+  }
+  // Update live sum (only counting % subcats)
+  var catId=cat.replace(/\s/g,"-");
+  var pctSubcats=(subcats[cat]||[]).filter(function(s){return !((tempFixedAmountsSub[cat]||{})[s]>0);});
+  var subcatSum=pctSubcats.reduce(function(a,s){return a+((tempSubcatTargets[cat]||{})[s]||0);},0);
+  var sumOk=Math.abs(subcatSum-100)<0.1||subcatSum===0,over=subcatSum>100.05;
+  var badge=document.getElementById("tsc-badge-"+catId);
+  var remain=document.getElementById("tsc-remain-"+catId);
+  var bar=document.getElementById("tsc-bar-"+catId);
+  var c2=sumOk?"#66bb6a":over?"#ef5350":"#ffa726";
+  if(badge){badge.textContent=subcatSum.toFixed(0)+"%";badge.style.color=c2;}
+  if(remain){remain.textContent=sumOk?"✓":(over?"Superi di "+(subcatSum-100).toFixed(1)+"%":"Mancano "+(100-subcatSum).toFixed(1)+"%");remain.style.color=c2;}
+  if(bar){bar.style.width=Math.min(subcatSum,100)+"%";bar.style.background=c2;}
 }
+
+// Keep old onTempSubcatInput for backward compat
+function onTempSubcatInput(inp){onTempSubcatInput2(inp);}
+
+function setTgtMode(){}
+function setSubTgtMode(){}
+
 
 function saveTargetModal(){
   // Validate cat sum
@@ -1816,16 +1817,131 @@ function saveTargetModal(){
     errEl.style.display="block";
     return;
   }
-  // Validate subcats
+  // Validate subcats: only check % subcats (exclude fixed-€ ones)
   var subcatErrors=[];
   HAS_SUBCATS.forEach(function(cat){
     if(!etfs.some(function(e){return e.c===cat;}))return;
-    var sum=Object.values(tempSubcatTargets[cat]||{}).reduce(function(a,v){return a+v;},0);
+    var pctSubcats=(subcats[cat]||[]).filter(function(s){return !((tempFixedAmountsSub[cat]||{})[s]>0);});
+    var sum=pctSubcats.reduce(function(a,s){return a+((tempSubcatTargets[cat]||{})[s]||0);},0);
     if(sum>0&&Math.abs(sum-100)>0.1)subcatErrors.push(cat+": "+sum.toFixed(1)+"%");
   });
   if(subcatErrors.length){
     var errEl=document.getElementById("tgt-error");
-    errEl.textContent="⚠ Sottocategorie non bilanciate (devono sommare 100% o 0%): "+subcatErrors.join(", ");
+    errEl.textContent="⚠ Le sottocategorie % non bilanciate (devono sommare 100% o 0%): "+subcatErrors.join(", ");
+    errEl.style.display="block";
+    return;
+  }
+  // Apply
+  CATS.forEach(function(c){catTargets[c]=tempCatTargets[c]||0;});
+  Object.keys(tempSubcatTargets).forEach(function(cat){
+    subcatTargets[cat]={};
+    Object.keys(tempSubcatTargets[cat]).forEach(function(sub){
+      subcatTargets[cat][sub]=tempSubcatTargets[cat][sub]||0;
+    });
+  });
+  fixedAmounts={};
+  Object.keys(tempFixedAmounts).forEach(function(c){if(tempFixedAmounts[c]>0)fixedAmounts[c]=tempFixedAmounts[c];});
+  fixedAmountsSub={};
+  Object.keys(tempFixedAmountsSub).forEach(function(cat){
+    Object.keys(tempFixedAmountsSub[cat]).forEach(function(sub){
+      var v=tempFixedAmountsSub[cat][sub];
+      if(v>0){if(!fixedAmountsSub[cat])fixedAmountsSub[cat]={};fixedAmountsSub[cat][sub]=v;}
+    });
+  });
+  // Save to localStorage
+  try{
+    localStorage.setItem("pf_catTargets",JSON.stringify(catTargets));
+    localStorage.setItem("pf_subcatTargets",JSON.stringify(subcatTargets));
+    localStorage.setItem("pf_fixedAmounts",JSON.stringify(fixedAmounts));
+  }catch(e){}
+  // Save to Drive immediately
+  saveToDrive();
+  closeTargetModal();
+  renderOverview();
+}
+
+
+// ── TABS ──────────────────────────────────────────────────────────────
+function switchTab(t){
+  activeTab=t;
+  document.querySelectorAll(".tab-btn").forEach(function(b,i){b.classList.toggle("active",i===(t==="overview"?0:1));});
+  document.getElementById("tab-overview").style.display=t==="overview"?"":"none";
+  document.getElementById("tab-ribilancia").style.display=t==="ribilancia"?"":"none";
+  document.querySelectorAll(".nav-it").forEach(function(b){b.classList.remove("active");});
+  if(t==="overview")document.getElementById("nav-ov").classList.add("active");
+  if(t==="ribilancia")document.getElementById("nav-reb").classList.add("active");
+  if(t==="ribilancia")renderRebalance();
+}
+
+function onTempCatInput(inp){
+  var cat=inp.dataset.cat;
+  var v=parseFloat(inp.value);
+  tempCatTargets[cat]=isNaN(v)?0:Math.max(0,v);
+  var catSum=Object.values(tempCatTargets).reduce(function(a,v){return a+v;},0);
+  var sumEl=document.getElementById("tgt-cat-sum");
+  if(sumEl){sumEl.textContent=catSum.toFixed(1)+"%";sumEl.style.color=Math.abs(catSum-100)<0.1?"#66bb6a":catSum>100?"#ef5350":"#ffa726";}
+}
+
+function onTempSubcatInput2(inp){
+  var cat=inp.dataset.cat2,sub=inp.dataset.sub2,isFixed=!!inp.dataset.fixed;
+  var v=parseFloat(inp.value);
+  if(isFixed){
+    if(!tempFixedAmountsSub[cat])tempFixedAmountsSub[cat]={};
+    tempFixedAmountsSub[cat][sub]=isNaN(v)||v<=0?0:v;
+    // toggle visual state: if fixed value entered, disable % input in same row
+    var row=inp.closest("div[style*='align-items:center']");
+    if(row){
+      var pctInp=row.querySelector("input:not([data-fixed])");
+      if(pctInp){pctInp.disabled=v>0;pctInp.style.borderColor=v>0?"#334155":"#1e3a5f";pctInp.parentElement.style.opacity=v>0?"0.35":"1";}
+      var euroSpan=inp.previousElementSibling;
+      if(euroSpan)euroSpan.style.color=v>0?"var(--accent)":"#334155";
+      inp.style.borderColor=v>0?"var(--accent)":"#1e3a5f";
+    }
+  } else {
+    if(!tempSubcatTargets[cat])tempSubcatTargets[cat]={};
+    tempSubcatTargets[cat][sub]=isNaN(v)?0:Math.max(0,v);
+  }
+  // Update live sum (only counting % subcats)
+  var catId=cat.replace(/\s/g,"-");
+  var pctSubcats=(subcats[cat]||[]).filter(function(s){return !((tempFixedAmountsSub[cat]||{})[s]>0);});
+  var subcatSum=pctSubcats.reduce(function(a,s){return a+((tempSubcatTargets[cat]||{})[s]||0);},0);
+  var sumOk=Math.abs(subcatSum-100)<0.1||subcatSum===0,over=subcatSum>100.05;
+  var badge=document.getElementById("tsc-badge-"+catId);
+  var remain=document.getElementById("tsc-remain-"+catId);
+  var bar=document.getElementById("tsc-bar-"+catId);
+  var c2=sumOk?"#66bb6a":over?"#ef5350":"#ffa726";
+  if(badge){badge.textContent=subcatSum.toFixed(0)+"%";badge.style.color=c2;}
+  if(remain){remain.textContent=sumOk?"✓":(over?"Superi di "+(subcatSum-100).toFixed(1)+"%":"Mancano "+(100-subcatSum).toFixed(1)+"%");remain.style.color=c2;}
+  if(bar){bar.style.width=Math.min(subcatSum,100)+"%";bar.style.background=c2;}
+}
+
+// Keep old onTempSubcatInput for backward compat
+function onTempSubcatInput(inp){onTempSubcatInput2(inp);}
+
+function setTgtMode(){}
+function setSubTgtMode(){}
+
+
+function saveTargetModal(){
+  // Validate cat sum
+  var catSum=Object.values(tempCatTargets).reduce(function(a,v){return a+v;},0);
+  if(Math.abs(catSum-100)>0.1){
+    var errEl=document.getElementById("tgt-error");
+    errEl.textContent="⚠ La somma dei target di categoria è "+catSum.toFixed(1)+"% — deve essere esattamente 100%.";
+    errEl.style.display="block";
+    return;
+  }
+  // Validate subcats: only check % subcats (exclude fixed-€ ones)
+  var subcatErrors=[];
+  HAS_SUBCATS.forEach(function(cat){
+    if(!etfs.some(function(e){return e.c===cat;}))return;
+    var pctSubcats=(subcats[cat]||[]).filter(function(s){return !((tempFixedAmountsSub[cat]||{})[s]>0);});
+    var sum=pctSubcats.reduce(function(a,s){return a+((tempSubcatTargets[cat]||{})[s]||0);},0);
+    if(sum>0&&Math.abs(sum-100)>0.1)subcatErrors.push(cat+": "+sum.toFixed(1)+"%");
+  });
+  if(subcatErrors.length){
+    var errEl=document.getElementById("tgt-error");
+    errEl.textContent="⚠ Le sottocategorie % non bilanciate (devono sommare 100% o 0%): "+subcatErrors.join(", ");
     errEl.style.display="block";
     return;
   }
