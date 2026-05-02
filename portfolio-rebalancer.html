@@ -370,42 +370,38 @@ tr.drag-over td{border-top:2px solid var(--accent)}
 <div class="modal-ov" id="target-modal" style="display:none" onclick="if(event.target===this)closeTargetModal()">
   <div class="modal" style="max-height:96vh">
     <div class="modal-handle"></div>
-    <h3>Target allocazione</h3>
-    <p class="modal-sub">Imposta gli obiettivi di allocazione. Salva per confermare.</p>
+    <h3>⚙ Target allocazione</h3>
+    <p class="modal-sub">Solo le categorie con ETF. Salva per confermare.</p>
 
-    <!-- CAT TARGETS -->
-    <div style="margin-bottom:16px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <span style="font-size:12px;font-weight:600;color:#94a3b8">CATEGORIE <span style="font-weight:400;color:var(--muted)">(somma = 100%)</span></span>
-        <span id="tgt-cat-sum" style="font-family:DM Mono,monospace;font-size:13px;font-weight:700">0%</span>
-      </div>
-      <div id="tgt-cat-rows" style="display:flex;flex-direction:column;gap:8px"></div>
+    <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">
+      1. Importo fisso € <span style="font-weight:400;color:var(--muted)">(opzionale — per liquidità e obbligazionario)</span>
     </div>
+    <div style="font-size:11px;color:#475569;margin-bottom:8px">Il ribilanciamento alloca prima questi importi fissi, poi distribuisce il resto con i target %.</div>
+    <div id="tgt-fixed-rows" style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px"></div>
 
     <hr class="modal-div">
 
-    <!-- SUBCAT TARGETS -->
-    <div id="tgt-subcat-section">
-      <div style="font-size:12px;font-weight:600;color:#94a3b8;margin-bottom:10px">SOTTOCATEGORIE <span style="font-weight:400;color:var(--muted)">(somma = 100% per cat, o lascia tutto a 0)</span></div>
-      <div id="tgt-subcat-rows" style="display:flex;flex-direction:column;gap:16px"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <span style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em">2. Target categoria % <span style="font-weight:400;color:var(--muted)">(somma 100%)</span></span>
+      <span id="tgt-cat-sum" style="font-family:'DM Mono',monospace;font-size:14px;font-weight:700;color:#ffa726">0%</span>
     </div>
+    <div id="tgt-cat-rows" style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px"></div>
 
     <hr class="modal-div">
-    <div>
-      <div style="font-size:12px;font-weight:600;color:#94a3b8;margin-bottom:4px">💶 IMPORTI FISSI <span style="font-weight:400;color:var(--muted)">(opzionale — priorità sul % nel ribilanciamento)</span></div>
-      <div style="font-size:11px;color:#475569;margin-bottom:10px">Utile per: liquidità di sicurezza, scala obbligazionaria, allocazioni stabili indipendenti dal totale.</div>
-      <div id="tgt-fixed-rows" style="display:flex;flex-direction:column;gap:6px"></div>
-    </div>
 
-    <div id="tgt-error" style="display:none;background:#2a1a1a;border:1px solid #7f1d1d;border-radius:8px;padding:10px 13px;color:#fca5a5;font-size:12px;margin-top:12px"></div>
+    <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">
+      3. Target sottocategoria % <span style="font-weight:400;color:var(--muted)">(somma 100% per categoria, o lascia a 0)</span>
+    </div>
+    <div id="tgt-subcat-rows" style="display:flex;flex-direction:column;gap:10px;margin-bottom:4px"></div>
+
+    <div id="tgt-error" style="display:none;background:#2a1a1a;border:1px solid #7f1d1d;border-radius:8px;padding:10px 13px;color:#fca5a5;font-size:12px;margin-top:10px"></div>
 
     <div class="modal-btns">
       <button class="btn-cancel ripple" onclick="closeTargetModal()">Annulla</button>
-      <button class="btn-ok ripple" onclick="saveTargetModal()" id="tgt-save-btn">✓ Salva target</button>
+      <button class="btn-ok ripple" onclick="saveTargetModal()">✓ Salva</button>
     </div>
   </div>
 </div>
-
 
 <!-- ADD MODAL -->
 <div class="modal-ov" id="add-modal" style="display:none" onclick="if(event.target===this)closeAddModal()">
@@ -1608,236 +1604,207 @@ function closeExport(){document.getElementById("exp-overlay").classList.remove("
 function copyExport(){navigator.clipboard.writeText(curExpTxt).then(function(){var b=document.getElementById("btn-copy");b.classList.add("copied");b.textContent="✓ Copiato!";setTimeout(function(){b.classList.remove("copied");b.textContent="📋 Copia";},2000);});}
 function dlExport(){var ext=expFmt==="json"?"json":expFmt==="csv"?"csv":"txt",mime=expFmt==="json"?"application/json":expFmt==="csv"?"text/csv":"text/plain",date=new Date().toISOString().slice(0,10);var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([curExpTxt],{type:mime}));a.download="portfolio_"+date+"."+ext;a.click();}
 
-// ── TARGET EDITOR MODAL ───────────────────────────────────────────────
-var tempCatTargets={}, tempSubcatTargets={}, tempFixedAmounts={}, tempFixedAmountsSub={};
+// ── TARGET EDITOR ──────────────────────────────────────────────────
+// State: catTargets (% sum=100), subcatTargets[cat][sub] (% sum=100 per cat)
+//        fixedAmounts[cat] (€ absolute override for rebalance)
+
+var _td = {}; // temp data during editing
 
 function openTargetModal(){
-  // Deep copy current targets into temp
-  tempCatTargets={};
-  CATS.forEach(function(c){ tempCatTargets[c]=catTargets[c]||0; });
-  tempSubcatTargets={};
-  Object.keys(subcatTargets).forEach(function(cat){
-    tempSubcatTargets[cat]={};
-    Object.keys(subcatTargets[cat]).forEach(function(sub){
-      tempSubcatTargets[cat][sub]=subcatTargets[cat][sub]||0;
+  // Build temp copy
+  _td = {cat:{}, sub:{}, fixed:{}};
+  // Only categories that have ETFs
+  var usedCats = CATS.filter(function(c){ return etfs.some(function(e){ return e.c===c; }); });
+  usedCats.forEach(function(c){
+    _td.cat[c] = catTargets[c]||0;
+    _td.fixed[c] = fixedAmounts[c]||0;
+    _td.sub[c] = {};
+    (subcats[c]||[]).forEach(function(s){
+      _td.sub[c][s] = (subcatTargets[c]||{})[s]||0;
     });
   });
-  tempFixedAmounts={};
-  CATS.forEach(function(c){if(fixedAmounts[c])tempFixedAmounts[c]=fixedAmounts[c];});
-  tempFixedAmountsSub={};
-  Object.keys(fixedAmountsSub).forEach(function(cat){
-    tempFixedAmountsSub[cat]={};
-    Object.keys(fixedAmountsSub[cat]).forEach(function(sub){tempFixedAmountsSub[cat][sub]=fixedAmountsSub[cat][sub];});
-  });
-  renderTargetEditor();
-  document.getElementById("target-modal").style.display="flex";
-  pushState("target");
+  renderTgtBody();
+  document.getElementById('target-modal').style.display='flex';
+  pushState('target');
 }
+
 function closeTargetModal(){
-  document.getElementById("target-modal").style.display="none";
+  document.getElementById('target-modal').style.display='none';
 }
 
-function renderTargetEditor(){
-  // ── Section 1: Category % targets ──────────────────────────────────
-  var catSum=Object.values(tempCatTargets).reduce(function(a,v){return a+v;},0);
-  var sumEl=document.getElementById("tgt-cat-sum");
-  if(sumEl){
-    sumEl.textContent=catSum.toFixed(1)+"%";
-    sumEl.style.color=Math.abs(catSum-100)<0.1?"#66bb6a":catSum>100?"#ef5350":"#ffa726";
-  }
-  var catRows=document.getElementById("tgt-cat-rows");
-  if(catRows){
-    var tot=total();
-    catRows.innerHTML=CATS.map(function(c){
-      var col=(COL[c]||COL.Altro).accent;
-      var tgt=tempCatTargets[c]||0;
-      var catVal=etfs.filter(function(e){return e.c===c;}).reduce(function(a,e){return a+e.v;},0);
-      var act=tot>0?(catVal/tot)*100:0;
-      var diff=act-tgt,ac=allocColor(act,tgt),ds=(diff>=0?"+":"")+diff.toFixed(1);
-      return "<div style='display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--s2);border-radius:10px;border:1px solid var(--border)'>"
-        +"<div style='width:9px;height:9px;border-radius:50%;background:"+col+";flex-shrink:0'></div>"
-        +"<span style='flex:1;font-size:13px'>"+c+"</span>"
-        +"<span style='font-size:11px;color:var(--muted);font-family:DM Mono,monospace;min-width:60px;text-align:right'>att:"+act.toFixed(1)+"%</span>"
-        +"<span style='font-size:11px;color:"+ac+";font-family:DM Mono,monospace;min-width:44px;text-align:right'>"+ds+"%</span>"
-        +"<div style='display:flex;align-items:center;gap:4px'>"
-        +"<input type='number' inputmode='decimal' min='0' max='100' step='1' value='"+tgt+"' data-cat='"+c+"'"
-        +" oninput='onTempCatInput(this)'"
-        +" style='width:58px;background:var(--bg);border:1px solid #1e3a5f;border-radius:8px;padding:7px 6px;color:var(--text);font-family:DM Mono,monospace;font-size:16px;text-align:center;outline:none'>"
-        +"<span style='color:var(--muted);font-size:12px'>%</span></div>"
-        +"</div>";
-    }).join("");
-  }
+function renderTgtBody(){
+  var usedCats = CATS.filter(function(c){ return etfs.some(function(e){ return e.c===c; }); });
+  var tot = total();
+  // Cat sum for % validation
+  var catSum = usedCats.reduce(function(a,c){ return a+(_td.cat[c]||0); },0);
+  var catOk = Math.abs(catSum-100)<0.1;
 
-  // ── Section 2: Subcategory % targets ──────────────────────────────
-  var subcatSection=document.getElementById("tgt-subcat-rows");
-  if(subcatSection){
-    var tot=total();
-    var html="";
-    HAS_SUBCATS.forEach(function(cat){
-      var catItems=etfs.filter(function(e){return e.c===cat;});
-      if(!catItems.length)return;
-      var col=(COL[cat]||COL.Altro).accent;
-      var catVal=catItems.reduce(function(a,e){return a+e.v;},0);
-      var subcatSum=Object.values(tempSubcatTargets[cat]||{}).reduce(function(a,v){return a+v;},0);
-      var sumOk=subcatSum<0.1||Math.abs(subcatSum-100)<0.1;
-      var over=subcatSum>100.05;
-      var catId=cat.replace(/\s/g,"-");
-      html+="<div>"
-        +"<div style='display:flex;align-items:center;gap:8px;margin-bottom:6px'>"
-        +"<div style='width:8px;height:8px;border-radius:50%;background:"+col+"'></div>"
-        +"<span style='font-size:12px;font-weight:600;color:"+col+"'>"+cat.toUpperCase()+"</span>"
-        +"<span id='tsc-badge-"+catId+"' style='font-size:11px;font-family:DM Mono,monospace;font-weight:700;color:"+(sumOk?"#66bb6a":over?"#ef5350":"#ffa726")+"'>"+subcatSum.toFixed(0)+"%</span>"
-        +"<span id='tsc-remain-"+catId+"' style='font-size:10px;color:"+(sumOk?"#66bb6a":over?"#ef5350":"#ffa726")+";margin-left:2px'>"
-        +(subcatSum<0.1?"(non impostato)":sumOk?"✓":over?"superi di "+(subcatSum-100).toFixed(1)+"%":"mancano "+(100-subcatSum).toFixed(1)+"%")
-        +"</span></div>"
-        +"<div style='height:5px;background:#1e293b;border-radius:3px;margin-bottom:10px;overflow:hidden'>"
-        +"<div id='tsc-bar-"+catId+"' style='height:100%;border-radius:3px;transition:width .3s;width:"+Math.min(subcatSum,100)+"%;background:"+(sumOk?"#66bb6a":over?"#ef5350":"#ffa726")+"'></div>"
-        +"</div>"
-        +"<div style='display:flex;flex-direction:column;gap:6px'>";
-      (subcats[cat]||[]).forEach(function(sub){
-        var tgt=(tempSubcatTargets[cat]||{})[sub]||0;
-        var subVal=catItems.filter(function(e){return e.s===sub;}).reduce(function(a,e){return a+e.v;},0);
+  var html = '';
+
+  // ── Header row: category % sum ───────────────────────────────────
+  html += "<div style='display:flex;align-items:center;justify-content:space-between;padding:8px 2px;margin-bottom:4px'>"
+    +"<span style='font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em'>Categorie — target %</span>"
+    +"<span style='font-family:DM Mono,monospace;font-size:13px;font-weight:700;color:"+(catOk?"#66bb6a":catSum>100?"#ef5350":"#ffa726")+"'>"+catSum.toFixed(1)+"% / 100%</span>"
+    +"</div>";
+
+  // ── One block per used category ──────────────────────────────────
+  usedCats.forEach(function(c){
+    var col=(COL[c]||COL.Altro).accent;
+    var tgtPct = _td.cat[c]||0;
+    var fixedV = _td.fixed[c]||0;
+    var catVal = etfs.filter(function(e){return e.c===c;}).reduce(function(a,e){return a+e.v;},0);
+    var actPct = tot>0?(catVal/tot)*100:0;
+    var diff = actPct-tgtPct, ac=allocColor(actPct,tgtPct);
+    var ds=(diff>=0?"+":"")+diff.toFixed(1);
+
+    // Subcat section
+    var subs = subcats[c]||[];
+    var hasSub = subs.length>0;
+    var subcatSum = hasSub ? subs.reduce(function(a,s){return a+(_td.sub[c]&&_td.sub[c][s]||0);},0) : 0;
+    var subcatOk = !hasSub || subcatSum<0.1 || Math.abs(subcatSum-100)<0.1;
+    var subcatOver = subcatSum>100.05;
+
+    var cid = c.replace(/\s/g,'-');
+
+    html += "<div style='background:var(--s2);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:4px'>";
+
+    // Cat header row
+    html += "<div style='padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap'>"
+      +"<div style='width:9px;height:9px;border-radius:50%;background:"+col+";flex-shrink:0'></div>"
+      +"<span style='font-size:13px;font-weight:600;flex:1'>"+c+"</span>"
+      +"<span style='font-size:11px;color:"+ac+";font-family:DM Mono,monospace'>att:"+actPct.toFixed(1)+"% ("+ds+"%)</span>"
+      // % input
+      +"<div style='display:flex;align-items:center;gap:4px'>"
+      +"<input type='number' inputmode='decimal' min='0' max='100' step='1' value='"+tgtPct+"'"
+      +" data-c='"+cid+"'"
+      +" oninput='onTdCat(this)'"
+      +" style='width:56px;background:var(--bg);border:1px solid #1e3a5f;border-radius:8px;padding:7px 6px;color:var(--text);font-family:DM Mono,monospace;font-size:16px;text-align:center;outline:none'>"
+      +"<span style='color:var(--muted);font-size:12px'>%</span></div>"
+      // fixed € input
+      +"<div style='display:flex;align-items:center;gap:3px'>"
+      +"<span style='color:"+(fixedV>0?"var(--accent)":"#334155")+";font-family:DM Mono,monospace;font-size:14px'>€</span>"
+      +"<input type='number' inputmode='decimal' min='0' step='500' value='"+(fixedV||"")+  "' placeholder='—'"
+      +" data-c='"+cid+"'"
+      +" oninput='onTdFixed(this)'"
+      +" style='width:80px;background:var(--bg);border:1px solid "+(fixedV>0?"var(--accent)":"var(--border)")+";border-radius:8px;padding:7px 6px;color:var(--text);font-family:DM Mono,monospace;font-size:14px;text-align:right;outline:none'>"
+      +"</div>"
+      +"</div>";
+
+    // Subcat rows
+    if(hasSub){
+      html += "<div style='border-top:1px solid var(--border);padding:8px 14px;background:#080e1c'>";
+      // subcat sum bar
+      html += "<div style='display:flex;align-items:center;gap:8px;margin-bottom:8px'>"
+        +"<span style='font-size:10px;color:#475569;text-transform:uppercase;letter-spacing:.06em;flex:1'>Sottocategorie</span>"
+        +"<span id='scsum-"+cid+"' style='font-family:DM Mono,monospace;font-size:11px;font-weight:700;color:"+(subcatOk?"#66bb6a":subcatOver?"#ef5350":"#ffa726")+"'>"+subcatSum.toFixed(0)+"% / 100%</span>"
+        +"<span id='scmsg-"+cid+"' style='font-size:10px;color:"+(subcatOk?"#66bb6a":subcatOver?"#ef5350":"#ffa726")+";min-width:80px'>"
+        +(subcatSum<0.1?"(non impostato)":subcatOk?"✓ OK":subcatOver?"superi di "+(subcatSum-100).toFixed(1)+"%":"mancano "+(100-subcatSum).toFixed(1)+"%")
+        +"</span></div>";
+      // progress bar
+      html += "<div style='height:4px;background:#1e293b;border-radius:2px;margin-bottom:10px;overflow:hidden'>"
+        +"<div id='scbar-"+cid+"' style='height:100%;border-radius:2px;transition:width .3s;width:"+Math.min(subcatSum,100)+"%;background:"+(subcatOk?"#66bb6a":subcatOver?"#ef5350":"#ffa726")+"'></div>"
+        +"</div>";
+      // sub rows
+      subs.forEach(function(s){
+        var sc=subcatColor(c,s);
+        var stgt=(_td.sub[c]&&_td.sub[c][s])||0;
+        var subVal=etfs.filter(function(e){return e.c===c&&e.s===s;}).reduce(function(a,e){return a+e.v;},0);
         var actOfCat=catVal>0?(subVal/catVal)*100:0;
-        var diff=actOfCat-tgt,ac=allocColor(actOfCat,tgt),ds=(diff>=0?"+":"")+diff.toFixed(1);
-        var sc=subcatColor(cat,sub);
-        html+="<div style='display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--s2);border-radius:8px;border:1px solid var(--border)'>"
-          +"<div style='width:3px;height:16px;border-radius:2px;background:"+sc+";flex-shrink:0'></div>"
-          +"<span style='flex:1;font-size:12px'>"+sub+"</span>"
-          +"<span style='font-size:10px;color:var(--muted);font-family:DM Mono,monospace;min-width:58px;text-align:right'>att:"+actOfCat.toFixed(1)+"%</span>"
-          +"<span style='font-size:10px;color:"+ac+";font-family:DM Mono,monospace;min-width:44px;text-align:right'>"+ds+"%</span>"
+        var sdiff=actOfCat-stgt,sac=allocColor(actOfCat,stgt),sds=(sdiff>=0?"+":"")+sdiff.toFixed(1);
+        var sid = cid+'__'+s.replace(/\s/g,'-');
+        html += "<div style='display:flex;align-items:center;gap:8px;margin-bottom:6px'>"
+          +"<div style='width:3px;height:14px;border-radius:2px;background:"+sc+";flex-shrink:0'></div>"
+          +"<span style='flex:1;font-size:12px'>"+s+"</span>"
+          +"<span style='font-size:10px;color:"+sac+";font-family:DM Mono,monospace;min-width:60px;text-align:right'>att:"+actOfCat.toFixed(1)+"% ("+sds+"%)</span>"
           +"<div style='display:flex;align-items:center;gap:4px'>"
-          +"<input type='number' inputmode='decimal' min='0' max='100' step='1' value='"+tgt+"'"
-          +" data-cat='"+cat+"' data-sub='"+sub+"' oninput='onTempSubcatInput(this)'"
+          +"<input type='number' inputmode='decimal' min='0' max='100' step='1' value='"+stgt+"'"
+          +" data-c='"+cid+"' data-s='"+sid+"' data-sname='"+s+"'"
+          +" oninput='onTdSub(this)'"
           +" style='width:52px;background:var(--bg);border:1px solid #1e3a5f;border-radius:8px;padding:6px 5px;color:var(--text);font-family:DM Mono,monospace;font-size:15px;text-align:center;outline:none'>"
           +"<span style='color:var(--muted);font-size:11px'>%</span></div>"
           +"</div>";
       });
-      html+="</div></div>";
-    });
-    subcatSection.innerHTML=html;
-  }
-
-  // ── Section 3: Fixed € overrides ────────────────────────────────────
-  var fixedRows=document.getElementById("tgt-fixed-rows");
-  if(fixedRows){
-    var allRows="";
-    // Categories
-    CATS.forEach(function(c){
-      var col=(COL[c]||COL.Altro).accent;
-      var v=tempFixedAmounts[c]||"";
-      allRows+="<div style='display:flex;align-items:center;gap:10px;padding:7px 10px;background:var(--s2);border-radius:8px;border:1px solid var(--border)'>"
-        +"<div style='width:7px;height:7px;border-radius:50%;background:"+col+";flex-shrink:0'></div>"
-        +"<span style='flex:1;font-size:12px;color:#94a3b8'>"+c+"</span>"
-        +"<div style='display:flex;align-items:center;gap:4px'>"
-        +"<span style='color:var(--accent);font-size:14px;font-family:DM Mono,monospace'>€</span>"
-        +"<input type='number' inputmode='decimal' min='0' step='100' value='"+v+"' placeholder='—'"
-        +" data-cat='"+c+"' oninput='onTempFixedInput(this)'"
-        +" style='width:90px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:6px 8px;color:var(--text);font-family:DM Mono,monospace;font-size:15px;text-align:right;outline:none'>"
-        +"</div></div>";
-    });
-    // Subcategories (flat list)
-    allRows+="<div style='margin-top:8px;color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:.06em;padding:4px 2px'>Sottocategorie</div>";
-    HAS_SUBCATS.forEach(function(cat){
-      var catItems=etfs.filter(function(e){return e.c===cat;});
-      if(!catItems.length)return;
-      (subcats[cat]||[]).forEach(function(sub){
-        var sc=subcatColor(cat,sub);
-        var v=(tempFixedAmountsSub[cat]||{})[sub]||"";
-        allRows+="<div style='display:flex;align-items:center;gap:10px;padding:6px 10px;background:var(--s2);border-radius:8px;border:1px solid var(--border)'>"
-          +"<div style='width:3px;height:14px;border-radius:2px;background:"+sc+";flex-shrink:0'></div>"
-          +"<span style='flex:1;font-size:11px;color:#94a3b8'>"+cat+" › "+sub+"</span>"
-          +"<div style='display:flex;align-items:center;gap:4px'>"
-          +"<span style='color:var(--accent);font-size:13px;font-family:DM Mono,monospace'>€</span>"
-          +"<input type='number' inputmode='decimal' min='0' step='100' value='"+v+"' placeholder='—'"
-          +" data-cat='"+cat+"' data-sub='"+sub+"' oninput='onTempFixedSubInput(this)'"
-          +" style='width:90px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:5px 8px;color:var(--text);font-family:DM Mono,monospace;font-size:14px;text-align:right;outline:none'>"
-          +"</div></div>";
-      });
-    });
-    fixedRows.innerHTML=allRows;
-  }
-  document.getElementById("tgt-error").style.display="none";
-}
-
-function onTempCatInput(inp){
-  var cat=inp.dataset.cat;
-  var v=parseFloat(inp.value);
-  tempCatTargets[cat]=isNaN(v)?0:Math.max(0,v);
-  var catSum=Object.values(tempCatTargets).reduce(function(a,v){return a+v;},0);
-  var sumEl=document.getElementById("tgt-cat-sum");
-  if(sumEl){sumEl.textContent=catSum.toFixed(1)+"%";sumEl.style.color=Math.abs(catSum-100)<0.1?"#66bb6a":catSum>100?"#ef5350":"#ffa726";}
-}
-
-function onTempSubcatInput2(inp){
-  var cat=inp.dataset.cat2,sub=inp.dataset.sub2,isFixed=!!inp.dataset.fixed;
-  var v=parseFloat(inp.value);
-  if(isFixed){
-    if(!tempFixedAmountsSub[cat])tempFixedAmountsSub[cat]={};
-    tempFixedAmountsSub[cat][sub]=isNaN(v)||v<=0?0:v;
-    // toggle visual state: if fixed value entered, disable % input in same row
-    var row=inp.closest("div[style*='align-items:center']");
-    if(row){
-      var pctInp=row.querySelector("input:not([data-fixed])");
-      if(pctInp){pctInp.disabled=v>0;pctInp.style.borderColor=v>0?"#334155":"#1e3a5f";pctInp.parentElement.style.opacity=v>0?"0.35":"1";}
-      var euroSpan=inp.previousElementSibling;
-      if(euroSpan)euroSpan.style.color=v>0?"var(--accent)":"#334155";
-      inp.style.borderColor=v>0?"var(--accent)":"#1e3a5f";
+      html += "</div>"; // end subcat section
     }
-  } else {
-    if(!tempSubcatTargets[cat])tempSubcatTargets[cat]={};
-    tempSubcatTargets[cat][sub]=isNaN(v)?0:Math.max(0,v);
-  }
-  // Update live sum (only counting % subcats)
-  var catId=cat.replace(/\s/g,"-");
-  var pctSubcats=(subcats[cat]||[]).filter(function(s){return !((tempFixedAmountsSub[cat]||{})[s]>0);});
-  var subcatSum=pctSubcats.reduce(function(a,s){return a+((tempSubcatTargets[cat]||{})[s]||0);},0);
-  var sumOk=Math.abs(subcatSum-100)<0.1||subcatSum===0,over=subcatSum>100.05;
-  var badge=document.getElementById("tsc-badge-"+catId);
-  var remain=document.getElementById("tsc-remain-"+catId);
-  var bar=document.getElementById("tsc-bar-"+catId);
-  var c2=sumOk?"#66bb6a":over?"#ef5350":"#ffa726";
-  if(badge){badge.textContent=subcatSum.toFixed(0)+"%";badge.style.color=c2;}
-  if(remain){remain.textContent=sumOk?"✓":(over?"Superi di "+(subcatSum-100).toFixed(1)+"%":"Mancano "+(100-subcatSum).toFixed(1)+"%");remain.style.color=c2;}
-  if(bar){bar.style.width=Math.min(subcatSum,100)+"%";bar.style.background=c2;}
+
+    html += "</div>"; // end cat block
+  });
+
+  document.getElementById('tgt-body').innerHTML = html;
+  document.getElementById('tgt-error').style.display='none';
 }
 
-// Keep old onTempSubcatInput for backward compat
-function onTempSubcatInput(inp){onTempSubcatInput2(inp);}
+// Map cid back to real cat name
+function cidToCat(cid){ return CATS.find(function(c){ return c.replace(/\s/g,'-')===cid; })||cid; }
 
-function setTgtMode(){}
-function setSubTgtMode(){}
+function onTdCat(inp){
+  var c=cidToCat(inp.dataset.c), v=parseFloat(inp.value);
+  _td.cat[c]=isNaN(v)?0:Math.max(0,v);
+  // Update sum display
+  var usedCats=CATS.filter(function(c){ return etfs.some(function(e){ return e.c===c; }); });
+  var s=usedCats.reduce(function(a,c){ return a+(_td.cat[c]||0); },0);
+  var ok=Math.abs(s-100)<0.1;
+  // Find the sum label and update it
+  var lbl=document.querySelector('#tgt-body>div:first-child span:last-child');
+  if(lbl){ lbl.textContent=s.toFixed(1)+"% / 100%"; lbl.style.color=ok?"#66bb6a":s>100?"#ef5350":"#ffa726"; }
+}
 
+function onTdFixed(inp){
+  var c=cidToCat(inp.dataset.c), v=parseFloat(inp.value);
+  _td.fixed[c]=isNaN(v)||v<=0?0:v;
+  var euro=inp.previousElementSibling;
+  if(euro){ euro.style.color=_td.fixed[c]>0?"var(--accent)":"#334155"; }
+  inp.style.borderColor=_td.fixed[c]>0?"var(--accent)":"var(--border)";
+}
+
+function onTdSub(inp){
+  var c=cidToCat(inp.dataset.c), s=inp.dataset.sname;
+  var v=parseFloat(inp.value);
+  if(!_td.sub[c])_td.sub[c]={};
+  _td.sub[c][s]=isNaN(v)?0:Math.max(0,v);
+  // Update subcat sum bar
+  var cid=inp.dataset.c;
+  var subs=subcats[c]||[];
+  var sum=subs.reduce(function(a,x){ return a+(_td.sub[c][x]||0); },0);
+  var ok=sum<0.1||Math.abs(sum-100)<0.1, over=sum>100.05;
+  var color=ok?"#66bb6a":over?"#ef5350":"#ffa726";
+  var sumEl=document.getElementById('scsum-'+cid);
+  var msgEl=document.getElementById('scmsg-'+cid);
+  var barEl=document.getElementById('scbar-'+cid);
+  if(sumEl){sumEl.textContent=sum.toFixed(0)+"% / 100%"; sumEl.style.color=color;}
+  if(msgEl){
+    msgEl.style.color=color;
+    msgEl.textContent=sum<0.1?"(non impostato)":ok?"✓ OK":over?"superi di "+(sum-100).toFixed(1)+"%":"mancano "+(100-sum).toFixed(1)+"%";
+  }
+  if(barEl){barEl.style.width=Math.min(sum,100)+"%"; barEl.style.background=color;}
+}
 
 function saveTargetModal(){
-  // Validate cat sum
-  var catSum=Object.values(tempCatTargets).reduce(function(a,v){return a+v;},0);
-  if(Math.abs(catSum-100)>0.1){
+  var activeCats=CATS.filter(function(c){return etfs.some(function(e){return e.c===c;});});
+  // Validate cat sum (only active cats)
+  var catSum=activeCats.reduce(function(a,c){return a+(tempCatTargets[c]||0);},0);
+  if(Math.abs(catSum-100)>0.5){
     var errEl=document.getElementById("tgt-error");
-    errEl.textContent="⚠ La somma dei target di categoria è "+catSum.toFixed(1)+"% — deve essere esattamente 100%.";
-    errEl.style.display="block";
-    return;
+    errEl.textContent="⚠ I target di categoria sommano "+catSum.toFixed(1)+"% — devono fare esattamente 100%.";
+    errEl.style.display="block";return;
   }
-  // Validate subcats: only check % subcats (exclude fixed-€ ones)
+  // Validate subcats
   var subcatErrors=[];
-  HAS_SUBCATS.forEach(function(cat){
-    if(!etfs.some(function(e){return e.c===cat;}))return;
-    var pctSubcats=(subcats[cat]||[]).filter(function(s){return !((tempFixedAmountsSub[cat]||{})[s]>0);});
-    var sum=pctSubcats.reduce(function(a,s){return a+((tempSubcatTargets[cat]||{})[s]||0);},0);
-    if(sum>0&&Math.abs(sum-100)>0.1)subcatErrors.push(cat+": "+sum.toFixed(1)+"%");
+  activeCats.forEach(function(cat){
+    var catSubs=subcats[cat]||[];if(!catSubs.length)return;
+    var sum=catSubs.reduce(function(a,s){return a+((tempSubcatTargets[cat]||{})[s]||0);},0);
+    if(sum>0.5&&Math.abs(sum-100)>0.5)subcatErrors.push(cat+": "+sum.toFixed(1)+"%");
   });
   if(subcatErrors.length){
     var errEl=document.getElementById("tgt-error");
-    errEl.textContent="⚠ Le sottocategorie % non bilanciate (devono sommare 100% o 0%): "+subcatErrors.join(", ");
-    errEl.style.display="block";
-    return;
+    errEl.textContent="⚠ Sottocategorie non bilanciate (devono sommare 100% o restare a 0): "+subcatErrors.join(", ");
+    errEl.style.display="block";return;
   }
   // Apply
   CATS.forEach(function(c){catTargets[c]=tempCatTargets[c]||0;});
   Object.keys(tempSubcatTargets).forEach(function(cat){
     subcatTargets[cat]={};
-    Object.keys(tempSubcatTargets[cat]).forEach(function(sub){
-      subcatTargets[cat][sub]=tempSubcatTargets[cat][sub]||0;
-    });
+    Object.keys(tempSubcatTargets[cat]).forEach(function(sub){subcatTargets[cat][sub]=tempSubcatTargets[cat][sub]||0;});
   });
   fixedAmounts={};
   Object.keys(tempFixedAmounts).forEach(function(c){if(tempFixedAmounts[c]>0)fixedAmounts[c]=tempFixedAmounts[c];});
@@ -1848,20 +1815,276 @@ function saveTargetModal(){
       if(v>0){if(!fixedAmountsSub[cat])fixedAmountsSub[cat]={};fixedAmountsSub[cat][sub]=v;}
     });
   });
-  // Save to localStorage
   try{
     localStorage.setItem("pf_catTargets",JSON.stringify(catTargets));
     localStorage.setItem("pf_subcatTargets",JSON.stringify(subcatTargets));
     localStorage.setItem("pf_fixedAmounts",JSON.stringify(fixedAmounts));
+    localStorage.setItem("pf_fixedAmountsSub",JSON.stringify(fixedAmountsSub));
   }catch(e){}
-  // Save to Drive immediately
+  saveToDrive();closeTargetModal();renderOverview();
+}
+
+function onTempFixedInput(inp){
+  var cat=inp.dataset.cat,v=parseFloat(inp.value);
+  tempFixedAmounts[cat]=isNaN(v)||v<=0?0:v;
+  inp.style.borderColor=v>0?"var(--accent)":"#334155";
+}
+function onTempFixedSubInput(inp){
+  var cat=inp.dataset.cat,sub=inp.dataset.sub,v=parseFloat(inp.value);
+  if(!tempFixedAmountsSub[cat])tempFixedAmountsSub[cat]={};
+  tempFixedAmountsSub[cat][sub]=isNaN(v)||v<=0?0:v;
+  inp.style.borderColor=v>0?"var(--accent)":"#334155";
+}
+
+function deleteTempCat(cat){
+  if(!confirm("Rimuovere la categoria '"+cat+"'?"))return;
+  delete tempCatTargets[cat];
+  delete tempFixedAmounts[cat];
+  // Remove from CATS if custom
+  var idx=CATS.indexOf(cat);
+  if(idx>=0)CATS.splice(idx,1);
+  delete COL[cat];
+  renderTargetEditor();
+}
+
+function addTempSubcat(cat){
+  var id="nsub-tgt-"+cat.replace(/\s/g,"-");
+  var inp=document.getElementById(id);
+  if(!inp)return;
+  var name=inp.value.trim();
+  if(!name)return;
+  if(!subcats[cat])subcats[cat]=[];
+  if(subcats[cat].indexOf(name)<0){
+    subcats[cat].push(name);
+    if(!tempSubcatTargets[cat])tempSubcatTargets[cat]={};
+    tempSubcatTargets[cat][name]=0;
+  }
+  inp.value="";
+  renderTargetEditor();
+}
+
+function openAddCatModal(){
+  document.getElementById("newcat-name").value="";
+  document.getElementById("addcat-modal").style.display="flex";
+}
+function confirmAddCat(){
+  var name=document.getElementById("newcat-name").value.trim();
+  if(!name){alert("Inserisci un nome.");return;}
+  if(CATS.indexOf(name)<0){
+    CATS.push(name);
+    COL[name]={bg:"#1a1a1a",accent:"#b0bec5"};
+    tempCatTargets[name]=0;
+  }
+  document.getElementById("addcat-modal").style.display="none";
+  renderTargetEditor();
+}
+
+
+function saveTargetModal(){
+  var usedCats=CATS.filter(function(c){ return etfs.some(function(e){ return e.c===c; }); });
+  // Validate cat sum
+  var catSum=usedCats.reduce(function(a,c){ return a+(_td.cat[c]||0); },0);
+  if(Math.abs(catSum-100)>0.5){
+    var e=document.getElementById('tgt-error');
+    e.textContent="⚠ I target di categoria sommano "+catSum.toFixed(1)+"% — devono fare esattamente 100%.";
+    e.style.display="block"; return;
+  }
+  // Validate subcats
+  var errs=[];
+  usedCats.forEach(function(c){
+    var subs=subcats[c]||[]; if(!subs.length)return;
+    var sum=subs.reduce(function(a,s){ return a+(_td.sub[c]&&_td.sub[c][s]||0); },0);
+    if(sum>0.5&&Math.abs(sum-100)>0.5)errs.push(c+": "+sum.toFixed(0)+"%");
+  });
+  if(errs.length){
+    var e=document.getElementById('tgt-error');
+    e.textContent="⚠ Le sottocategorie devono sommare 100% (o lasciarle tutte a 0): "+errs.join(", ");
+    e.style.display="block"; return;
+  }
+  // Apply
+  usedCats.forEach(function(c){
+    catTargets[c]=_td.cat[c]||0;
+    if(_td.fixed[c]>0)fixedAmounts[c]=_td.fixed[c]; else delete fixedAmounts[c];
+    if(_td.sub[c]){
+      if(!subcatTargets[c])subcatTargets[c]={};
+      Object.keys(_td.sub[c]).forEach(function(s){ subcatTargets[c][s]=_td.sub[c][s]||0; });
+    }
+  });
+  saveTargetsLocal();
   saveToDrive();
   closeTargetModal();
   renderOverview();
 }
 
+// Stub old functions for compatibility
+function renderTargetEditor(){
+  var tot=total();
+  var activeCats=CATS.filter(function(c){return etfs.some(function(e){return e.c===c;});});
 
-// ── TABS ──────────────────────────────────────────────────────────────
+  // ── 1. Fixed € amounts ────────────────────────────────────────────
+  var fixedTotal=activeCats.reduce(function(a,c){return a+(fixedAmounts[c]||0);},0);
+  var remainingPct=tot>0?Math.max(0,tot-fixedTotal):0; // portfolio after fixed amounts
+  var fixedHtml=activeCats.map(function(c){
+    var col=(COL[c]||COL.Altro).accent;
+    var v=tempFixedAmounts[c]||"";
+    var catVal=etfs.filter(function(e){return e.c===c;}).reduce(function(a,e){return a+e.v;},0);
+    return "<div style='display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--s2);border-radius:10px;border:1px solid var(--border)'>"
+      +"<div style='width:8px;height:8px;border-radius:50%;background:"+col+";flex-shrink:0'></div>"
+      +"<span style='flex:1;font-size:13px'>"+c+"</span>"
+      +"<span style='font-size:11px;color:var(--muted);font-family:DM Mono,monospace'>att: "+fmt(catVal)+"</span>"
+      +"<span style='color:var(--accent);font-family:DM Mono,monospace;font-size:14px'>€</span>"
+      +"<input type='number' inputmode='decimal' min='0' step='500' value='"+v+"' placeholder='—'"
+      +" data-cat='"+c+"' id='fi-"+c.replace(/\s/g,"-")+"' oninput='onTempFixedInput(this)'"
+      +" style='width:100px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:6px 8px;color:var(--text);font-family:DM Mono,monospace;font-size:15px;text-align:right;outline:none'>"
+      +"</div>";
+  }).join("");
+  var fixedEl=document.getElementById("tgt-fixed-rows");
+  if(fixedEl)fixedEl.innerHTML=fixedHtml;
+
+  // ── 2. Category % targets ─────────────────────────────────────────
+  var catSum=activeCats.reduce(function(a,c){return a+(tempCatTargets[c]||0);},0);
+  var catSumOk=Math.abs(catSum-100)<0.1;
+  var catSumEl=document.getElementById("tgt-cat-sum");
+  if(catSumEl){
+    catSumEl.textContent=catSum.toFixed(1)+"% / 100%";
+    catSumEl.style.color=catSumOk?"#66bb6a":catSum>100?"#ef5350":"#ffa726";
+  }
+  var catHtml=activeCats.map(function(c){
+    var col=(COL[c]||COL.Altro).accent;
+    var tgt=tempCatTargets[c]||0;
+    var catVal=etfs.filter(function(e){return e.c===c;}).reduce(function(a,e){return a+e.v;},0);
+    var act=tot>0?(catVal/tot)*100:0;
+    var diff=act-tgt,ac=allocColor(act,tgt),ds=(diff>=0?"+":"")+diff.toFixed(1);
+    // If fixed amount set, show implied % too
+    var fixedV=tempFixedAmounts[c]||0;
+    var impliedPct=fixedV>0&&tot>0?(fixedV/tot*100).toFixed(1)+"% implicito":"";
+    return "<div style='display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--s2);border-radius:10px;border:1px solid var(--border)'>"
+      +"<div style='width:9px;height:9px;border-radius:50%;background:"+col+";flex-shrink:0'></div>"
+      +"<span style='flex:1;font-size:13px'>"+c+"</span>"
+      +(impliedPct?"<span style='font-size:10px;color:#475569'>"+impliedPct+"</span>":"")
+      +"<span style='font-size:11px;color:var(--muted);font-family:DM Mono,monospace'>att:"+act.toFixed(1)+"%</span>"
+      +"<span style='font-size:11px;color:"+ac+";font-family:DM Mono,monospace;min-width:44px;text-align:right'>"+ds+"%</span>"
+      +"<input type='number' inputmode='decimal' min='0' max='100' step='1' value='"+tgt+"' data-cat='"+c+"'"
+      +" oninput='onTgCat(this)'"
+      +" style='width:58px;background:var(--bg);border:1px solid #1e3a5f;border-radius:8px;padding:7px 6px;color:var(--text);font-family:DM Mono,monospace;font-size:16px;text-align:center;outline:none'>"
+      +"<span style='color:var(--muted);font-size:12px'>%</span>"
+      +"</div>";
+  }).join("");
+  var catEl=document.getElementById("tgt-cat-rows");
+  if(catEl)catEl.innerHTML=catHtml;
+
+  // ── 3. Subcategory % targets ──────────────────────────────────────
+  var subcatHtml="";
+  activeCats.forEach(function(cat){
+    var catSubs=subcats[cat]||[];
+    if(!catSubs.length)return;
+    var col=(COL[cat]||COL.Altro).accent,bg=(COL[cat]||COL.Altro).bg;
+    var catVal=etfs.filter(function(e){return e.c===cat;}).reduce(function(a,e){return a+e.v;},0);
+    var catTgt=tempCatTargets[cat]||0;
+    var fixedV=tempFixedAmounts[cat]||0;
+    var subcatSum=catSubs.reduce(function(a,s){return a+((tempSubcatTargets[cat]||{})[s]||0);},0);
+    var sumOk=subcatSum<0.1||Math.abs(subcatSum-100)<0.5;
+    var over=subcatSum>100.5;
+    var catId=cat.replace(/\s/g,"-");
+    var remainLbl=subcatSum<0.1?"(non impostato)":sumOk?"✓":over?"supera di "+(subcatSum-100).toFixed(1)+"%":"mancano "+(100-subcatSum).toFixed(1)+"%";
+    subcatHtml+="<div style='border:1px solid var(--border);border-radius:12px;overflow:hidden'>"
+      +"<div style='padding:8px 12px;background:"+bg+";display:flex;align-items:center;gap:8px'>"
+      +"<div style='width:8px;height:8px;border-radius:50%;background:"+col+"'></div>"
+      +"<span style='font-size:12px;font-weight:700;color:"+col+"'>"+cat.toUpperCase()+"</span>"
+      +"<span id='tsb-"+catId+"' style='font-size:11px;font-family:DM Mono,monospace;color:"+(sumOk?"#66bb6a":over?"#ef5350":"#ffa726")+"'>"+subcatSum.toFixed(0)+"%</span>"
+      +"<span style='font-size:10px;color:"+(sumOk?"#66bb6a":over?"#ef5350":"#ffa726")+";margin-left:2px'>"+remainLbl+"</span>"
+      +"</div>"
+      +"<div style='height:4px;background:#1e293b'><div id='tsbar-"+catId+"' style='height:100%;width:"+Math.min(subcatSum,100)+"%;background:"+(sumOk?"#66bb6a":over?"#ef5350":"#ffa726")+";transition:width .3s'></div></div>"
+      +"<div style='padding:8px;display:flex;flex-direction:column;gap:5px'>";
+    catSubs.forEach(function(sub){
+      var tgt=(tempSubcatTargets[cat]||{})[sub]||0;
+      var subVal=etfs.filter(function(e){return e.c===cat&&e.s===sub;}).reduce(function(a,e){return a+e.v;},0);
+      var actOfCat=catVal>0?(subVal/catVal)*100:0;
+      // implied € if cat has fixed amount
+      var impliedEur=fixedV>0?(tgt/100*fixedV):catTgt>0&&tot>0?(tgt/100*(catTgt/100)*tot):0;
+      var diff=actOfCat-tgt,ac=allocColor(actOfCat,tgt),ds=(diff>=0?"+":"")+diff.toFixed(1);
+      var sc=subcatColor(cat,sub);
+      subcatHtml+="<div style='display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--s2);border-radius:8px'>"
+        +"<div style='width:3px;height:14px;border-radius:2px;background:"+sc+";flex-shrink:0'></div>"
+        +"<span style='flex:1;font-size:12px'>"+sub+"</span>"
+        +(impliedEur>0?"<span style='font-size:10px;color:#475569;font-family:DM Mono,monospace'>"+fmt(impliedEur)+"</span>":"")
+        +"<span style='font-size:10px;color:var(--muted);font-family:DM Mono,monospace'>att:"+actOfCat.toFixed(1)+"%</span>"
+        +"<span style='font-size:10px;color:"+ac+";font-family:DM Mono,monospace;min-width:40px;text-align:right'>"+ds+"%</span>"
+        +"<input type='number' inputmode='decimal' min='0' max='100' step='1' value='"+tgt+"'"
+        +" data-cat='"+cat+"' data-sub='"+sub+"' oninput='onTgSub(this)'"
+        +" style='width:52px;background:var(--bg);border:1px solid #1e3a5f;border-radius:8px;padding:5px 6px;color:var(--text);font-family:DM Mono,monospace;font-size:15px;text-align:center;outline:none'>"
+        +"<span style='color:var(--muted);font-size:11px'>%</span>"
+        +"</div>";
+    });
+    subcatHtml+="</div></div>";
+  });
+  var subcatEl=document.getElementById("tgt-subcat-rows");
+  if(subcatEl)subcatEl.innerHTML=subcatHtml||"<div style='color:#334155;font-size:12px'>Nessuna sottocategoria. Aggiungile dall'Overview.</div>";
+
+  document.getElementById("tgt-error").style.display="none";
+}
+
+function onTgCat(inp){
+  var c=inp.dataset.cat,v=parseFloat(inp.value);
+  tempCatTargets[c]=isNaN(v)?0:Math.max(0,v);
+  var catSum=Object.values(tempCatTargets).reduce(function(a,v){return a+v;},0);
+  var el=document.getElementById("tgt-cat-sum");
+  if(el){el.textContent=catSum.toFixed(1)+"% / 100%";el.style.color=Math.abs(catSum-100)<0.1?"#66bb6a":catSum>100?"#ef5350":"#ffa726";}
+}
+
+function onTgSub(inp){
+  var cat=inp.dataset.cat,sub=inp.dataset.sub,v=parseFloat(inp.value);
+  if(!tempSubcatTargets[cat])tempSubcatTargets[cat]={};
+  tempSubcatTargets[cat][sub]=isNaN(v)?0:Math.max(0,v);
+  var sum=Object.values(tempSubcatTargets[cat]).reduce(function(a,v){return a+v;},0);
+  var ok=sum<0.1||Math.abs(sum-100)<0.5,over=sum>100.5;
+  var catId=cat.replace(/\s/g,"-");
+  var badge=document.getElementById("tsb-"+catId);
+  var bar=document.getElementById("tsbar-"+catId);
+  if(badge){badge.textContent=sum.toFixed(0)+"%";badge.style.color=ok?"#66bb6a":over?"#ef5350":"#ffa726";}
+  if(bar){bar.style.width=Math.min(sum,100)+"%";bar.style.background=ok?"#66bb6a":over?"#ef5350":"#ffa726";}
+}
+
+function onTempFixedInput(inp){
+  var c=inp.dataset.cat,v=parseFloat(inp.value);
+  tempFixedAmounts[c]=isNaN(v)||v<=0?0:v;
+}
+
+function saveTargetModal(){
+  var activeCats=CATS.filter(function(c){return etfs.some(function(e){return e.c===c;});});
+  var catSum=activeCats.reduce(function(a,c){return a+(tempCatTargets[c]||0);},0);
+  if(Math.abs(catSum-100)>0.5){
+    var e=document.getElementById("tgt-error");
+    e.textContent="⚠ I target di categoria sommano "+catSum.toFixed(1)+"% — devono fare 100%.";
+    e.style.display="block";return;
+  }
+  var errs=[];
+  activeCats.forEach(function(cat){
+    var subs=subcats[cat]||[];if(!subs.length)return;
+    var sum=subs.reduce(function(a,s){return a+((tempSubcatTargets[cat]||{})[s]||0);},0);
+    if(sum>0.5&&Math.abs(sum-100)>0.5)errs.push(cat+": "+sum.toFixed(1)+"%");
+  });
+  if(errs.length){
+    var e=document.getElementById("tgt-error");
+    e.textContent="⚠ Sottocategorie devono sommare 100% (o restare a 0): "+errs.join(", ");
+    e.style.display="block";return;
+  }
+  CATS.forEach(function(c){catTargets[c]=tempCatTargets[c]||0;});
+  Object.keys(tempSubcatTargets).forEach(function(cat){
+    subcatTargets[cat]={};
+    Object.keys(tempSubcatTargets[cat]).forEach(function(sub){subcatTargets[cat][sub]=tempSubcatTargets[cat][sub]||0;});
+  });
+  fixedAmounts={};
+  Object.keys(tempFixedAmounts).forEach(function(c){if(tempFixedAmounts[c]>0)fixedAmounts[c]=tempFixedAmounts[c];});
+  try{
+    localStorage.setItem("pf_catTargets",JSON.stringify(catTargets));
+    localStorage.setItem("pf_subcatTargets",JSON.stringify(subcatTargets));
+    localStorage.setItem("pf_fixedAmounts",JSON.stringify(fixedAmounts));
+  }catch(e){}
+  saveToDrive();closeTargetModal();renderOverview();
+}
+
+
 function switchTab(t){
   activeTab=t;
   document.querySelectorAll(".tab-btn").forEach(function(b,i){b.classList.toggle("active",i===(t==="overview"?0:1));});
@@ -1933,15 +2156,14 @@ function saveTargetModal(){
   }
   // Validate subcats: only check % subcats (exclude fixed-€ ones)
   var subcatErrors=[];
-  HAS_SUBCATS.forEach(function(cat){
-    if(!etfs.some(function(e){return e.c===cat;}))return;
-    var pctSubcats=(subcats[cat]||[]).filter(function(s){return !((tempFixedAmountsSub[cat]||{})[s]>0);});
-    var sum=pctSubcats.reduce(function(a,s){return a+((tempSubcatTargets[cat]||{})[s]||0);},0);
-    if(sum>0&&Math.abs(sum-100)>0.1)subcatErrors.push(cat+": "+sum.toFixed(1)+"%");
+  CATS.forEach(function(cat){
+    if(!(subcats[cat]||[]).length)return;
+    var sum=Object.values(tempSubcatTargets[cat]||{}).reduce(function(a,v){return a+v;},0);
+    if(sum>0.5&&Math.abs(sum-100)>1)subcatErrors.push(cat+": "+sum.toFixed(0)+"%");
   });
   if(subcatErrors.length){
     var errEl=document.getElementById("tgt-error");
-    errEl.textContent="⚠ Le sottocategorie % non bilanciate (devono sommare 100% o 0%): "+subcatErrors.join(", ");
+    errEl.textContent="⚠ Sottocategorie non bilanciate — devono sommare 100% (o tutte 0%): "+subcatErrors.join(", ");
     errEl.style.display="block";
     return;
   }
