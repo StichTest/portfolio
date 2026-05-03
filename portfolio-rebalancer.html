@@ -609,6 +609,7 @@ ETF_DB.forEach(function(e){if(e.i)DB_ISIN[e.i]=e;if(e.t)DB_TICKER[e.t]=e;});
 // catTargets: % of total portfolio, must sum to 100
 // subcatTargets[cat][sub]: % OF CATEGORY, must sum to 100 per cat
 var nextId=30;
+var tempCatTargets={}, tempSubcatTargets={}, tempFixedAmounts={}, tempFixedAmountsSub={};
 // fixedAmounts[cat]: fixed € for a whole category (overrides % target)
 var fixedAmounts={}; // e.g. {"Liquidità": 5000}
 // fixedAmountsSub[cat][sub]: fixed € for a subcategory
@@ -1611,22 +1612,21 @@ function dlExport(){var ext=expFmt==="json"?"json":expFmt==="csv"?"csv":"txt",mi
 var _td = {}; // temp data during editing
 
 function openTargetModal(){
-  // Build temp copy
-  _td = {cat:{}, sub:{}, fixed:{}};
-  // Only categories that have ETFs
-  var usedCats = CATS.filter(function(c){ return etfs.some(function(e){ return e.c===c; }); });
-  usedCats.forEach(function(c){
-    _td.cat[c] = catTargets[c]||0;
-    _td.fixed[c] = fixedAmounts[c]||0;
-    _td.sub[c] = {};
+  // Copy current targets into temp vars used by renderTargetEditor
+  tempCatTargets={};tempSubcatTargets={};tempFixedAmounts={};tempFixedAmountsSub={};
+  CATS.forEach(function(c){
+    tempCatTargets[c]=catTargets[c]||0;
+    tempFixedAmounts[c]=fixedAmounts[c]||0;
+    tempSubcatTargets[c]={};
     (subcats[c]||[]).forEach(function(s){
-      _td.sub[c][s] = (subcatTargets[c]||{})[s]||0;
+      tempSubcatTargets[c][s]=(subcatTargets[c]||{})[s]||0;
     });
   });
-  renderTgtBody();
+  renderTargetEditor();
   document.getElementById('target-modal').style.display='flex';
   pushState('target');
 }
+
 
 function closeTargetModal(){
   document.getElementById('target-modal').style.display='none';
