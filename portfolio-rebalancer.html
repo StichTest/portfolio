@@ -1222,6 +1222,64 @@ function calcTargets(newTot){
     return Object.assign({},e,{tv:tv,diff:tv-e.v});
   });
 }
+var rebCalcTimer=null;
+function scheduleRebCalc(){
+  clearTimeout(rebCalcTimer);
+  rebCalcTimer=setTimeout(updateRebResults,300);
+}
+function updateRebResults(){
+  var capEl=document.getElementById("cap-inp");
+  if(!capEl)return;
+  var cap=parseFloat(capEl.value)||0;
+  var tot=total(),newTot=tot+cap,sct=sumCatTargets(),tok=Math.abs(sct-100)<0.1;
+  var totEl=document.getElementById("reb-tot-lbl");
+  if(totEl)totEl.innerHTML=cap>0?"Totale dopo: <span style='color:var(--accent);font-family:DM Mono,monospace;font-weight:600'>"+fmt(newTot)+"</span>":"";
+  var resultsEl=document.getElementById("reb-results");
+  if(!resultsEl)return;
+  if(!tok){resultsEl.innerHTML="<div class='warn-box'>⚠ I target di categoria non sommano al 100% ("+sct.toFixed(1)+"%). Vai in ⚙ Target per correggerli.</div>";return;}
+  var acts=calcTargets(newTot).sort(function(a,b){return b.diff-a.diff;});
+  var buyItems=[],okItems=[],sellItems=[];
+  var rebHtml=acts.map(function(e){
+    var col=(COL[e.c]||COL.Altro).accent,isBuy=e.diff>1,isNeu=Math.abs(e.diff)<=1;
+    var ac=isNeu?"#64748b":isBuy?"#66bb6a":"#ef5350";
+    var bb=isNeu?"#1e293b":isBuy?"rgba(20,83,45,.25)":"rgba(127,29,29,.25)";
+    var lbl=isNeu?"≈ OK":isBuy?"▲ ACQUISTA":"▼ SOVRAP.";
+    var capShare=cap>0&&e.diff>0?Math.min(e.diff,cap):0;
+    var amt=isNeu?"≈ OK":cap>0&&capShare>0?"+ "+fmt(capShare)+" ora":(isBuy?"+ ":"- ")+fmt(Math.abs(e.diff));
+    var tP=newTot>0?((e.tv/newTot)*100).toFixed(1):0,subL=e.s?" · "+e.s:"";
+    if(e.diff>1)buyItems.push(e);else if(Math.abs(e.diff)<=1)okItems.push(e);else sellItems.push(e);
+    return "<div class='reb-row'><div class='reb-dot' style='background:"+col+"'></div>"
+      +"<div class='reb-id'><div class='reb-tk' style='color:"+col+"'>"+(e.t||(e.i?e.i.substring(0,6)+"…":"—"))+"</div>"
+      +(e.i?"<div class='reb-isin'>"+e.i+"</div>":"")
+      +"<div class='reb-cat'>"+e.c+"<span style='color:#2d3748'>"+subL+"</span></div></div>"
+      +"<div class='reb-name'>"+e.n+"</div>"
+      +"<div class='reb-nums'><div class='reb-num-lbl'>Attuale</div><div class='reb-num-val'>"+fmt(e.v)+"</div>"
+      +"<div class='reb-num-lbl' style='margin-top:4px'>Target ("+tP+"%)</div><div class='reb-num-val'>"+fmt(e.tv)+"</div></div>"
+      +"<div class='reb-action'><div class='reb-amount' style='color:"+ac+"'>"+amt+"</div>"
+      +"<div class='reb-badge' style='color:"+ac+";background:"+bb+"'>"+lbl+"</div></div></div>";
+  }).join("");
+  function sc(title,items,color){
+    var inner=items.length===0?"<div class='empty-msg'>—</div>":
+      items.map(function(e){return "<div class='summ-item'><span class='summ-tk'>"+(e.t||(e.i?e.i.substring(0,6)+"…":"—"))+"</span><span class='summ-val' style='color:"+color+"'>"+fmt(Math.abs(e.diff))+"</span></div>";}).join("")
+      +(items.length?"<div class='summ-tot'><span style='font-size:10px;color:#64748b'>Tot.</span><span class='summ-val' style='color:"+color+";font-weight:600'>"+fmt(items.reduce(function(a,e){return a+Math.abs(e.diff);},0))+"</span></div>":"");
+    return "<div class='summ-card'><div class='summ-title' style='color:"+color+"'>"+title+" ("+items.length+")</div>"+inner+"</div>";
+  }
+  resultsEl.innerHTML="<div style='color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px'>Piano di ribilanciamento"+(cap>0?" — con "+fmt(cap)+" disponibili":"")+"</div>"
+    +"<div class='reb-list'>"+rebHtml+"</div>"
+    +"<div class='card'><div class='card-lbl'>Riepilogo</div><div class='sg3'>"+sc("Acquistare",buyItems,"#66bb6a")+sc("Bilanciati",okItems,"#64748b")+sc("Sovrappeso",sellItems,"#ef5350")+"</div></div>";
+}
+var _rebTimer=null;
+function scheduleRebalance(){
+  clearTimeout(_rebTimer);
+  _rebTimer=setTimeout(function(){
+    var el=document.getElementById("cap-inp");
+    var val=el?el.value:"";
+    renderRebalance();
+    // Restore focus and cursor position
+    var el2=document.getElementById("cap-inp");
+    if(el2){el2.focus();el2.value=val;el2.setSelectionRange(val.length,val.length);}
+  },400);
+}
 function renderRebalance(){
   var tot=total(),cap=parseFloat((document.getElementById("cap-inp")||{}).value)||0;
   var newTot=tot+cap,sct=sumCatTargets(),tok=Math.abs(sct-100)<0.1;
@@ -1269,18 +1327,18 @@ function renderRebalance(){
     if(fixedAmounts[c]>0){var col=(COL[c]||COL.Altro).accent;fixedDisplay+="<span style='font-size:11px;color:"+col+";font-family:DM Mono,monospace'>"+c+": "+fmt(fixedAmounts[c])+" fisso</span> ";}
   });
 
+  var savedCap=(document.getElementById("cap-inp")||{}).value||"";
   document.getElementById("tab-ribilancia").innerHTML=
-    "<div class='card' style='margin-bottom:14px'>"
-    +"<div class='card-lbl'>Importo da investire</div>"
+    "<div class='card' style='margin-bottom:14px'><div class='card-lbl'>Importo da investire</div>"
     +"<div style='display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:10px'>"
-    +"<div class='cap-wrap'><span class='cap-euro'>€</span><input class='cap-inp' type='number' inputmode='decimal' id='cap-inp' placeholder='0.00' oninput='renderRebalance()' value='"+(cap||"")+"'></div>"
-    +(cap>0?"<div style='color:var(--muted);font-size:12px'>Portfolio totale dopo: <span style='color:var(--accent);font-family:DM Mono,monospace;font-weight:600'>"+fmt(newTot)+"</span></div>":"")
-    +"</div>"
+    +"<div class='cap-wrap'><span class='cap-euro'>€</span>"
+    +"<input class='cap-inp' type='number' inputmode='decimal' id='cap-inp' placeholder='0.00' oninput='scheduleRebCalc()' value='"+savedCap+"'>"
+    +"</div><div id='reb-tot-lbl' style='color:var(--muted);font-size:12px'></div></div>"
     +(fixedDisplay?"<div style='display:flex;gap:10px;flex-wrap:wrap;margin-top:4px'>"+fixedDisplay+"</div>":"")
     +"</div>"
-    +warn+info
-    +(cap>0?"<div style='color:#64748b;font-size:11px;margin-bottom:12px'>💡 Con <span style='color:var(--accent);font-family:DM Mono,monospace'>"+fmt(cap)+"</span> disponibili — distribuzione ottimale per avvicinarsi ai target:</div>":"")
-    +rebHtml;
+    +"<div class='info-box'>💡 Distribuzione basata su target categoria e sottocategoria. Dentro ogni gruppo ETF pesati proporzionalmente.</div>"
+    +"<div id='reb-results'></div>";
+  updateRebResults();
 }
 
 // ── MUTATIONS ─────────────────────────────────────────────────────────
