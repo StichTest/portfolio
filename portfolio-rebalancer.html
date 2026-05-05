@@ -1189,9 +1189,15 @@ function renderOverview(){
 
 // ── REBALANCE ─────────────────────────────────────────────────────────
 function calcTargets(newTot){
+  // Step 1: sum all fixed amounts
+  var totalFixed=Object.values(fixedAmounts).reduce(function(a,v){return a+(v||0);},0);
+  // Step 2: remaining budget for %-based categories
+  var remainingForPct=Math.max(0, newTot-totalFixed);
+
   function catTargetValue(cat){
-    if(fixedAmounts[cat]>0)return fixedAmounts[cat];
-    return (catTargets[cat]||0)/100*newTot;
+    if(fixedAmounts[cat]>0) return fixedAmounts[cat];
+    // % applied to the remaining portfolio after fixed amounts
+    return (catTargets[cat]||0)/100 * remainingForPct;
   }
   function subcatTargetValue(cat,sub,catTv){
     if(fixedAmountsSub[cat]&&fixedAmountsSub[cat][sub]>0)return fixedAmountsSub[cat][sub];
@@ -1264,7 +1270,11 @@ function updateRebResults(){
       +(items.length?"<div class='summ-tot'><span style='font-size:10px;color:#64748b'>Tot.</span><span class='summ-val' style='color:"+color+";font-weight:600'>"+fmt(items.reduce(function(a,e){return a+Math.abs(e.diff);},0))+"</span></div>":"");
     return "<div class='summ-card'><div class='summ-title' style='color:"+color+"'>"+title+" ("+items.length+")</div>"+inner+"</div>";
   }
-  resultsEl.innerHTML="<div style='color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px'>Piano di ribilanciamento"+(cap>0?" — con "+fmt(cap)+" disponibili":"")+"</div>"
+  resultsEl.innerHTML=(function(){
+    var totalFixed=Object.values(fixedAmounts).reduce(function(a,v){return a+(v||0);},0);
+    var fixedInfo=totalFixed>0?" | fissi: "+fmt(totalFixed)+" | % su: "+fmt(newTot-totalFixed):"";
+    return "<div style='color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px'>Piano di ribilanciamento"+(cap>0?" — con "+fmt(cap)+" disponibili":"")+fixedInfo+"</div>";
+  })()
     +"<div class='reb-list'>"+rebHtml+"</div>"
     +"<div class='card'><div class='card-lbl'>Riepilogo</div><div class='sg3'>"+sc("Acquistare",buyItems,"#66bb6a")+sc("Bilanciati",okItems,"#64748b")+sc("Sovrappeso",sellItems,"#ef5350")+"</div></div>";
 }
