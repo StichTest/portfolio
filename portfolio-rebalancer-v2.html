@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Portfolio Rebalancer</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0d1a;--sur:#111827;--s2:#1a2234;--bdr:#1e293b;
+  --txt:#e2e8f0;--mut:#64748b;--acc:#4fc3f7;
+  --grn:#66bb6a;--red:#ef5350;--org:#ffa726;
+  --sb:env(safe-area-inset-bottom,0px);
+}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'DM Sans',sans-serif;overflow-x:hidden}
+::-webkit-scrollbar{display:none}
+input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
+input::placeholder{color:#334155}
+button{-webkit-tap-highlight-color:transparent;touch-action:manipulation;font-family:'DM Sans',sans-serif}
+
+/* Header */
+.hdr{position:sticky;top:0;z-index:80;background:var(--bg);border-bottom:1px solid var(--bdr);padding:10px 16px;display:flex;align-items:center;gap:10px}
+.logo{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+.logo-icon{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#1d4ed8,#4fc3f7);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.logo-txt{font-weight:700;font-size:14px;white-space:nowrap}
+.dtabs{display:flex;gap:4px}
+.dtab{background:transparent;border:1px solid var(--bdr);border-radius:8px;padding:6px 14px;color:var(--mut);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
+.dtab.active{background:#1e3a5f;border-color:var(--acc);color:var(--acc)}
+
+/* Body */
+.body{padding:14px;max-width:800px;margin:0 auto;padding-bottom:80px}
+
+/* Cards */
+.card{background:var(--sur);border:1px solid var(--bdr);border-radius:14px;padding:15px;margin-bottom:11px}
+.card-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin-bottom:11px}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.stat{background:var(--s2);border:1px solid var(--bdr);border-radius:10px;padding:9px 11px}
+.stat-l{font-size:10px;color:var(--mut);margin-bottom:3px}
+.stat-v{font-family:'DM Mono',monospace;font-size:14px;font-weight:600}
+
+/* Progress bar */
+.pbar{height:5px;border-radius:3px;background:var(--bdr);overflow:hidden;display:flex;gap:1px;margin-bottom:12px}
+.pbar-seg{height:100%;transition:flex .4s}
+
+/* Category blocks */
+.cat-block{border:1px solid var(--bdr);border-radius:12px;overflow:hidden;margin-bottom:9px}
+.cat-hdr{padding:8px 13px;display:flex;align-items:center;gap:7px;font-size:11px;font-weight:700;letter-spacing:.04em;flex-wrap:wrap;gap:6px}
+.cdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.etf-row{padding:9px 13px;border-top:1px solid var(--bdr);display:flex;align-items:center;gap:7px}
+.etf-l{flex:1;min-width:0;cursor:pointer}
+.etf-tk{font-family:'DM Mono',monospace;font-weight:700;font-size:14px}
+.etf-nm{font-size:11px;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
+.etf-r{display:flex;align-items:center;gap:5px;flex-shrink:0}
+.vbtn{font-family:'DM Mono',monospace;font-size:13px;background:var(--s2);border:1px solid var(--bdr);border-radius:8px;padding:5px 8px;color:var(--txt);cursor:pointer;min-width:80px;text-align:right;transition:border-color .15s}
+.vbtn:hover{border-color:var(--acc)}
+.vinp{font-family:'DM Mono',monospace;font-size:13px;background:var(--bg);border:2px solid var(--acc);border-radius:8px;padding:5px 8px;color:var(--txt);width:105px;text-align:right;outline:none}
+.ftog{background:transparent;border:1px solid var(--bdr);border-radius:7px;padding:4px 8px;font-size:11px;font-weight:600;cursor:pointer;color:var(--mut);white-space:nowrap;transition:all .15s;line-height:1}
+.ftog.on{background:#0d1e36;border-color:var(--acc);color:var(--acc)}
+.delbtn{background:transparent;border:none;color:#334155;cursor:pointer;font-size:14px;padding:5px;border-radius:4px;line-height:1;min-width:28px;min-height:28px;display:flex;align-items:center;justify-content:center}
+.delbtn:hover{color:var(--red)}
+
+/* Invest tab */
+.inv-card{background:var(--sur);border:1px solid var(--bdr);border-radius:14px;padding:20px;margin-bottom:11px}
+.inv-lbl{font-size:11px;color:var(--mut);margin-bottom:8px;text-transform:uppercase;letter-spacing:.07em;font-weight:700}
+.inv-row{display:flex;align-items:center;gap:8px}
+.euro-sym{font-family:'DM Mono',monospace;font-size:28px;color:var(--acc);flex-shrink:0}
+.inv-inp{font-family:'DM Mono',monospace;font-size:28px;font-weight:700;background:transparent;border:none;border-bottom:2px solid var(--acc);color:var(--txt);outline:none;width:100%;padding:2px 0;min-width:0}
+.buy-row{background:var(--sur);border:1px solid var(--bdr);border-radius:11px;padding:11px 13px;margin-bottom:7px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.buy-l{flex:1;min-width:120px}
+.buy-tk{font-family:'DM Mono',monospace;font-weight:700;font-size:15px}
+.buy-det{font-size:11px;color:var(--mut);margin-top:2px}
+.buy-amt{font-family:'DM Mono',monospace;font-size:17px;font-weight:700;color:var(--grn);text-align:right;flex-shrink:0}
+.fixed-row{padding:7px 13px;border:1px solid var(--bdr);border-radius:9px;display:flex;align-items:center;gap:7px;margin-bottom:5px;opacity:.55}
+
+/* Target tab */
+.tgt-row{display:flex;align-items:center;gap:7px;padding:8px 11px;background:var(--s2);border-radius:9px;border:1px solid var(--bdr);margin-bottom:5px}
+.tgt-nm{flex:1;font-size:13px}
+.tgt-act{font-family:'DM Mono',monospace;font-size:11px;color:var(--mut);text-align:right;min-width:60px}
+.tgt-inp{width:50px;background:var(--bg);border:1px solid #1e3a5f;border-radius:7px;padding:6px 5px;color:var(--txt);font-family:'DM Mono',monospace;font-size:15px;text-align:center;outline:none;flex-shrink:0}
+.tgt-inp:focus{border-color:var(--acc)}
+.tpct{color:var(--mut);font-size:12px;flex-shrink:0}
+.sum-pill{font-family:'DM Mono',monospace;font-size:12px;font-weight:700;padding:3px 9px;border-radius:6px;border:1px solid transparent}
+.sum-ok{color:var(--grn);border-color:#166534;background:#0e2a1e}
+.sum-err{color:var(--org);border-color:#78350f;background:#1a1510}
+.sum-over{color:var(--red);border-color:#7f1d1d;background:#2a1a1a}
+
+/* Info / warn boxes */
+.info{background:#0e1f30;border:1px solid #1e3a5f;border-radius:9px;padding:9px 13px;font-size:11px;color:#90caf9;line-height:1.65;margin-bottom:11px}
+.warn{background:#2a1a1a;border:1px solid #7f1d1d;border-radius:9px;padding:9px 13px;font-size:12px;color:#fca5a5;margin-bottom:11px}
+
+/* Add btn */
+.btn-add{background:#1d4ed8;border:none;border-radius:9px;padding:9px 18px;color:#fff;font-size:13px;font-weight:600;cursor:pointer}
+.btn-sm{background:transparent;border:1px solid var(--bdr);border-radius:7px;padding:5px 11px;color:var(--acc);font-size:11px;font-weight:600;cursor:pointer}
+
+/* Cat section label in invest */
+.cat-sec{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:6px 3px 4px;margin-top:4px}
+
+/* Modal */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:flex-end;justify-content:center;z-index:200;backdrop-filter:blur(4px)}
+.modal{background:var(--sur);border:1px solid #1e3a5f;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:520px;max-height:93vh;overflow-y:auto;padding-bottom:calc(20px + var(--sb))}
+.mh{width:36px;height:4px;background:var(--bdr);border-radius:2px;margin:0 auto 14px}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:15px}
+.fld{margin-bottom:11px}
+.fld label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin-bottom:5px}
+.fld input,.fld select{width:100%;background:var(--bg);border:1px solid #1e3a5f;border-radius:10px;padding:12px;color:var(--txt);font-family:'DM Mono',monospace;font-size:16px;outline:none}
+.fld input:focus,.fld select:focus{border-color:var(--acc)}
+.fld select{font-family:'DM Sans',sans-serif;font-size:14px;-webkit-appearance:none}
+.mbtns{display:flex;gap:8px;margin-top:16px}
+.bok{flex:2;background:#1d4ed8;border:none;border-radius:12px;padding:14px;color:#fff;font-size:15px;font-weight:700;cursor:pointer}
+.bcancel{flex:1;background:transparent;border:1px solid #334155;border-radius:12px;padding:14px;color:#94a3b8;font-size:15px;cursor:pointer}
+.bdel{flex:1;background:transparent;border:1px solid #7f1d1d;border-radius:12px;padding:14px;color:var(--red);font-size:15px;cursor:pointer}
+
+/* Toggle switch */
+.tog-wrap{display:flex;align-items:center;gap:10px;background:var(--s2);border:1px solid var(--bdr);border-radius:10px;padding:11px 13px;margin-bottom:11px;cursor:pointer}
+.tog-info{flex:1}
+.tog-title{font-size:13px;font-weight:600}
+.tog-sub{font-size:11px;color:var(--mut);margin-top:2px;line-height:1.4}
+.tog-sw{position:relative;width:44px;height:24px;flex-shrink:0}
+.tog-track{position:absolute;inset:0;border-radius:24px;background:#334155;transition:.2s}
+.tog-knob{position:absolute;width:18px;height:18px;top:3px;left:3px;border-radius:50%;background:#fff;transition:.2s}
+.tog-sw.on .tog-track{background:#1d4ed8}
+.tog-sw.on .tog-knob{transform:translateX(20px)}
+
+/* Bottom nav */
+.bnav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--sur);border-top:1px solid var(--bdr);z-index:100;padding-bottom:var(--sb)}
+.bnav-inner{display:flex;height:56px}
+.bnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border:none;background:transparent;color:var(--mut);font-size:10px;font-weight:600;cursor:pointer}
+.bnav-btn.active{color:var(--acc)}
+.ni{font-size:19px;line-height:1}
+.fab{position:fixed;bottom:calc(64px + var(--sb));right:14px;width:50px;height:50px;border-radius:14px;background:#1d4ed8;border:none;color:#fff;font-size:26px;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(29,78,216,.45);z-index:101}
+
+@media(max-width:600px){
+  .bnav{display:block}.fab{display:flex}
+  .dtabs{display:none}
+  .body{padding:10px;padding-bottom:72px}
+  .stats{grid-template-columns:1fr 1fr}
+}
+@media(min-width:601px){
+  .ov{align-items:center}
+  .modal{border-radius:16px}
+  .mh{display:none}
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="hdr">
+    <div class="logo">
+      <div class="logo-icon">⚖</div>
+      <span class="logo-txt">Portfolio Rebalancer</span>
+    </div>
+    <div class="dtabs">
+      <button class="dtab active" onclick="switchTab('portfolio')">📊 Portfolio</button>
+      <button class="dtab" onclick="switchTab('invest')">💰 Investi</button>
+      <button class="dtab" onclick="switchTab('target')">🎯 Target</button>
+    </div>
+  </div>
+
+  <div class="body" id="main"></div>
+
+  <div class="bnav">
+    <div class="bnav-inner">
+      <button class="bnav-btn active" id="nb-p" onclick="switchTab('portfolio')"><span class="ni">📊</span>Portfolio</button>
+      <button class="bnav-btn" id="nb-i" onclick="switchTab('invest')"><span class="ni">💰</span>Investi</button>
+      <button class="bnav-btn" id="nb-t" onclick="switchTab('target')"><span class="ni">🎯</span>Target</button>
+    </div>
+  </div>
+  <button class="fab" onclick="openAdd()">＋</button>
+</div>
+
+<!-- MODAL -->
+<div class="ov" id="modal" style="display:none" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="mh"></div>
+    <h3 id="m-title">Aggiungi ETF</h3>
+    <div class="fld"><label>Ticker</label><input id="m-tk" type="text" autocapitalize="characters" spellcheck="false" oninput="this.value=this.value.toUpperCase()"></div>
+    <div class="fld"><label>Nome / Descrizione</label><input id="m-nm" type="text" placeholder="es. Vanguard FTSE All-World"></div>
+    <div class="fld"><label>Valore attuale (€)</label><input id="m-vl" type="number" inputmode="decimal" placeholder="0"></div>
+    <div class="fld"><label>Categoria</label>
+      <select id="m-cat" onchange="mCatChange()">
+        <option>Azionario</option><option>Obbligazionario</option><option>Materie Prime</option>
+        <option>Immobiliare</option><option>Liquidità</option><option>Crypto</option><option>Altro</option>
+      </select>
+    </div>
+    <div class="fld" id="m-sf" style="display:none"><label>Sottocategoria</label><select id="m-sub"></select></div>
+
+    <div class="tog-wrap" onclick="toggleFixed()" id="fix-tog-wrap">
+      <div class="tog-info">
+        <div class="tog-title">Posizione fissa 🔒</div>
+        <div class="tog-sub">Questa posizione non verrà incrementata nei nuovi investimenti, ma conta nell'allocazione di portafoglio.</div>
+      </div>
+      <div class="tog-sw" id="fix-sw"><div class="tog-track"></div><div class="tog-knob"></div></div>
+    </div>
+
+    <div class="mbtns">
+      <button class="bcancel" onclick="closeModal()">Annulla</button>
+      <button class="bdel" id="m-del" style="display:none" onclick="delFromModal()">🗑 Elimina</button>
+      <button class="bok" onclick="saveModal()">✓ Salva</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── CONFIG ────────────────────────────────────────────────────────
+var CATS=['Azionario','Obbligazionario','Materie Prime','Immobiliare','Liquidità','Crypto','Altro'];
+var SUBCAT_DEFS={
+  Azionario:['Globale','USA','Europa','Emergenti','Pacifico'],
+  Obbligazionario:['Governativo','Corporate','High Yield','Emergenti']
+};
+var COL={
+  Azionario:'#4fc3f7',Obbligazionario:'#66bb6a','Materie Prime':'#ffa726',
+  Immobiliare:'#ce93d8',Liquidità:'#90caf9',Crypto:'#ef5350',Altro:'#b0bec5'
+};
+var CBGCOL={
+  Azionario:'#0b1e30',Obbligazionario:'#081f12','Materie Prime':'#1e1208',
+  Immobiliare:'#170b24',Liquidità:'#071625',Crypto:'#200a0a',Altro:'#111'
+};
+
+// ─── STATE ────────────────────────────────────────────────────────
+var etfs=[], catTargets={}, subcatTargets={}, subcats={}, nid=1;
+var tab='portfolio', editId=null, inlId=null, fixOn=false, lastCap='';
+
+// ─── PERSISTENCE ─────────────────────────────────────────────────
+function save(){
+  try{
+    localStorage.setItem('pfr3_e',JSON.stringify(etfs));
+    localStorage.setItem('pfr3_ct',JSON.stringify(catTargets));
+    localStorage.setItem('pfr3_st',JSON.stringify(subcatTargets));
+    localStorage.setItem('pfr3_sc',JSON.stringify(subcats));
+    localStorage.setItem('pfr3_nid',nid);
+  }catch(e){}
+}
+function load(){
+  try{
+    var e=localStorage.getItem('pfr3_e'); if(e)etfs=JSON.parse(e);
+    var ct=localStorage.getItem('pfr3_ct'); if(ct)catTargets=JSON.parse(ct);
+    var st=localStorage.getItem('pfr3_st'); if(st)subcatTargets=JSON.parse(st);
+    var sc=localStorage.getItem('pfr3_sc'); if(sc)subcats=JSON.parse(sc);
+    var ni=localStorage.getItem('pfr3_nid'); if(ni)nid=parseInt(ni)||1;
+  }catch(e){}
+  if(!etfs.length) loadDemo();
+}
+function loadDemo(){
+  subcats=JSON.parse(JSON.stringify(SUBCAT_DEFS));
+  catTargets={Azionario:75,Obbligazionario:20,Liquidità:5,'Materie Prime':0,Immobiliare:0,Crypto:0,Altro:0};
+  subcatTargets={Azionario:{Globale:75,Emergenti:25},Obbligazionario:{Governativo:60,Corporate:40}};
+  etfs=[
+    {id:nid++,tk:'VWCE',nm:'Vanguard FTSE All-World',cat:'Azionario',sub:'Globale',v:12000,fx:false},
+    {id:nid++,tk:'WSML',nm:'iShares MSCI World Small Cap',cat:'Azionario',sub:'Globale',v:3000,fx:false},
+    {id:nid++,tk:'EIMI',nm:'iShares Core MSCI EM IMI',cat:'Azionario',sub:'Emergenti',v:4000,fx:false},
+    {id:nid++,tk:'VAGF',nm:'Vanguard Global Aggregate Bond',cat:'Obbligazionario',sub:'Governativo',v:5000,fx:true},
+    {id:nid++,tk:'XGLE',nm:'Xtrackers Eurozone Govt Bond',cat:'Obbligazionario',sub:'Governativo',v:3000,fx:true},
+    {id:nid++,tk:'ESIT',nm:'iShares EUR Corp Bond UCITS',cat:'Obbligazionario',sub:'Corporate',v:4000,fx:true},
+    {id:nid++,tk:'XEON',nm:'Xtrackers EUR Overnight Rate',cat:'Liquidità',sub:null,v:2000,fx:true},
+  ];
+  save();
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────
+var fmtCur=new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR',minimumFractionDigits:0,maximumFractionDigits:0});
+function fc(n){return fmtCur.format(n);}
+function f1(n){return n.toFixed(1)+'%';}
+function tot(){return etfs.reduce(function(a,e){return a+e.v;},0);}
+
+// ─── CORE CALCULATION ─────────────────────────────────────────────
+// Logic:
+// 1. newTotal = currentPortfolio + newCapital
+// 2. For each category with a target %:
+//    catBudget = newTotal × catTarget%
+// 3. For each subcategory with a target %:
+//    subBudget = catBudget × subTarget%
+//    fixedVal  = sum of fixed ETFs in that subcat
+//    freeBudget = max(0, subBudget - fixedVal)
+//    → distribute freeBudget among non-fixed ETFs proportionally to current value
+// 4. If no subcategory targets set: same logic at category level
+// 5. Scale all buys to newCapital if total > newCapital
+function calcBuys(newCap){
+  var curTot=tot(), newTot=curTot+newCap;
+  var orders=[];
+
+  CATS.forEach(function(cat){
+    var catTgt=catTargets[cat]||0;
+    if(!catTgt) return;
+    var catBudget=newTot*catTgt/100;
+    var catEtfs=etfs.filter(function(e){return e.cat===cat;});
+    if(!catEtfs.length) return;
+
+    var catSubs=subcats[cat]||[];
+    var subTgts=subcatTargets[cat]||{};
+    var hasSubTgts=catSubs.length>0 && catSubs.some(function(s){return (subTgts[s]||0)>0;});
+
+    if(hasSubTgts){
+      // ─ With subcategory targets ─
+      catSubs.forEach(function(sub){
+        var st=subTgts[sub]||0;
+        if(!st) return;
+        var subBudget=catBudget*st/100;
+        var subEtfs=catEtfs.filter(function(e){return e.sub===sub;});
+        var fixedV=subEtfs.filter(function(e){return e.fx;}).reduce(function(a,e){return a+e.v;},0);
+        var nonFixed=subEtfs.filter(function(e){return !e.fx;});
+        if(!nonFixed.length) return;
+        var free=Math.max(0,subBudget-fixedV);
+        var nfTot=nonFixed.reduce(function(a,e){return a+e.v;},0);
+        nonFixed.forEach(function(e){
+          var w=nfTot>0?e.v/nfTot:1/nonFixed.length;
+          var tv=free*w;
+          orders.push({etf:e,tv:tv,buy:Math.max(0,tv-e.v),sub:sub,cat:cat});
+        });
+      });
+      // ETFs without a covered subcat target → give them leftover budget
+      var coveredSubBudget=catSubs.reduce(function(a,s){return a+catBudget*(subTgts[s]||0)/100;},0);
+      var leftover=Math.max(0,catBudget-coveredSubBudget);
+      if(leftover>0){
+        var uncatFixed=catEtfs.filter(function(e){return e.fx&&(!e.sub||!catSubs.includes(e.sub));}).reduce(function(a,e){return a+e.v;},0);
+        var uncatNF=catEtfs.filter(function(e){return !e.fx&&(!e.sub||!catSubs.includes(e.sub));});
+        if(uncatNF.length){
+          var free=Math.max(0,leftover-uncatFixed);
+          var nfTot=uncatNF.reduce(function(a,e){return a+e.v;},0);
+          uncatNF.forEach(function(e){
+            var w=nfTot>0?e.v/nfTot:1/uncatNF.length;
+            var tv=free*w;
+            orders.push({etf:e,tv:tv,buy:Math.max(0,tv-e.v),sub:e.sub,cat:cat});
+          });
+        }
+      }
+    } else {
+      // ─ No subcategory targets: whole category ─
+      var fixedV=catEtfs.filter(function(e){return e.fx;}).reduce(function(a,e){return a+e.v;},0);
+      var nonFixed=catEtfs.filter(function(e){return !e.fx;});
+      if(!nonFixed.length) return;
+      var free=Math.max(0,catBudget-fixedV);
+      var nfTot=nonFixed.reduce(function(a,e){return a+e.v;},0);
+      nonFixed.forEach(function(e){
+        var w=nfTot>0?e.v/nfTot:1/nonFixed.length;
+        var tv=free*w;
+        orders.push({etf:e,tv:tv,buy:Math.max(0,tv-e.v),sub:e.sub,cat:cat});
+      });
+    }
+  });
+
+  // Scale to available capital
+  var totalBuy=orders.reduce(function(a,r){return a+r.buy;},0);
+  if(totalBuy>newCap && totalBuy>0){
+    var sc=newCap/totalBuy;
+    orders.forEach(function(r){r.buy*=sc;r.tv=r.etf.v+r.buy;});
+  }
+
+  return orders.filter(function(r){return r.buy>=0.5;}).sort(function(a,b){return b.buy-a.buy;});
+}
+
+// ─── RENDER PORTFOLIO ─────────────────────────────────────────────
+function renderPortfolio(){
+  var T=tot(), groups={};
+  etfs.forEach(function(e){if(!groups[e.cat])groups[e.cat]=[];groups[e.cat].push(e);});
+  var catSum=Object.values(catTargets).reduce(function(a,v){return a+v;},0);
+  var catOk=Math.abs(catSum-100)<0.1;
+  var fixedN=etfs.filter(function(e){return e.fx;}).length;
+
+  var h='';
+  // Summary
+  h+="<div class='card'><div class='card-lbl'>Riepilogo portafoglio</div>";
+  h+="<div class='stats'>";
+  h+="<div class='stat'><div class='stat-l'>Totale</div><div class='stat-v' style='color:var(--acc)'>"+fc(T)+"</div></div>";
+  h+="<div class='stat'><div class='stat-l'>Posizioni</div><div class='stat-v'>"+etfs.length+"</div></div>";
+  h+="<div class='stat'><div class='stat-l'>Fisse 🔒</div><div class='stat-v' style='color:var(--acc)'>"+fixedN+"</div></div>";
+  h+="</div>";
+  if(!catOk) h+="<div class='warn'>⚠ Target categorie: "+catSum.toFixed(1)+"% — devono sommare 100%. Vai in 🎯 Target.</div>";
+  if(T>0){
+    h+="<div class='pbar'>";
+    CATS.forEach(function(c){
+      var cv=(groups[c]||[]).reduce(function(a,e){return a+e.v;},0);
+      if(!cv) return;
+      h+="<div class='pbar-seg' style='flex:"+cv+";background:"+COL[c]+"'></div>";
+    });
+    h+="</div>";
+  }
+  h+="</div>";
+
+  // ETF blocks
+  CATS.forEach(function(cat){
+    var items=groups[cat]; if(!items||!items.length) return;
+    var col=COL[cat], catV=items.reduce(function(a,e){return a+e.v;},0);
+    var catPct=T>0?(catV/T*100):0, catTgt=catTargets[cat]||0;
+    var diff=catPct-catTgt, dc=Math.abs(diff)<0.5?'var(--grn)':Math.abs(diff)<3?'var(--org)':'var(--red)';
+    var sgnDiff=(diff>=0?'+':'')+diff.toFixed(1)+'%';
+
+    h+="<div class='cat-block'>";
+    h+="<div class='cat-hdr' style='background:"+CBGCOL[cat]+"'>";
+    h+="<div class='cdot' style='background:"+col+"'></div>";
+    h+="<span style='color:"+col+"'>"+cat.toUpperCase()+"</span>";
+    h+="<span style='color:var(--mut);font-weight:400;font-size:10px'>"+items.length+"</span>";
+    h+="<span style='flex:1'></span>";
+    h+="<span style='font-family:DM Mono,monospace;font-size:11px;color:var(--mut)'>"+fc(catV)+"</span>";
+    h+="<span style='font-family:DM Mono,monospace;font-size:11px;color:"+col+";margin-left:7px'>"+catPct.toFixed(1)+"%</span>";
+    if(catTgt) h+="<span style='font-family:DM Mono,monospace;font-size:10px;color:"+dc+";margin-left:4px'>"+sgnDiff+" vs "+catTgt+"%</span>";
+    h+="</div>";
+
+    // Group by subcat
+    var subOrder=subcats[cat]||[];
+    var usedSubs=items.map(function(e){return e.sub;}).filter(function(s,i,a){return s&&a.indexOf(s)===i;});
+    var allSubs=subOrder.concat(usedSubs.filter(function(s){return !subOrder.includes(s);}));
+    var noSub=items.filter(function(e){return !e.sub;});
+
+    if(allSubs.length>0){
+      allSubs.forEach(function(sub){
+        var si=items.filter(function(e){return e.sub===sub;}); if(!si.length) return;
+        var sc2=subcatTargets[cat]&&subcatTargets[cat][sub]?subcatTargets[cat][sub]:0;
+        var sv=si.reduce(function(a,e){return a+e.v;},0);
+        var actOfCat=catV>0?(sv/catV*100):0;
+        h+="<div style='padding:5px 13px 0;background:#080e1c;display:flex;align-items:center;gap:6px;border-top:1px solid var(--bdr)'>";
+        h+="<div style='width:3px;height:13px;background:"+col+";border-radius:2px;flex-shrink:0'></div>";
+        h+="<span style='font-size:11px;color:"+col+";font-weight:600'>"+sub+"</span>";
+        if(sc2) h+="<span style='font-size:10px;color:var(--mut)'>target "+sc2+"% di cat · att "+actOfCat.toFixed(1)+"%</span>";
+        h+="</div>";
+        si.forEach(function(e){h+=etfRow(e,T,col);});
+      });
+    }
+    noSub.forEach(function(e){h+=etfRow(e,T,col);});
+    h+="</div>";
+  });
+
+  h+="<div style='text-align:center;margin:6px 0 2px'><button class='btn-add' onclick='openAdd()'>＋ Aggiungi ETF</button></div>";
+  set(h);
+  if(inlId){var el=document.getElementById('ei'+inlId);if(el){el.focus();el.select();}}
+}
+
+function etfRow(e,T,col){
+  var pct=T>0?(e.v/T*100):0;
+  var vpart=inlId===e.id
+    ?"<input class='vinp' id='ei"+e.id+"' type='number' inputmode='decimal' value='"+e.v+"' onblur='saveInl("+e.id+")' onkeydown='if(event.key===\"Enter\")saveInl("+e.id+")'>"
+    :"<button class='vbtn' onclick='startInl("+e.id+")'>"+fc(e.v)+"</button>";
+  return "<div class='etf-row'>"
+    +"<div class='etf-l' onclick='openEdit("+e.id+")'>"
+    +"<div class='etf-tk' style='color:"+col+"'>"+e.tk+(e.fx?' 🔒':'')+"</div>"
+    +"<div class='etf-nm'>"+e.nm+" · "+pct.toFixed(1)+"%</div>"
+    +"</div>"
+    +"<div class='etf-r'>"
+    +vpart
+    +"<button class='ftog"+(e.fx?' on':'')+"' onclick='togFx("+e.id+")'>"+(e.fx?'🔒':'🔓')+"</button>"
+    +"<button class='delbtn' onclick='delEtf("+e.id+")'>✕</button>"
+    +"</div></div>";
+}
+
+// ─── RENDER INVEST ────────────────────────────────────────────────
+function renderInvest(){
+  var cap=parseFloat(lastCap)||0, T=tot();
+  var catSum=Object.values(catTargets).reduce(function(a,v){return a+v;},0);
+  var catOk=Math.abs(catSum-100)<0.1;
+  var h='';
+
+  h+="<div class='inv-card'>";
+  h+="<div class='inv-lbl'>Nuovo capitale da investire</div>";
+  h+="<div class='inv-row'><span class='euro-sym'>€</span><input class='inv-inp' id='cap-inp' type='number' inputmode='decimal' placeholder='0' value='"+lastCap+"' oninput='onCap(this.value)'></div>";
+  if(cap>0) h+="<div style='font-size:12px;color:var(--mut);margin-top:8px'>Portafoglio: "+fc(T)+" → dopo: <span style='color:var(--acc);font-family:DM Mono,monospace;font-weight:600'>"+fc(T+cap)+"</span></div>";
+  h+="</div>";
+
+  if(!catOk){
+    h+="<div class='warn'>⚠ Target non bilanciati ("+catSum.toFixed(1)+"%). Vai in 🎯 Target e portali a 100%.</div>";
+  } else if(!cap){
+    h+="<div class='info'>💡 <strong>Come funziona:</strong><br>1. Le posizioni 🔒 fisse restano invariate e contano nell'allocazione attuale.<br>2. Il nuovo capitale viene distribuito tra le posizioni non fisse per avvicinarsi ai target di categoria e sottocategoria.<br>3. Dentro ogni gruppo gli ETF vengono pesati proporzionalmente al valore attuale.</div>";
+    // Show current allocation vs target
+    h+="<div class='card'><div class='card-lbl'>Allocazione attuale vs target</div>";
+    CATS.forEach(function(cat){
+      var tgt=catTargets[cat]||0; if(!tgt) return;
+      var cv=etfs.filter(function(e){return e.cat===cat;}).reduce(function(a,e){return a+e.v;},0);
+      var act=T>0?(cv/T*100):0, diff=act-tgt;
+      var dc=Math.abs(diff)<0.5?'var(--grn)':Math.abs(diff)<3?'var(--org)':'var(--red)';
+      var col=COL[cat];
+      var pct=Math.min(100,act/Math.max(tgt,1)*100);
+      h+="<div style='margin-bottom:8px'>";
+      h+="<div style='display:flex;align-items:center;gap:6px;margin-bottom:4px'>";
+      h+="<div class='cdot' style='background:"+col+"'></div>";
+      h+="<span style='font-size:12px;flex:1'>"+cat+"</span>";
+      h+="<span style='font-family:DM Mono,monospace;font-size:11px;color:var(--mut)'>att: "+act.toFixed(1)+"%</span>";
+      h+="<span style='font-family:DM Mono,monospace;font-size:11px;color:"+dc+"'> → tgt: "+tgt+"%</span>";
+      h+="</div>";
+      h+="<div style='height:4px;background:#1e293b;border-radius:2px;overflow:hidden;display:flex'>";
+      h+="<div style='flex:"+Math.min(act,tgt)+";background:"+col+";border-radius:2px;transition:flex .4s'></div>";
+      if(act<tgt) h+="<div style='flex:"+(tgt-act)+";background:"+col+"33'></div>";
+      if(act>tgt) h+="<div style='flex:"+(act-tgt)+";background:var(--red)44'></div>";
+      h+="</div>";
+      h+="</div>";
+    });
+    h+="</div>";
+  } else {
+    var orders=calcBuys(cap);
+    var totalBuy=orders.reduce(function(a,r){return a+r.buy;},0);
+    var remaining=cap-totalBuy;
+
+    if(!orders.length){
+      h+="<div style='text-align:center;padding:36px 20px;color:var(--grn);font-size:15px;font-weight:700'>✅ Portafoglio già bilanciato!</div>";
+    } else {
+      // Header summary
+      h+="<div class='card' style='border-color:#166534;background:#0a1e12'>";
+      h+="<div style='display:flex;align-items:center;gap:10px;flex-wrap:wrap'>";
+      h+="<div style='flex:1'><div style='font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.07em;font-weight:700'>Da investire</div><div style='font-family:DM Mono,monospace;font-size:22px;font-weight:700;color:var(--grn)'>"+fc(totalBuy)+"</div></div>";
+      h+="<div><div style='font-size:11px;color:var(--mut)'>su "+fc(cap)+" disponibili</div>";
+      if(remaining>0.5) h+="<div style='font-size:11px;color:var(--org)'>"+fc(remaining)+" non allocati</div>";
+      h+="</div></div></div>";
+
+      // Orders by category
+      var byCat={};
+      orders.forEach(function(r){if(!byCat[r.cat])byCat[r.cat]=[];byCat[r.cat].push(r);});
+      CATS.forEach(function(cat){
+        var items=byCat[cat]; if(!items||!items.length) return;
+        var col=COL[cat], catBuy=items.reduce(function(a,r){return a+r.buy;},0);
+        var newTot=T+cap;
+
+        h+="<div class='cat-sec' style='color:"+col+"'>"+cat.toUpperCase()+" — acquistare "+fc(catBuy)+"</div>";
+        items.forEach(function(r){
+          var newPct=newTot>0?(r.tv/newTot*100):0;
+          var oldPct=T>0?(r.etf.v/T*100):0;
+          h+="<div class='buy-row'>";
+          h+="<div class='cdot' style='background:"+col+"'></div>";
+          h+="<div class='buy-l'>";
+          h+="<div class='buy-tk' style='color:"+col+"'>"+r.etf.tk+"</div>";
+          h+="<div class='buy-det'>"+r.etf.nm;
+          if(r.sub) h+=" · "+r.sub;
+          h+="</div>";
+          h+="<div class='buy-det' style='margin-top:3px;color:var(--mut)'>"+fc(r.etf.v)+" → <span style='color:var(--grn)'>"+fc(r.tv)+"</span> ("+oldPct.toFixed(1)+"% → "+newPct.toFixed(1)+"%)</div>";
+          h+="</div>";
+          h+="<div class='buy-amt'>+"+fc(r.buy)+"</div>";
+          h+="</div>";
+        });
+      });
+
+      if(remaining>0.5){
+        h+="<div class='info'>💰 <strong>"+fc(remaining)+"</strong> non allocati: le altre categorie sono già ai target o non hanno posizioni libere. Considera di destinare il rimanente alla liquidità.</div>";
+      }
+    }
+
+    // Fixed ETFs summary (always show)
+    var fixd=etfs.filter(function(e){return e.fx;});
+    if(fixd.length){
+      h+="<div class='card' style='margin-top:4px'><div class='card-lbl'>Posizioni fisse 🔒 — invariate</div>";
+      fixd.forEach(function(e){
+        var col=COL[e.cat], pct=(T+cap)>0?(e.v/(T+cap)*100):0;
+        h+="<div class='fixed-row'>";
+        h+="<div class='cdot' style='background:"+col+"'></div>";
+        h+="<span style='font-family:DM Mono,monospace;font-size:13px;color:"+col+"'>"+e.tk+"</span>";
+        h+="<span style='flex:1;font-size:11px;color:var(--mut);margin-left:4px'>"+e.nm+"</span>";
+        h+="<span style='font-family:DM Mono,monospace;font-size:11px;color:var(--mut)'>"+fc(e.v)+" · "+pct.toFixed(1)+"%</span>";
+        h+="</div>";
+      });
+      h+="</div>";
+    }
+  }
+
+  set(h);
+  var inp=document.getElementById('cap-inp');
+  if(inp){inp.focus();}
+}
+
+// ─── RENDER TARGET ────────────────────────────────────────────────
+function renderTarget(){
+  var T=tot();
+  var activeCats=CATS.filter(function(c){return etfs.some(function(e){return e.cat===c;});});
+  var catSum=activeCats.reduce(function(a,c){return a+(catTargets[c]||0);},0);
+  var catOk=Math.abs(catSum-100)<0.1, catOver=catSum>100.05;
+  var h='';
+
+  h+="<div class='card'>";
+  h+="<div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:10px'>";
+  h+="<div class='card-lbl' style='margin:0'>Target per categoria</div>";
+  h+="<span id='csum' class='sum-pill "+(catOk?'sum-ok':catOver?'sum-over':'sum-err')+"'>"+catSum.toFixed(1)+"% / 100%</span>";
+  h+="</div>";
+  h+="<div class='info' style='margin-bottom:10px'>% del portafoglio totale — devono sommare 100%. Solo le categorie con ETF sono mostrate.</div>";
+  activeCats.forEach(function(cat){
+    var col=COL[cat], tgt=catTargets[cat]||0;
+    var cv=etfs.filter(function(e){return e.cat===cat;}).reduce(function(a,e){return a+e.v;},0);
+    var act=T>0?(cv/T*100):0, diff=act-tgt;
+    var dc=Math.abs(diff)<0.5?'var(--grn)':Math.abs(diff)<3?'var(--org)':'var(--red)';
+    h+="<div class='tgt-row'>";
+    h+="<div class='cdot' style='background:"+col+"'></div>";
+    h+="<span class='tgt-nm'>"+cat+"</span>";
+    h+="<span class='tgt-act' style='color:"+dc+"'>att "+act.toFixed(1)+"% ("+(diff>=0?'+':'')+diff.toFixed(1)+"%)</span>";
+    h+="<input class='tgt-inp' type='number' inputmode='decimal' min='0' max='100' step='1' value='"+tgt+"' data-cat='"+cat+"' oninput='onCT(this)'>";
+    h+="<span class='tpct'>%</span>";
+    h+="</div>";
+  });
+  h+="</div>";
+
+  // Subcategory targets
+  activeCats.forEach(function(cat){
+    var catSubs=subcats[cat]||[]; if(!catSubs.length) return;
+    var col=COL[cat];
+    var cv=etfs.filter(function(e){return e.cat===cat;}).reduce(function(a,e){return a+e.v;},0);
+    var subSum=catSubs.reduce(function(a,s){return a+((subcatTargets[cat]||{})[s]||0);},0);
+    var subOk=subSum<0.1||Math.abs(subSum-100)<0.1, subOver=subSum>100.05;
+    var cid=cat.replace(/\s/g,'-');
+
+    h+="<div class='card'>";
+    h+="<div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:10px'>";
+    h+="<div class='card-lbl' style='margin:0;color:"+col+"'>"+cat+" — sottocategorie</div>";
+    h+="<span id='ss-"+cid+"' class='sum-pill "+(subOk?'sum-ok':subOver?'sum-over':'sum-err')+"'>"+subSum.toFixed(0)+"% / 100%</span>";
+    h+="</div>";
+    h+="<div class='info' style='margin-bottom:10px'>% del budget categoria "+cat+" — devono sommare 100% (o lascia tutto a 0 per distribuire proporzionalmente).</div>";
+
+    catSubs.forEach(function(sub){
+      var tgt=(subcatTargets[cat]||{})[sub]||0;
+      var sv=etfs.filter(function(e){return e.cat===cat&&e.sub===sub;}).reduce(function(a,e){return a+e.v;},0);
+      var fxN=etfs.filter(function(e){return e.cat===cat&&e.sub===sub&&e.fx;}).length;
+      var nfN=etfs.filter(function(e){return e.cat===cat&&e.sub===sub&&!e.fx;}).length;
+      var actOfCat=cv>0?(sv/cv*100):0, diff=actOfCat-tgt;
+      var dc=Math.abs(diff)<0.5?'var(--grn)':Math.abs(diff)<3?'var(--org)':'var(--red)';
+      h+="<div class='tgt-row'>";
+      h+="<div style='width:3px;height:14px;background:"+col+";border-radius:2px;flex-shrink:0'></div>";
+      h+="<span class='tgt-nm'>"+sub;
+      if(fxN) h+=" <span style='font-size:10px;color:var(--acc)'>"+fxN+"🔒</span>";
+      if(nfN) h+=" <span style='font-size:10px;color:var(--mut)'>"+nfN+" lib.</span>";
+      h+="</span>";
+      h+="<span class='tgt-act' style='color:"+dc+"'>att "+actOfCat.toFixed(1)+"% ("+(diff>=0?'+':'')+diff.toFixed(1)+"%)</span>";
+      h+="<input class='tgt-inp' type='number' inputmode='decimal' min='0' max='100' step='1' value='"+tgt+"' data-cat='"+cat+"' data-sub='"+sub+"' oninput='onST(this)'>";
+      h+="<span class='tpct'>%</span>";
+      h+="</div>";
+    });
+    h+="</div>";
+  });
+
+  set(h);
+}
+
+// ─── INTERACTIONS ─────────────────────────────────────────────────
+function onCT(inp){
+  var c=inp.dataset.cat, v=Math.max(0,parseFloat(inp.value)||0);
+  catTargets[c]=v;
+  var activeCats=CATS.filter(function(c){return etfs.some(function(e){return e.cat===c;});});
+  var s=activeCats.reduce(function(a,c){return a+(catTargets[c]||0);},0);
+  var ok=Math.abs(s-100)<0.1, over=s>100.05;
+  var el=document.getElementById('csum');
+  if(el){el.textContent=s.toFixed(1)+'% / 100%';el.className='sum-pill '+(ok?'sum-ok':over?'sum-over':'sum-err');}
+  save();
+}
+function onST(inp){
+  var c=inp.dataset.cat, s=inp.dataset.sub, v=Math.max(0,parseFloat(inp.value)||0);
+  if(!subcatTargets[c])subcatTargets[c]={};
+  subcatTargets[c][s]=v;
+  var catSubs=subcats[c]||[];
+  var sum=catSubs.reduce(function(a,x){return a+((subcatTargets[c]||{})[x]||0);},0);
+  var ok=sum<0.1||Math.abs(sum-100)<0.1, over=sum>100.05;
+  var cid=c.replace(/\s/g,'-'), el=document.getElementById('ss-'+cid);
+  if(el){el.textContent=sum.toFixed(0)+'% / 100%';el.className='sum-pill '+(ok?'sum-ok':over?'sum-over':'sum-err');}
+  save();
+}
+var _capTmr;
+function onCap(v){lastCap=v;clearTimeout(_capTmr);_capTmr=setTimeout(function(){renderInvest();},280);}
+function startInl(id){inlId=id;renderPortfolio();}
+function saveInl(id){
+  var el=document.getElementById('ei'+id);
+  if(el){var v=parseFloat(el.value);if(!isNaN(v))etfs=etfs.map(function(e){return e.id===id?Object.assign({},e,{v:Math.max(0,v)}):e;});}
+  inlId=null;save();renderPortfolio();
+}
+function togFx(id){etfs=etfs.map(function(e){return e.id===id?Object.assign({},e,{fx:!e.fx}):e;});save();renderPortfolio();}
+function delEtf(id){if(confirm('Rimuovere questa posizione?')){etfs=etfs.filter(function(e){return e.id!==id;});save();renderPortfolio();}}
+
+// ─── MODAL ────────────────────────────────────────────────────────
+function toggleFixed(){fixOn=!fixOn;document.getElementById('fix-sw').className='tog-sw'+(fixOn?' on':'');}
+function mCatChange(){
+  var cat=document.getElementById('m-cat').value;
+  var subs=subcats[cat]||[];
+  var sf=document.getElementById('m-sf'), ss=document.getElementById('m-sub');
+  if(subs.length){
+    sf.style.display='block';
+    ss.innerHTML=subs.map(function(s){return '<option>'+s+'</option>';}).join('')+'<option value="">— Nessuna —</option>';
+  } else sf.style.display='none';
+}
+function openAdd(){
+  editId=null;fixOn=false;
+  document.getElementById('m-title').textContent='Aggiungi ETF';
+  document.getElementById('m-tk').value='';
+  document.getElementById('m-nm').value='';
+  document.getElementById('m-vl').value='';
+  document.getElementById('m-cat').value='Azionario';
+  document.getElementById('m-del').style.display='none';
+  document.getElementById('fix-sw').className='tog-sw';
+  mCatChange();
+  document.getElementById('modal').style.display='flex';
+  setTimeout(function(){document.getElementById('m-tk').focus();},120);
+}
+function openEdit(id){
+  var e=etfs.find(function(x){return x.id===id;});if(!e)return;
+  editId=id;fixOn=e.fx;
+  document.getElementById('m-title').textContent='Modifica — '+e.tk;
+  document.getElementById('m-tk').value=e.tk||'';
+  document.getElementById('m-nm').value=e.nm||'';
+  document.getElementById('m-vl').value=e.v||'';
+  document.getElementById('m-cat').value=e.cat||'Azionario';
+  document.getElementById('m-del').style.display='';
+  document.getElementById('fix-sw').className='tog-sw'+(fixOn?' on':'');
+  mCatChange();
+  if(e.sub){var ss=document.getElementById('m-sub');if(ss)ss.value=e.sub;}
+  document.getElementById('modal').style.display='flex';
+}
+function closeModal(){document.getElementById('modal').style.display='none';editId=null;}
+function delFromModal(){
+  if(editId===null)return;
+  if(confirm('Eliminare questa posizione?')){
+    etfs=etfs.filter(function(e){return e.id!==editId;});
+    save();closeModal();renderPortfolio();
+  }
+}
+function saveModal(){
+  var tk=(document.getElementById('m-tk').value||'').toUpperCase().trim();
+  var nm=document.getElementById('m-nm').value.trim();
+  var v=parseFloat(document.getElementById('m-vl').value)||0;
+  var cat=document.getElementById('m-cat').value;
+  var sf=document.getElementById('m-sf');
+  var ss=document.getElementById('m-sub');
+  var sub=(sf.style.display!=='none'&&ss&&ss.value)?ss.value:null;
+  if(!tk&&!nm){alert('Inserisci il ticker o il nome.');return;}
+  if(!nm)nm=tk; if(!tk)tk=nm.substring(0,6).toUpperCase();
+
+  if(editId!==null){
+    etfs=etfs.map(function(e){return e.id!==editId?e:{id:e.id,tk:tk,nm:nm,cat:cat,sub:sub,v:v,fx:fixOn};});
+  } else {
+    etfs.push({id:nid++,tk:tk,nm:nm,cat:cat,sub:sub,v:v,fx:fixOn});
+  }
+  save();closeModal();renderPortfolio();
+}
+
+// ─── TABS ─────────────────────────────────────────────────────────
+function switchTab(t){
+  tab=t;
+  var tabs=['portfolio','invest','target'];
+  document.querySelectorAll('.dtab').forEach(function(b,i){b.classList.toggle('active',tabs[i]===t);});
+  document.querySelectorAll('.bnav-btn').forEach(function(b,i){b.classList.toggle('active',tabs[i]===t);});
+  if(t==='portfolio')renderPortfolio();
+  else if(t==='invest')renderInvest();
+  else renderTarget();
+}
+function set(h){document.getElementById('main').innerHTML=h;}
+
+// ─── INIT ─────────────────────────────────────────────────────────
+// Initialize subcats from defs if not loaded
+CATS.forEach(function(c){if(!subcats[c]&&SUBCAT_DEFS[c])subcats[c]=SUBCAT_DEFS[c].slice();});
+load();
+renderPortfolio();
+</script>
+</body>
+</html>
