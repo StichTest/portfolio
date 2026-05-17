@@ -133,7 +133,7 @@ h1{font-size:21px;font-weight:600;letter-spacing:-.3px;}
         </div>
         <div class="field">
           <label>Risparmio annuale investito (netto)</label>
-          <div class="row"><input type="range" id="risp-libera" min="1000" max="80000" step="500" value="20000"><span class="val" id="risp-libera-o"></span></div>
+          <div class="row"><input type="range" id="risp-libera" min="0" max="80000" step="500" value="20000"><span class="val" id="risp-libera-o"></span></div>
           <div class="hint">Quanto investi ogni anno dopo tutte le spese correnti</div>
         </div>
       </div>
@@ -195,7 +195,7 @@ h1{font-size:21px;font-weight:600;letter-spacing:-.3px;}
         </div>
         <div class="field">
           <label>Risparmio annuale investito (netto, dopo affitto)</label>
-          <div class="row"><input type="range" id="risp-affitto" min="1000" max="80000" step="500" value="15000"><span class="val" id="risp-affitto-o"></span></div>
+          <div class="row"><input type="range" id="risp-affitto" min="0" max="80000" step="500" value="15000"><span class="val" id="risp-affitto-o"></span></div>
           <div class="hint">Quanto investi ogni anno dopo aver pagato l'affitto</div>
         </div>
       </div>
@@ -393,6 +393,102 @@ h1{font-size:21px;font-weight:600;letter-spacing:-.3px;}
 <!-- RISULTATI -->
 <div class="sec-t">Anni all'indipendenza finanziaria</div>
 <div class="results" id="results"></div>
+
+<!-- DECUMULO -->
+<div style="margin-top:2rem">
+  <div class="sec-t">Simulazione fase di decumulo</div>
+  <div class="panel">
+    <div class="scen-badge" style="margin-bottom:14px">
+      Simula come si comporta il portafoglio dopo il FIRE in diversi scenari di rendimento. I parametri vengono auto-popolati dai risultati sopra — puoi modificarli manualmente.
+    </div>
+
+    <div class="g3" style="margin-bottom:14px">
+      <div class="field">
+        <label>Portafoglio al FIRE</label>
+        <div class="row"><input type="range" id="dec-pat" min="50000" max="3000000" step="10000" value="700000"><span class="val" id="dec-pat-o"></span></div>
+        <div class="hint">Auto-popolato dallo scenario Normal FIRE</div>
+      </div>
+      <div class="field">
+        <label>Spesa annua netta</label>
+        <div class="row"><input type="range" id="dec-spesa" min="5000" max="120000" step="1000" value="25000"><span class="val" id="dec-spesa-o"></span></div>
+      </div>
+      <div class="field">
+        <label>Orizzonte simulazione</label>
+        <div class="row"><input type="range" id="dec-anni" min="10" max="60" step="5" value="40"><span class="val" id="dec-anni-o"></span></div>
+      </div>
+    </div>
+
+    <div class="g3" style="margin-bottom:14px">
+      <div class="field">
+        <label>Rendimento reale base</label>
+        <div class="row"><input type="range" id="dec-rend" min="1" max="9" step="0.5" value="4"><span class="val" id="dec-rend-o"></span></div>
+        <div class="hint">Già netto di TER e bollo</div>
+      </div>
+      <div class="field">
+        <label>Quota azionaria portafoglio FIRE</label>
+        <div class="row"><input type="range" id="dec-equity" min="0" max="100" step="5" value="80"><span class="val sm" id="dec-equity-o"></span></div>
+        <div class="hint" id="dec-alloc-hint"></div>
+      </div>
+      <div class="field">
+        <label>Età al FIRE</label>
+        <div class="row"><input type="range" id="dec-eta" min="30" max="70" step="1" value="50"><span class="val" id="dec-eta-o"></span></div>
+      </div>
+    </div>
+
+    <!-- Pensione in decumulo -->
+    <div style="background:var(--bg3);border-radius:var(--r);padding:10px 14px;margin-bottom:14px">
+      <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px">Flussi aggiuntivi in decumulo</div>
+      <div class="g3">
+        <div class="field">
+          <label>Pensione netta/anno (0 = nessuna)</label>
+          <div class="row"><input type="range" id="dec-pens" min="0" max="30000" step="500" value="0"><span class="val sm" id="dec-pens-o"></span></div>
+        </div>
+        <div class="field">
+          <label>Età inizio pensione</label>
+          <div class="row"><input type="range" id="dec-eta-pens" min="60" max="75" step="1" value="67"><span class="val sm" id="dec-eta-pens-o"></span></div>
+        </div>
+        <div class="field">
+          <label>Reddito part-time/anno (anni iniziali)</label>
+          <div class="row"><input type="range" id="dec-parttime" min="0" max="30000" step="500" value="0"><span class="val sm" id="dec-parttime-o"></span></div>
+          <div class="hint">Per quanti anni: <input type="range" id="dec-pt-anni" min="0" max="15" step="1" value="0" style="width:60px;vertical-align:middle"> <span id="dec-pt-anni-o">0a</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Guardrails toggle -->
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
+      <div>
+        <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:5px">Strategia di prelievo</div>
+        <div class="btnrow">
+          <button class="sbtn" id="dec-btn-fisso" onclick="setDecMode('fisso')">Fisso</button>
+          <button class="sbtn" id="dec-btn-guard" onclick="setDecMode('guardrails')">Guardrails (Guyton-Klinger)</button>
+          <button class="sbtn" id="dec-btn-floor" onclick="setDecMode('floor')">Floor &amp; Upside</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Guardrails explanation (shown contextually) -->
+    <div id="dec-mode-info" style="font-size:11px;background:var(--blue-bg);color:var(--blue);border-radius:6px;padding:7px 10px;margin-bottom:14px;line-height:1.6"></div>
+
+    <!-- Results summary cards -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px" id="dec-cards"></div>
+
+    <!-- Chart -->
+    <div class="legend" id="dec-legend"></div>
+    <div style="position:relative;width:100%;height:280px;margin-bottom:14px">
+      <canvas id="dec-chart" role="img" aria-label="Simulazione decumulo portafoglio"></canvas>
+    </div>
+
+    <!-- Year-by-year table toggle -->
+    <button class="adv-btn" id="dec-table-btn" onclick="toggleDecTable()">▸ Tabella anno per anno</button>
+    <div id="dec-table-wrap" style="display:none;overflow-x:auto;margin-top:8px">
+      <table id="dec-table" style="width:100%;border-collapse:collapse;font-size:11px"></table>
+    </div>
+
+    <!-- Practical guidance -->
+    <div id="dec-guide" style="margin-top:14px;font-size:11px;line-height:1.7;background:var(--bg3);border-radius:var(--r);padding:10px 14px;color:var(--text2)"></div>
+  </div>
+</div>
 
 <!-- CHART -->
 <div style="margin-top:1.5rem">
@@ -779,6 +875,11 @@ function upd(){
 
   renderCards(res,eta);
   renderLegend(pat,eta);
+  // Auto-populate decumulo with Normal FIRE scenario
+  if(res.normal){
+    const spesaNormal=scen==='affitto'?normal+affitto:normal+cprop;
+    autoPopulateDecumulo(res.normal, eta+res.normal.anni, spesaNormal);
+  }
 
   // Chart
   const maxY=65;
@@ -823,6 +924,275 @@ function upd(){
   });
 }
 
+// ─── DECUMULO ────────────────────────────────────────────────────────────────
+let decMode='guardrails', decChart=null, decTableOpen=false;
+
+function setDecMode(m){
+  decMode=m;
+  ['fisso','guard','floor'].forEach(k=>document.getElementById('dec-btn-'+k).classList.toggle('act',k===m));
+  const info=document.getElementById('dec-mode-info');
+  if(m==='fisso') info.innerHTML=`<strong>Prelievo fisso:</strong> prelevi sempre la stessa cifra rivalutata all'inflazione, indipendentemente dall'andamento del mercato. Semplice ma rigido — nei mercati negativi erode il capitale più velocemente.`;
+  else if(m==='guardrails') info.innerHTML=`<strong>Guardrails Guyton-Klinger:</strong> taglia i prelievi del 10% se il portafoglio scende sotto il 80% del valore iniziale; aumenta del 10% se supera il 120%. Protegge dai crash, sfrutta i rialzi. Richiede flessibilità di spesa.`;
+  else info.innerHTML=`<strong>Floor &amp; Upside:</strong> definisce un prelievo minimo garantito (80% della spesa base) coperto da asset stabili, e una quota variabile legata alla performance. Approccio ibrido consigliato per orizzonti molto lunghi.`;
+  calcDecumulo();
+}
+
+function toggleDecTable(){
+  decTableOpen=!decTableOpen;
+  document.getElementById('dec-table-wrap').style.display=decTableOpen?'block':'none';
+  document.getElementById('dec-table-btn').textContent=(decTableOpen?'▾ ':'▸ ')+'Tabella anno per anno';
+}
+
+function simPortfolio(pat0, spesa0, rend, anni, pensioneNetta, etaFire, etaPensione, parttime, ptAnni, mode){
+  const vals=[pat0];
+  let prelievo=spesa0;
+  let pat=pat0;
+  const guardrailHigh=pat0*1.20, guardrailLow=pat0*0.80;
+  const events=[];
+
+  for(let y=1;y<=anni;y++){
+    const etaCorrente=etaFire+y;
+    // Flussi aggiuntivi
+    const pensione=etaCorrente>=etaPensione?pensioneNetta:0;
+    const pt=y<=ptAnni?parttime:0;
+    const flussiPos=pensione+pt;
+
+    // Prelievo effettivo
+    let prelievoEff=prelievo;
+    if(mode==='guardrails'){
+      if(pat<guardrailLow&&prelievo>spesa0*0.5){prelievoEff=prelievo*0.9;prelievo=prelievoEff;events.push({y,tipo:'taglio',msg:'Taglio 10% → '+fmtE(prelievo)+'/a'});}
+      else if(pat>guardrailHigh&&prelievo<spesa0*1.5){prelievoEff=prelievo*1.10;prelievo=prelievoEff;events.push({y,tipo:'aumento',msg:'Aumento 10% → '+fmtE(prelievo)+'/a'});}
+    } else if(mode==='floor'){
+      const floor=spesa0*0.80;
+      prelievoEff=Math.max(floor, Math.min(spesa0*1.3, pat*0.035));
+    }
+
+    const prelievoNetto=Math.max(0,prelievoEff-flussiPos);
+    pat=pat*(1+rend)-prelievoNetto;
+    if(pat<0) pat=0;
+    vals.push(Math.round(pat));
+  }
+  return{vals,events};
+}
+
+function calcDecumulo(){
+  const pat=+document.getElementById('dec-pat').value;
+  const spesa=+document.getElementById('dec-spesa').value;
+  const anni=+document.getElementById('dec-anni').value;
+  const rendBase=+document.getElementById('dec-rend').value/100;
+  const equity=+document.getElementById('dec-equity').value/100;
+  // Rendimento per componente (reale): azioni ~rendBase, obbligazioni ~1.5% reale
+  const rendBond=0.015;
+  const rendMixed=rendBase*equity + rendBond*(1-equity);
+  // Spread (volatilità) cresce con la quota azionaria
+  const spread=Math.max(0.5, equity*3.0 + (1-equity)*0.5)/100;
+  const etaFire=+document.getElementById('dec-eta').value;
+  const pens=+document.getElementById('dec-pens').value;
+  const etaPens=+document.getElementById('dec-eta-pens').value;
+  const pt=+document.getElementById('dec-parttime').value;
+  const ptA=+document.getElementById('dec-pt-anni').value;
+
+  // Labels
+  document.getElementById('dec-pat-o').textContent=fmtE(pat);
+  document.getElementById('dec-spesa-o').textContent=fmtE(spesa);
+  document.getElementById('dec-anni-o').textContent=anni+' anni';
+  document.getElementById('dec-rend-o').textContent=(rendBase*100).toFixed(1)+'%';
+  document.getElementById('dec-equity-o').textContent=(equity*100).toFixed(0)+'% az. / '+(100-equity*100).toFixed(0)+'% ob.';
+  const hintEl=document.getElementById('dec-alloc-hint');
+  if(hintEl) hintEl.textContent='Rend. misto stimato: '+(rendMixed*100).toFixed(2)+'% · volatilità: ±'+(spread*100).toFixed(1)+'%';
+  document.getElementById('dec-eta-o').textContent=etaFire+' anni';
+  document.getElementById('dec-pens-o').textContent=fmtE(pens);
+  document.getElementById('dec-eta-pens-o').textContent=etaPens+' anni';
+  document.getElementById('dec-parttime-o').textContent=fmtE(pt);
+  document.getElementById('dec-pt-anni-o').textContent=ptA+'a';
+
+  const scenarios=[
+    {label:'Pessimistico',rend:rendMixed-spread,col:'#c05848',dash:[5,3]},
+    {label:'Base',rend:rendMixed,col:isDark?'#ccc':'#444',dash:[]},
+    {label:'Ottimistico',rend:rendMixed+spread,col:'#1a7a50',dash:[3,2]},
+  ];
+
+  const results=scenarios.map(sc=>{
+    const {vals,events}=simPortfolio(pat,spesa,sc.rend,anni,pens,etaFire,etaPens,pt,ptA,decMode);
+    const depleted=vals.findIndex((v,i)=>i>0&&v===0);
+    const finale=vals[vals.length-1];
+    return{...sc,vals,events,depleted,finale};
+  });
+
+  // Summary cards
+  const cards=document.getElementById('dec-cards');
+  const cardColors={Pessimistico:{bg:'var(--red-bg)',col:'var(--red)'},Base:{bg:'var(--amber-bg)',col:'var(--amber)'},Ottimistico:{bg:'var(--green-bg)',col:'var(--green)'}};
+  cards.innerHTML=results.map(r=>{
+    const cc=cardColors[r.label];
+    const depStr=r.depleted>0
+      ?'<div style="color:var(--red);font-weight:700">Esaurito anno '+(r.depleted)+'<br><span style="font-size:10px;font-weight:400">età '+(etaFire+r.depleted)+'</span></div>'
+      :'<div style="color:var(--green);font-weight:700">Sopravvive ✓<br><span style="font-size:10px;font-weight:400">Residuo: '+fmtE(r.finale)+'</span></div>';
+    return '<div style="border-radius:10px;border:.5px solid var(--border);overflow:hidden">'+
+      '<div style="padding:8px 12px;background:'+cc.bg+'"><div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:'+cc.col+'">'+r.label+'</div>'+
+      '<div style="font-size:10px;color:var(--text2)">Rend. '+(r.rend*100).toFixed(1)+'%</div></div>'+
+      '<div style="padding:10px 12px">'+depStr+'</div></div>';
+  }).join('');
+
+  // Chart
+  const labels=Array.from({length:anni+1},(_,i)=>etaFire+i);
+  const datasets=[
+    ...results.map(r=>({
+      label:r.label,data:r.vals,borderColor:r.col,borderWidth:r.label==='Base'?2.5:1.5,
+      borderDash:r.dash,pointRadius:0,tension:0.2,fill:false
+    })),
+    // Zero line reference
+    {label:'_',data:Array(anni+1).fill(0),borderColor:'rgba(180,0,0,0.3)',borderWidth:1,borderDash:[2,4],pointRadius:0,fill:false}
+  ];
+
+  if(decChart){decChart.data.labels=labels;decChart.data.datasets=datasets;decChart.update('none');}
+  else decChart=new Chart(document.getElementById('dec-chart'),{
+    type:'line',data:{labels,datasets},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:false},tooltip:{callbacks:{
+        title:ctx=>'Età: '+ctx[0].label,
+        label:ctx=>ctx.dataset.label==='_'?null:ctx.dataset.label+': '+fmtE(ctx.raw),
+        filter:i=>i.dataset.label!=='_'
+      }}},
+      scales:{
+        x:{ticks:{maxTicksLimit:12,font:{size:11},color:tc},grid:{color:gc}},
+        y:{ticks:{font:{size:11},color:tc,callback:v=>fmtE(v)},grid:{color:gc},min:0}
+      }
+    }
+  });
+
+  // Legend
+  const leg=document.getElementById('dec-legend');
+  leg.innerHTML=results.map(r=>'<div class="li"><span class="ld" style="background:'+r.col+'"></span>'+r.label+' ('+( r.rend*100).toFixed(1)+'%)</div>').join('');
+  if(pens>0) leg.innerHTML+='<div class="li" style="color:var(--green)">🏛 Pensione '+fmtE(pens)+'/a da età '+etaPens+'</div>';
+  if(pt>0&&ptA>0) leg.innerHTML+='<div class="li" style="color:var(--blue)">💼 Part-time '+fmtE(pt)+'/a per '+ptA+'a</div>';
+
+  // Table
+  const baseResult=results[1];
+  const tbl=document.getElementById('dec-table');
+  tbl.innerHTML='<tr style="border-bottom:.5px solid var(--border)">'+
+    ['Età','Portafoglio','Prelievo lordo','Pensione','Part-time','Saldo fine anno'].map(h=>'<th style="padding:4px 8px;text-align:right;color:var(--text3);font-weight:500">'+h+'</th>').join('')+'</tr>';
+  for(let y=0;y<=Math.min(anni,60);y++){
+    const etaR=etaFire+y;
+    const p=pens>0&&etaR>=etaPens?pens:0;
+    const ptR=y<ptA?pt:0;
+    const prelievoEff=spesa;
+    const bg=y%2===0?'':'background:var(--bg2)';
+    tbl.innerHTML+='<tr style="'+bg+'">'+
+      ['<strong>'+etaR+'</strong>',fmtE(baseResult.vals[y]),fmtE(spesa),p>0?fmtE(p):'—',ptR>0?fmtE(ptR):'—',
+       y<baseResult.vals.length?'<span style="color:'+(baseResult.vals[y]>pat*0.5?'var(--green)':'var(--red)')+'">'+fmtE(baseResult.vals[y])+'</span>':'€0'
+      ].map(v=>'<td style="padding:4px 8px;text-align:right;color:var(--text2)">'+v+'</td>').join('')+'</tr>';
+  }
+
+  // Guide — detailed and contextual
+  const baseOk=results[1].depleted<0;
+  const pessOk=results[0].depleted<0;
+  const ottOk=results[2].depleted<0;
+  const etaEsaurBase=results[1].depleted>0?etaFire+results[1].depleted:null;
+  const anniPensione=pens>0?Math.max(0,etaPens-etaFire):null;
+  const equityPct=(equity*100).toFixed(0);
+
+  // Build guide using template literals to avoid apostrophe issues
+  const rendPessStr = ((rendMixed-spread)*100).toFixed(1);
+  const rendBaseStr = (rendMixed*100).toFixed(1);
+  const etaEsaurStr = etaEsaurBase ? `${etaEsaurBase} anni` : `meno di ${anni} anni`;
+  const equityStr = equityPct;
+  const bondStr = (100-equity*100).toFixed(0);
+  const spesaStr = fmtE(spesa);
+  const pat80Str = fmtE(pat*0.8);
+  const pat120Str = fmtE(pat*1.2);
+  const spesaFloorStr = fmtE(spesa*0.8);
+  const spesa2yStr = fmtE(spesa*2);
+  const modeLabelStr = decMode==='fisso'?'Prelievo Fisso':decMode==='guardrails'?'Guardrails Guyton-Klinger':'Floor & Upside';
+
+  // 1. Diagnosi
+  let diagColor, diagIcon, diagTitle, diagText, diagSub='';
+  if(pessOk){
+    diagColor='var(--green)'; diagIcon='✅'; diagTitle='Piano robusto';
+    diagText=`Il portafoglio regge fino a ${anni} anni anche nel caso peggiore simulato (rendimento reale ${rendPessStr}%). Sei ben posizionato per il FIRE.`;
+  } else if(baseOk){
+    diagColor='var(--amber)'; diagIcon='⚠️'; diagTitle='Piano fragile';
+    diagText=`Il portafoglio sopravvive nello scenario base (${rendBaseStr}% reale) ma si esaurisce nello scenario pessimistico. Un decennio di rendimenti bassi come quello 2000–2010 metterebbe a rischio il piano.`;
+    diagSub=`Correttivi possibili: (a) riduci la spesa annua di ${fmtE(spesa*0.12)} (−12%) nei primi 5 anni, oppure (b) accumula ancora il 15% in più di patrimonio prima del FIRE.`;
+  } else {
+    diagColor='var(--red)'; diagIcon='❌'; diagTitle='Capitale insufficiente';
+    diagText=`Nello scenario base il portafoglio si esaurisce a circa ${etaEsaurStr}. Il prelievo annuo di ${spesaStr} è troppo elevato rispetto al patrimonio disponibile.`;
+    diagSub=`Opzioni: riduci la spesa target, posticipa il FIRE di qualche anno per accumulare più capitale, o riduci il tasso di prelievo nelle impostazioni avanzate.`;
+  }
+
+  // 2. Composizione
+  let allocText='';
+  if(equity>=0.9){
+    allocText=`Portafoglio quasi interamente azionario (${equityStr}%). Offre il massimo rendimento atteso ma crea forte esposizione al rischio sequenza: se il mercato crolla del 40% nel primo anno di FIRE, perdi ${fmtE(pat*0.4)} di capitale nel momento peggiore possibile. Soluzione: tieni ${spesa2yStr} (2 anni di spese) in liquidità su conto deposito o BTP a breve scadenza, da usare senza toccare le azioni nei mercati negativi.`;
+  } else if(equity>=0.6){
+    allocText=`Portafoglio bilanciato (${equityStr}% azioni, ${bondStr}% obbligazioni). La componente obbligazionaria funge da cuscinetto: nei mercati azionari negativi vendi prima le obbligazioni, lasci crescere le azioni, e ribilanci una volta tornato in territorio positivo. È la struttura più collaudata per il decumulo a lungo termine.`;
+  } else {
+    allocText=`Portafoglio conservativo (${equityStr}% azioni). Riduce la volatilità ma aumenta il rischio di longevità: con rendimenti reali bassi su un orizzonte di ${anni} anni, il capitale potrebbe non crescere abbastanza per compensare l'inflazione. Valuta di portare la quota azionaria almeno al 50–60% se l'orizzonte supera i 25 anni.`;
+  }
+
+  // 3. Strategia prelievo
+  let stratText='';
+  if(decMode==='fisso'){
+    stratText=`Con il prelievo fisso prelevi ogni anno la stessa cifra (${spesaStr}), indipendentemente da come va il mercato. È semplice da gestire ma rigido: in un anno in cui il portafoglio perde il 30%, stai comunque vendendo quote a prezzi bassi. <strong>Regola pratica:</strong> aggiungiti mentalmente un guardrail manuale — se il portafoglio scende sotto ${pat80Str} (−20% dal valore iniziale), riduci volontariamente la spesa del 10% per quell'anno. Anche un solo anno di taglio nella fase critica può allungare la vita del portafoglio di diversi anni.`;
+  } else if(decMode==='guardrails'){
+    stratText=`I guardrails funzionano automaticamente: se il portafoglio scende sotto ${pat80Str} (80% del valore iniziale al FIRE), il prelievo si taglia del 10%; se supera ${pat120Str} (120%), aumenta del 10%. <strong>Come applicarli nella pratica:</strong> scrivi i valori soglia il giorno del FIRE e controllali una volta l'anno, non più spesso. Il rischio principale non è tecnico ma emotivo — la tentazione di "spostare le soglie" quando il mercato è in ribasso è forte, ma vanifica l'intero meccanismo. Le soglie si fissano il giorno del FIRE e non si toccano.`;
+  } else {
+    stratText=`Il Floor & Upside separa il portafoglio in due parti: un "floor" di ${fmtE(anni<=20?spesa*3:spesa*5)} (3–5 anni di spesa minima garantita pari a ${spesaFloorStr}/anno) in asset stabili come BTP o conto deposito, e il resto in azionario per la crescita. <strong>Come funziona:</strong> nei periodi negativi prelevi dal floor senza toccare le azioni; nei periodi positivi lasci crescere il portafoglio azionario e ricarichi il floor quando necessario. È il metodo più sofisticato e richiede un ribilanciamento attivo, ma protegge meglio il tenore di vita nei primi anni critici.`;
+  }
+
+  // 4. Rischio sequenza
+  const spesaRidottaStr = fmtE(spesa*0.9);
+  const risparmioSeqStr = fmtE(spesa*0.1*5);
+  const rischioSeqText=`Il rischio sequenza è il principale pericolo del decumulo. Il concetto è semplice: due persone con lo stesso portafoglio e lo stesso tasso di prelievo possono avere esiti completamente diversi a seconda di quando arriva il crollo. Chi va in FIRE nel 2000 (crollo immediato) esaurisce il capitale anni prima di chi va in FIRE nel 2003 (dopo il crollo). <strong>Perché i primi 5 anni sono così critici:</strong> in questa fase il portafoglio è al massimo e ogni euro venduto a prezzi bassi è un euro che non può più crescere. Dopo 15 anni il portafoglio ha già accumulato rendimenti e un crollo è molto meno pericoloso. <strong>Piano concreto per i primi 5 anni:</strong> (1) tieni fuori dal portafoglio investito almeno 1 anno di spese in liquidità; (2) se il mercato scende di oltre il 20% in un anno, riduci la spesa a ${spesaRidottaStr} (−10%) per quell'anno; (3) anche un piccolo reddito occasionale nei primi anni — consulenze, affitto stanza, lavoro part-time — protegge enormemente il portafoglio: ${risparmioSeqStr} di reddito extra distribuiti nei primi 5 anni valgono molto di più del loro valore nominale.`;
+
+  // 5. Pensione
+  let pensText='';
+  if(pens>0){
+    const bridgeStr = anniPensione!==null ? `${anniPensione} anni (fino ai ${etaPens} anni)` : '';
+    const pensStr = fmtE(pens);
+    const prelievoRidottoStr = fmtE(Math.max(0,spesa-pens));
+    if(anniPensione!==null&&anniPensione<=15){
+      pensText=`A ${etaPens} anni inizia la pensione netta di ${pensStr}/anno, che riduce il prelievo dal portafoglio a ${prelievoRidottoStr}/anno. Il bridge pre-pensione dura solo ${anniPensione} anni: il periodo di massima vulnerabilità è breve e il piano è strutturalmente solido anche in scenari avversi.`;
+    } else if(anniPensione!==null){
+      pensText=`A ${etaPens} anni inizia la pensione netta di ${pensStr}/anno, che riduce il prelievo dal portafoglio da ${spesaStr} a ${prelievoRidottoStr}/anno. Il bridge pre-pensione dura ${anniPensione} anni: è il periodo più delicato del piano, quello su cui concentrare la difesa del portafoglio (liquidità di riserva, guardrails, flessibilità di spesa).`;
+    }
+  }
+
+  // 6. Ribilanciamento
+  const ribText=`In fase di accumulo ribilanci comprando la componente sottopesata. In decumulo funziona al contrario: usi i prelievi stessi per ribilanciare — prelevi prima dalla componente che ha sovraperformato, lasci crescere quella che ha sottoperformato. Questo meccanismo, se applicato con disciplina una volta l'anno, riduce il rischio sequenza senza richiedere vendite aggiuntive.`;
+
+  // Compose HTML
+  const sec=(icon,title,body,sub='',color='var(--text)')=>`
+    <div style="margin-bottom:14px;padding-bottom:14px;border-bottom:.5px solid var(--border)">
+      <div style="font-size:12px;font-weight:700;color:${color};margin-bottom:5px">${icon} ${title}</div>
+      <div style="font-size:11px;color:var(--text2);line-height:1.7">${body}</div>
+      ${sub?`<div style="font-size:11px;color:var(--text3);margin-top:4px;padding:5px 8px;background:var(--bg3);border-radius:5px">${sub}</div>`:''}
+    </div>`;
+
+  let g='';
+  g+=sec('📊','Diagnosi del piano',`<span style="color:${diagColor}">${diagIcon} <strong>${diagTitle}</strong> — ${diagText}</span>`,diagSub);
+  g+=sec('📦',`Composizione: ${equityStr}% azionario / ${bondStr}% obbligazionario`,allocText);
+  g+=sec('💸',`Strategia di prelievo: ${modeLabelStr}`,stratText);
+  g+=sec('⚠️','Rischio sequenza — perché i primi 5 anni sono critici',rischioSeqText);
+  if(pens>0) g+=sec('🏛','Pensione INPS come guardrail naturale',pensText,'','var(--green)');
+  g+=sec('🔄','Ribilanciamento in decumulo',ribText).replace('border-bottom:.5px solid var(--border)','');
+
+  document.getElementById('dec-guide').innerHTML=g;
+}
+
+function autoPopulateDecumulo(fireResult, etaFire, spesaNetta){
+  if(!fireResult) return;
+  document.getElementById('dec-pat').value=Math.min(3000000,Math.round(fireResult.fn/10000)*10000);
+  document.getElementById('dec-spesa').value=Math.min(120000,Math.round(spesaNetta/1000)*1000);
+  document.getElementById('dec-eta').value=Math.min(70,Math.max(30,etaFire));
+  if(pensNetta>0){
+    document.getElementById('dec-pens').value=Math.min(30000,Math.round(pensNetta/500)*500);
+    document.getElementById('dec-eta-pens').value=Math.min(75,Math.max(60,inpsEta));
+  }
+  calcDecumulo();
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 // Persistence
 function getS(){
   const s={scen,pt,dyn};
@@ -853,10 +1223,16 @@ SL.forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('
   const el=document.getElementById(id);
   if(el) el.addEventListener('input',calcForf);
 });
-document.getElementById('eta').addEventListener('input',calcForf); // età cambia gli anni al pensionamento
+document.getElementById('eta').addEventListener('input',calcForf);
+// Decumulo sliders
+['dec-pat','dec-spesa','dec-anni','dec-rend','dec-equity','dec-eta','dec-pens','dec-eta-pens','dec-parttime','dec-pt-anni'].forEach(id=>{
+  const el=document.getElementById(id);
+  if(el) el.addEventListener('input',calcDecumulo);
+});
 setPort('misto');setDyn(false);
 if(!loadS())setScen('libera');
 calcForf();
+setDecMode('guardrails');
 </script>
 </body>
 </html>
